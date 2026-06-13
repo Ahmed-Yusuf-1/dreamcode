@@ -1,26 +1,294 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-nunito);
+  --font-display: var(--font-baloo);
+  --font-mono: var(--font-jbmono);
+
+  /* dreamcode palette */
+  --color-ink: #13335f;
+  --color-ink-soft: #41608f;
+  --color-ink-muted: #7b93b8;
+  --color-dusk: #0e2247;
+  --color-dusk-deep: #081a38;
+  --color-sky-blue: #2f6fdd;
+  --color-sky-blue-bright: #3b7ce6;
+  --color-mint: #a9ecc9;
+  --color-mint-deep: #0f5c38;
+  --color-butter: #fff3c9;
+  --color-butter-deep: #7a5410;
+  --color-blush: #ffb6d9;
+  --color-lavender: #cdb9f7;
+  --color-neon-pink: #ff4fb0;
+  --color-neon-pink-soft: #ff7ad9;
+  --color-cyan-glow: #96f5ff;
 }
 
-@media (prefers-color-scheme: dark) {
+:root {
+  --nav-h: 66px;
+}
+@media (max-width: 640px) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --nav-h: 60px;
   }
 }
 
+::selection {
+  background: #ffd3ec;
+}
+
+@keyframes eqbar {
+  0%,
+  100% {
+    transform: scaleY(0.35);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+}
+
+html,
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font-nunito), sans-serif;
+  background: #2b2c63;
+  color: #16315c;
+}
+
+button {
+  font-family: var(--font-nunito), sans-serif;
+}
+
+@keyframes drift {
+  0% {
+    transform: translateX(-46px);
+  }
+  100% {
+    transform: translateX(46px);
+  }
+}
+
+@keyframes floaty {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-16px);
+  }
+}
+
+@keyframes floatySm {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+@keyframes pulseRing {
+  0% {
+    box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.85);
+  }
+  100% {
+    box-shadow: 0 0 0 26px rgba(255, 255, 255, 0);
+  }
+}
+
+@keyframes blinkCursor {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.15;
+  }
+}
+
+@keyframes neonFlicker {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  89% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 0.55;
+  }
+  91% {
+    opacity: 1;
+  }
+  94% {
+    opacity: 0.8;
+  }
+  95% {
+    opacity: 1;
+  }
+}
+
+@keyframes popIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.86) translateY(8px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.anim-floaty {
+  animation: floaty 13s ease-in-out infinite;
+}
+.anim-floaty-sm {
+  animation: floatySm 8s ease-in-out infinite;
+}
+.anim-pulse-ring {
+  animation: pulseRing 2s ease-out infinite;
+}
+.anim-blink {
+  animation: blinkCursor 1.2s infinite;
+}
+.anim-neon-flicker {
+  animation: neonFlicker 7s linear infinite;
+}
+.anim-pop-in {
+  animation: popIn 0.35s cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+}
+
+/* glow applied to cloud cutout images (cloudNeonGlow = 0.5) */
+.cloud-glow {
+  filter: drop-shadow(0 0 14px rgba(255, 120, 222, 0.45))
+    drop-shadow(0 0 34px rgba(110, 230, 255, 0.3));
+}
+
+/* bright magenta neon outline around a cloud cutout (like the wordmark) */
+.cloud-neon-magenta {
+  filter: drop-shadow(0 0 8px rgba(255, 160, 235, 0.95))
+    drop-shadow(0 0 22px rgba(255, 79, 208, 0.85))
+    drop-shadow(0 0 48px rgba(255, 79, 208, 0.55));
+}
+
+/* bright cyan neon outline around a cloud cutout */
+.cloud-neon-cyan {
+  filter: drop-shadow(0 0 8px rgba(180, 248, 255, 0.95))
+    drop-shadow(0 0 22px rgba(110, 230, 255, 0.85))
+    drop-shadow(0 0 48px rgba(80, 210, 255, 0.5));
+}
+
+/* the big neon wordmark glow */
+.neon-title {
+  text-shadow:
+    0 0 6px rgba(255, 255, 255, 0.95),
+    0 0 18px #ff8ade,
+    0 0 42px rgba(255, 79, 208, 0.8),
+    0 0 16px rgba(110, 230, 255, 0.5),
+    0 0 90px rgba(255, 79, 208, 0.6);
+}
+
+/* glowing page headings on cloud scenes */
+.glow-heading {
+  text-shadow:
+    0 0 8px rgba(255, 255, 255, 0.7),
+    0 0 26px rgba(255, 138, 222, 0.7),
+    0 6px 30px rgba(60, 60, 130, 0.5);
+}
+
+/* soft drop shadow for white text over photos */
+.sky-text {
+  text-shadow: 0 2px 14px rgba(20, 16, 50, 0.6);
+}
+
+/* small neon wordmark glow (scaled-down hero treatment) */
+.neon-wordmark {
+  text-shadow:
+    0 0 4px rgba(255, 255, 255, 0.9),
+    0 0 10px #ff8ade,
+    0 0 22px rgba(255, 79, 208, 0.75),
+    0 0 8px rgba(110, 230, 255, 0.45);
+}
+
+/* neon pink hover halo for interactive cards (overrides inline shadows) */
+.glow-hover {
+  transition:
+    box-shadow 0.25s ease,
+    transform 0.2s ease;
+}
+.glow-hover:hover {
+  box-shadow:
+    0 0 30px rgba(255, 122, 217, 0.45),
+    0 0 60px rgba(110, 230, 255, 0.18),
+    0 18px 44px rgba(20, 12, 50, 0.45) !important;
+}
+
+/* cyan-edged neon outline pill (like the LEARN·SOLVE·DREAM chip) */
+.neon-outline {
+  border: 2px solid rgba(150, 245, 255, 0.85);
+  box-shadow:
+    0 0 14px rgba(110, 230, 255, 0.45),
+    inset 0 0 12px rgba(110, 230, 255, 0.25);
+  text-shadow: 0 0 10px rgba(110, 230, 255, 0.8);
+}
+
+/* frosted glass card */
+.glass {
+  background: rgba(255, 255, 255, 0.16);
+  backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.45);
+}
+
+.glass-strong {
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+}
+
+@media (max-width: 1280px) {
+  .dc-side-float {
+    display: none !important;
+  }
+}
+
+/* CodeMirror - melt the editor into the dusk panel */
+.dc-editor .cm-editor {
+  background: transparent;
+  font-family: var(--font-jbmono), monospace;
+  font-size: 14px;
+  outline: none;
+}
+.dc-editor .cm-editor.cm-focused {
+  outline: none;
+}
+.dc-editor .cm-scroller {
+  line-height: 2;
+}
+.dc-editor .cm-gutters {
+  background: transparent;
+  border: none;
+  color: #48618f;
+}
+.dc-editor .cm-activeLine {
+  background: rgba(76, 130, 220, 0.18);
+}
+.dc-editor .cm-activeLineGutter {
+  background: transparent;
+  color: #9db8e8;
+}
+.dc-editor .cm-content {
+  caret-color: #ffffff;
+  color: #dbe9ff;
+}
+.dc-editor .cm-cursor {
+  border-left-color: #ffffff;
+}
+.dc-editor .cm-selectionBackground,
+.dc-editor .cm-editor ::selection {
+  background: rgba(110, 160, 240, 0.35) !important;
 }

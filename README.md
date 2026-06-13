@@ -1,36 +1,37 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# dreamcode — frontend
 
-## Getting Started
-
-First, run the development server:
+The dreamy cloud-themed programming-learning platform. **Frontend only for now** — all data is mocked in `src/lib/data.ts`; the backend (auth, Postgres, FSRS scheduling, real code sandboxes) comes later per the project plan.
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+npm run dev   # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Pages
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+| Route | What it is |
+|---|---|
+| `/` | Home — Neon Dusk hero (from the Claude Design handoff) |
+| `/lessons` | Lessons overview — Sunset Stops |
+| `/badges` | Badge collection (found + locked) |
+| `/journey` | Journey map — node road with HUD (streak, XP, level) |
+| `/peaks` | Problem Peaks — standalone challenge library |
+| `/lesson/loops` | Lesson player — teaching card + live CodeMirror editor + mock run |
+| `/practice/loops` | PRIMM practice flow — Predict MCQ → Parsons puzzle → faded example |
+| `/challenge/cloud-hopper` | Challenge — real in-browser JS test runner + badge reward |
+| `/review` | Night review — spaced-recall card session |
+| `/dashboard` | Logged-in hub — continue, due reviews, XP/week chart, badges |
+| `/projects` | Projects — Guided / Independent / Capstone tiers |
+| `/login`, `/signup` | Auth UI (mock — routes to dashboard) |
+| `/profile` | Profile & settings incl. the Dream Guide (AI mentor) opt-in toggle |
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+The **Dream Guide** (`src/components/DreamGuide.tsx`) is the opt-in Socratic AI mentor — scripted UI demo of the 5-phase hint flow (it asks questions, never writes code).
 
-## Learn More
+## Design source
 
-To learn more about Next.js, take a look at the following resources:
+The visual design comes from `../Code-handoff/code/project/Dreamcode.dc.html` (Claude Design export). Theme notes:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Fonts: Baloo 2 (display), Nunito (body), JetBrains Mono (code) via `next/font`
+- Cloud assets in `public/assets/` (copied from the handoff bundle)
+- **`src/lib/theme.ts` is the theme control panel**: per-page gradient opacity (`gradientOpacity.home`, `.lessons`, `.badges`, `.challenge`, `.auth`) and a global `cloudOpacityBoost` multiplier for all floating clouds
+- Shared keyframes/glow/glass utilities live in `src/app/globals.css` (`.neon-title`, `.neon-wordmark`, `.neon-outline`, `.glow-hover`, `.glass`, `.cloud-glow`)
