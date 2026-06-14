@@ -1,22 +1,64 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import Cloud from "@/components/Cloud";
 import { cloudOpacity } from "@/lib/theme";
 import { reviewCards } from "@/lib/data";
+import { getSRSStates, saveSRSState } from "@/lib/srs";
+import { addXP, unlockBadge } from "@/lib/profile";
+import { playChime } from "@/lib/sound";
 
 const cs = cloudOpacity.review;
 export default function ReviewPage() {
+  const [srsStates, setSrsStates] = useState<Record<string, number>>({});
+  const [now, setNow] = useState<number>(0);
   const [idx, setIdx] = useState(0);
   const [revealed, setRevealed] = useState(false);
-  const done = idx >= reviewCards.length;
-  const card = reviewCards[idx];
+  const [xpAwarded, setXpAwarded] = useState(false);
 
-  const grade = () => {
+  useEffect(() => {
+    const states = getSRSStates();
+    setTimeout(() => {
+      setSrsStates(states);
+      setNow(Date.now());
+    }, 0);
+    document.title = "Night review - dreamcode";
+  }, []);
+
+  const dueCards = now === 0 ? [] : reviewCards.filter((c) => (srsStates[c.id] ?? 0) <= now);
+  const done = idx >= dueCards.length;
+  const card = dueCards[idx];
+
+  useEffect(() => {
+    if (done && dueCards.length > 0 && !xpAwarded) {
+      addXP(20);
+      unlockBadge("streak-keeper");
+      playChime("success");
+      setXpAwarded(true);
+    }
+  }, [done, dueCards.length, xpAwarded]);
+
+  const grade = useCallback((rating: "again" | "good" | "easy") => {
+    if (!card) return;
+    if (rating !== "again") {
+      playChime("correct");
+    }
+    const currentNow = Date.now();
+    let nextDue = currentNow;
+    if (rating === "again") {
+      nextDue = currentNow + 60 * 1000; // 1 minute
+    } else if (rating === "good") {
+      nextDue = currentNow + 3 * 24 * 3600 * 1000; // 3 days
+    } else if (rating === "easy") {
+      nextDue = currentNow + 7 * 24 * 3600 * 1000; // 7 days
+    }
+
+    saveSRSState(card.id, nextDue);
+    setSrsStates((prev) => ({ ...prev, [card.id]: nextDue }));
     setRevealed(false);
-    setIdx(idx + 1);
-  };
+    setIdx((prevIdx) => prevIdx + 1);
+  }, [card]);
 
   return (
     <div
@@ -47,7 +89,7 @@ export default function ReviewPage() {
             borderRadius: 999,
           }}
         >
-          ← Dashboard
+          {"\u2190"} Dashboard
         </Link>
         <div className="font-display sky-text" style={{ fontWeight: 800, fontSize: 20, color: "#ffffff" }}>
           Night review
@@ -64,7 +106,7 @@ export default function ReviewPage() {
             borderRadius: 999,
           }}
         >
-          {done ? "all clear" : `${idx + 1} of ${reviewCards.length}`}
+          {done ? "all clear" : `${idx + 1} of ${dueCards.length}`}
         </div>
       </div>
 
@@ -179,13 +221,13 @@ export default function ReviewPage() {
             {revealed && (
               <div className="anim-pop-in flex justify-center" style={{ gap: 12, marginTop: 24 }}>
                 {[
-                  { label: "Again · soon", bg: "rgba(255,150,190,.25)", border: "rgba(255,150,190,.6)" },
-                  { label: "Good · 3 days", bg: "rgba(150,220,255,.22)", border: "rgba(150,220,255,.55)" },
-                  { label: "Easy · 1 week", bg: "rgba(150,255,200,.2)", border: "rgba(150,255,200,.5)" },
+                  { label: "Again \u00b7 soon", rating: "again" as const, bg: "rgba(255,150,190,.25)", border: "rgba(255,150,190,.6)" },
+                  { label: "Good \u00b7 3 days", rating: "good" as const, bg: "rgba(150,220,255,.22)", border: "rgba(150,220,255,.55)" },
+                  { label: "Easy \u00b7 1 week", rating: "easy" as const, bg: "rgba(150,255,200,.2)", border: "rgba(150,255,200,.5)" },
                 ].map((b) => (
                   <button
                     key={b.label}
-                    onClick={grade}
+                    onClick={() => grade(b.rating)}
                     className="cursor-pointer backdrop-blur-md transition-transform hover:-translate-y-0.5"
                     style={{
                       background: b.bg,
@@ -238,7 +280,7 @@ export default function ReviewPage() {
                   boxShadow: "0 0 26px rgba(255,100,200,.6)",
                 }}
               >
-                Keep learning →
+                Keep learning {"\u2192"}
               </Link>
             </div>
           </div>

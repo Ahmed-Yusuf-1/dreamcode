@@ -5,7 +5,7 @@ import Link from "next/link";
  * back pill on the left, wordmark in the middle, action on the right.
  */
 export default function SceneTopBar({
-  back = { href: "/", label: "← Home" },
+  back = { href: "/", label: "\u2190 Home" },
   right,
 }: {
   back?: { href: string; label: string };

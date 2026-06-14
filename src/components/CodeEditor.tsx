@@ -38,12 +38,14 @@ export default function CodeEditor({
   language,
   minHeight = "200px",
   readOnly = false,
+  lineNumbers = true,
 }: {
   value: string;
   onChange?: (v: string) => void;
   language: "python" | "javascript";
   minHeight?: string;
   readOnly?: boolean;
+  lineNumbers?: boolean;
 }) {
   return (
     <div className="dc-editor">
@@ -51,6 +53,7 @@ export default function CodeEditor({
         value={value}
         onChange={onChange}
         readOnly={readOnly}
+        editable={!readOnly}
         theme={dreamTheme}
         extensions={[
           language === "python" ? python() : javascript(),
@@ -60,8 +63,8 @@ export default function CodeEditor({
           foldGutter: false,
           searchKeymap: false,
           autocompletion: false,
-          highlightActiveLine: true,
-          lineNumbers: true,
+          highlightActiveLine: !readOnly,
+          lineNumbers,
         }}
         style={{ minHeight }}
         minHeight={minHeight}

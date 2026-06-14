@@ -97,6 +97,7 @@ export default function NavBar({ isHome = false }: { isHome?: boolean }) {
             {PRIMARY.map(([label, href]) => (
               <Link
                 key={href}
+                id={`nav-link-${label.toLowerCase()}`}
                 href={href}
                 className="cursor-pointer transition-colors hover:text-[#ffb3e2]"
                 style={linkStyle}
@@ -115,6 +116,7 @@ export default function NavBar({ isHome = false }: { isHome?: boolean }) {
           >
             <button
               type="button"
+              id="nav-btn-explore"
               onClick={() => setExploreOpen((o) => !o)}
               className="flex cursor-pointer items-center transition-colors hover:text-[#ffb3e2]"
               style={{ ...linkStyle, gap: 5, background: "none", border: "none" }}
@@ -185,6 +187,7 @@ export default function NavBar({ isHome = false }: { isHome?: boolean }) {
 
           <Link
             href="/signup"
+            id="nav-btn-signup"
             className="hidden cursor-pointer backdrop-blur-md transition-colors hover:bg-white/32 sm:block"
             style={{
               background: "rgba(255,255,255,.16)",

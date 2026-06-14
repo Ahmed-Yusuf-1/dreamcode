@@ -1,0 +1,341 @@
+"use client";
+
+import { useState } from "react";
+import Link from "next/link";
+import Cloud from "@/components/Cloud";
+import CodeEditor from "@/components/CodeEditor";
+import EditorFrame, { ConsolePanel } from "@/components/EditorFrame";
+import DreamGuide from "@/components/DreamGuide";
+import { usePyodide } from "@/lib/usePyodide";
+import { cloudOpacity } from "@/lib/theme";
+import type { Lesson, LessonLink } from "@/lib/curriculum";
+import { addXP, completeStop } from "@/lib/profile";
+
+const cs = cloudOpacity.lesson;
+
+/** Renders text with a tiny **bold** syntax. */
+function Emphasis({ text }: { text: string }) {
+  const parts = text.split(/\*\*(.+?)\*\*/g);
+  return (
+    <>
+      {parts.map((part, i) =>
+        i % 2 === 1 ? (
+          <strong key={i} style={{ color: "#13335f" }}>
+            {part}
+          </strong>
+        ) : (
+          <span key={i}>{part}</span>
+        ),
+      )}
+    </>
+  );
+}
+
+export default function LessonView({
+  lesson,
+  total,
+  next,
+}: {
+  lesson: Lesson;
+  total: number;
+  next: LessonLink | null;
+}) {
+  const [code, setCode] = useState(lesson.starter);
+  const [output, setOutput] = useState<string[]>([]);
+  const [note, setNote] = useState<{ text: string; ok: boolean } | undefined>();
+  const [running, setRunning] = useState(false);
+  const py = usePyodide();
+
+  const run = async () => {
+    if (running) return;
+    setRunning(true);
+    setOutput([]);
+
+    if (lesson.language === "javascript") {
+      setNote({ text: "Running...", ok: true });
+      const logs: string[] = [];
+      const originalLog = console.log;
+      console.log = (...args) => {
+        logs.push(args.map(arg => typeof arg === 'object' ? JSON.stringify(arg) : String(arg)).join(" "));
+      };
+
+      try {
+        const fn = new Function(code);
+        fn();
+        setOutput(logs);
+        setNote({ text: logs.length ? "Done." : "Finished, with no output to show.", ok: true });
+      } catch (err) {
+        setOutput(logs);
+        const msg = err instanceof Error ? err.message : String(err);
+        setNote({ text: msg, ok: false });
+      } finally {
+        console.log = originalLog;
+        setRunning(false);
+      }
+      return;
+    }
+
+    setNote({
+      text: py.status === "ready" ? "Running..." : "Booting Python (first run only)...",
+      ok: true,
+    });
+
+    const res = await py.run(code);
+
+    setOutput(res.stdout);
+    if (res.ok) {
+      setNote({ text: res.stdout.length ? "Done." : "Finished, with no output to show.", ok: true });
+    } else {
+      const summary =
+        (res.error || "").trim().split("\n").filter(Boolean).pop() || "Something went wrong.";
+      setNote({ text: summary, ok: false });
+    }
+    setRunning(false);
+  };
+
+  const runLabel = running
+    ? lesson.language === "javascript"
+      ? "Running..."
+      : py.status === "ready"
+        ? "Running..."
+        : "Booting Python..."
+    : "▶ Run";
+
+  return (
+    <div
+      className="relative"
+      style={{
+        minHeight: "100vh",
+        background: "linear-gradient(180deg, #1a1c52 0%, #2b2c63 26%, #4c4096 62%, #8E95CE 100%)",
+      }}
+    >
+      <Cloud src="/assets/clouds-sunset/cutout-cloud-sunset-14.webp" speed={0.08} pos={{ right: "-3%", top: "2%" }} width="min(420px, 32vw)" opacity={0.8} duration={16} neon="magenta" scale={cs} />
+      <Cloud src="/assets/clouds-sunset/cutout-cloud-sunset-16.webp" speed={0.05} pos={{ left: "-4%", bottom: "4%" }} width="min(380px, 28vw)" opacity={0.75} duration={18} delay={2} scale={cs} />
+      <Cloud src="/assets/clouds-sunset/cutout-cloud-sunset-1-03.webp" speed={0.14} pos={{ left: "8%", top: "12%" }} width="min(260px, 22vw)" opacity={0.7} anim="floatySm" duration={9} delay={0.7} neon="cyan" scale={cs} />
+
+      {/* lesson top bar - sits just under the global nav */}
+      <div
+        className="sticky z-20 flex flex-wrap items-center justify-between backdrop-blur-lg"
+        style={{
+          top: "var(--nav-h)",
+          gap: 12,
+          padding: "12px clamp(16px, 4vw, 32px)",
+          background: "rgba(24,20,70,.55)",
+          borderBottom: "1px solid rgba(255,255,255,.18)",
+        }}
+      >
+        <Link
+          href="/journey"
+          className="cursor-pointer transition-colors hover:bg-white/30"
+          style={{
+            background: "rgba(255,255,255,.16)",
+            border: "1px solid rgba(255,255,255,.45)",
+            color: "#ffffff",
+            fontWeight: 900,
+            fontSize: 13,
+            padding: "8px 16px",
+            borderRadius: 999,
+          }}
+        >
+          {"\u2190"} Back to map
+        </Link>
+        <div className="flex items-center" style={{ gap: 14 }}>
+          <div className="font-display" style={{ fontWeight: 700, fontSize: 17, color: "#ffffff" }}>
+            {lesson.catalogTitle} {"\u00b7"} Lesson {lesson.order} of {total}
+          </div>
+          <div className="flex" style={{ gap: 6 }}>
+            {Array.from({ length: total }, (_, i) => i + 1).map((n) => (
+              <span
+                key={n}
+                style={{
+                  width: 10,
+                  height: 10,
+                  borderRadius: "50%",
+                  background: n <= lesson.order ? "#ff7ad9" : "rgba(255,255,255,.3)",
+                  boxShadow: n <= lesson.order ? "0 0 8px rgba(255,122,217,.8)" : undefined,
+                }}
+              />
+            ))}
+          </div>
+        </div>
+        <div
+          style={{
+            background: "#fff3c9",
+            color: "#7a5410",
+            fontWeight: 900,
+            fontSize: 13,
+            padding: "8px 16px",
+            borderRadius: 999,
+          }}
+        >
+          +15 XP on finish
+        </div>
+      </div>
+
+      <div
+        className="relative z-5 mx-auto grid items-start lg:grid-cols-2"
+        style={{ gap: 26, maxWidth: 1180, padding: "38px 32px 80px" }}
+      >
+        {/* left: teaching card */}
+        <div
+          style={{
+            background: "rgba(255,255,255,.93)",
+            backdropFilter: "blur(10px)",
+            border: "1px solid rgba(255,255,255,.8)",
+            borderRadius: 24,
+            boxShadow: "0 0 34px rgba(255,150,220,.18), 0 24px 56px rgba(10,8,40,.45)",
+            padding: "36px 38px",
+          }}
+        >
+          <span
+            style={{
+              background: "#d9f5e6",
+              color: "#0f5c38",
+              fontWeight: 900,
+              fontSize: 12,
+              letterSpacing: 0.8,
+              padding: "6px 14px",
+              borderRadius: 999,
+            }}
+          >
+            {lesson.kicker}
+          </span>
+          <h2 className="font-display" style={{ fontWeight: 800, fontSize: 36, color: "#13335f", margin: "18px 0 12px" }}>
+            {lesson.title}
+          </h2>
+          <p style={{ fontSize: 16, lineHeight: 1.7, color: "#41608f", fontWeight: 600, margin: "0 0 22px", textWrap: "pretty" }}>
+            <Emphasis text={lesson.intro} />
+          </p>
+
+          {/* worked example, read-only with real highlighting */}
+          <div
+            style={{ background: "#0e2247", borderRadius: 16, padding: "10px 8px", marginBottom: 22 }}
+          >
+            <CodeEditor value={lesson.example} language={lesson.language === "javascript" ? "javascript" : "python"} readOnly lineNumbers={false} minHeight="0px" />
+          </div>
+
+          <div className="font-display" style={{ fontWeight: 700, fontSize: 18, color: "#13335f", marginBottom: 12 }}>
+            How it reads
+          </div>
+          <div className="flex flex-col" style={{ gap: 12, marginBottom: 24 }}>
+            {lesson.reads.map((row, i) => (
+              <div key={i} className="flex items-start" style={{ gap: 12 }}>
+                <span style={{ flexShrink: 0, width: 10, height: 10, borderRadius: "50%", background: row.dot, marginTop: 6 }} />
+                <span style={{ fontSize: 15, fontWeight: 600, color: "#41608f", lineHeight: 1.6 }}>
+                  <Emphasis text={row.text} />
+                </span>
+              </div>
+            ))}
+          </div>
+
+          <div
+            className="flex items-center"
+            style={{ gap: 14, background: "#fff8e3", borderRadius: 16, padding: "16px 18px" }}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/assets/clouds-sunset/cutout-cloud-sunset-1-01.webp"
+              alt=""
+              style={{ display: "block", flexShrink: 0, width: 54, height: "auto" }}
+            />
+            <div style={{ fontSize: 14, fontWeight: 700, color: "#7a5410", lineHeight: 1.6 }}>
+              <strong>Cloud tip:</strong> <Emphasis text={lesson.tip} />
+            </div>
+          </div>
+        </div>
+
+        {/* right: editor */}
+        <div className="flex flex-col lg:sticky" style={{ gap: 18, top: "calc(var(--nav-h) + 64px)" }}>
+          <EditorFrame
+            filename={lesson.language === "javascript" ? "index.js" : "main.py"}
+            language={lesson.language === "javascript" ? "JAVASCRIPT" : "PYTHON"}
+            footer={
+              <div className="flex items-center justify-between" style={{ padding: "0 18px 16px", gap: 12 }}>
+                <span
+                  className="font-mono"
+                  style={{ fontSize: 11, fontWeight: 600, color: "#9db8e8", letterSpacing: 0.3 }}
+                >
+                  {lesson.language === "javascript"
+                    ? "real JavaScript, runs in your browser"
+                    : py.status === "error"
+                      ? "could not load Python"
+                      : "real Python, runs in your browser"}
+                </span>
+                <button
+                  onClick={run}
+                  disabled={running}
+                  className="font-display transition-transform hover:-translate-y-0.5"
+                  style={{
+                    border: "none",
+                    background: running ? "#7fc7a4" : "#a9ecc9",
+                    color: "#0f5c38",
+                    fontWeight: 800,
+                    fontSize: 15,
+                    padding: "10px 26px",
+                    borderRadius: 999,
+                    boxShadow: "0 10px 24px rgba(40,150,90,.35)",
+                    cursor: running ? "wait" : "pointer",
+                    opacity: running ? 0.85 : 1,
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {runLabel}
+                </button>
+              </div>
+            }
+          >
+            <div style={{ padding: "10px 8px 6px" }}>
+              <CodeEditor value={code} onChange={setCode} language={lesson.language === "javascript" ? "javascript" : "python"} minHeight="180px" />
+            </div>
+          </EditorFrame>
+
+          <ConsolePanel lines={output} note={note} />
+
+          <div className="flex flex-wrap justify-end" style={{ gap: 12 }}>
+            {lesson.practiceSlug && (
+              <Link
+                href={`/practice/${lesson.practiceSlug}`}
+                className="font-display cursor-pointer backdrop-blur-sm transition-colors hover:bg-[rgba(110,230,255,.22)]"
+                style={{
+                  background: "rgba(24,22,60,.4)",
+                  border: "2px solid rgba(150,245,255,.85)",
+                  color: "#eefcff",
+                  fontWeight: 700,
+                  fontSize: 16,
+                  padding: "12px 24px",
+                  borderRadius: 999,
+                  boxShadow: "0 0 16px rgba(110,230,255,.35)",
+                }}
+              >
+                Practice this {"\u2192"}
+              </Link>
+            )}
+            <Link
+              href={next ? `/lesson/${next.slug}` : "/journey"}
+              onClick={() => {
+                addXP(15);
+                completeStop(lesson.slug);
+              }}
+              className="font-display cursor-pointer transition-transform hover:-translate-y-0.5"
+              style={{
+                border: "none",
+                background: "linear-gradient(135deg, #ff7ad9, #ff4fb0)",
+                color: "#ffffff",
+                fontWeight: 800,
+                fontSize: 16,
+                padding: "12px 26px",
+                borderRadius: 999,
+                boxShadow: "0 0 24px rgba(255,100,200,.55), 0 14px 30px rgba(20,10,50,.45)",
+              }}
+            >
+              {next ? `Next: ${next.title} \u2192` : "Finish chapter \u2192"}
+            </Link>
+          </div>
+        </div>
+      </div>
+
+      <DreamGuide />
+    </div>
+  );
+}
+

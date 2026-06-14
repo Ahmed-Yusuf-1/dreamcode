@@ -115,7 +115,7 @@ export default function AuthScene({ mode }: { mode: "login" | "signup" }) {
               boxShadow: "0 0 26px rgba(255,100,200,.55), 0 14px 32px rgba(40,16,60,.4)",
             }}
           >
-            {isSignup ? "Start the night drive →" : "Sign in →"}
+            {isSignup ? "Start the night drive \u2192" : "Sign in \u2192"}
           </button>
 
           <div className="flex items-center" style={{ gap: 12, margin: "18px 0" }}>
@@ -178,7 +178,7 @@ export default function AuthScene({ mode }: { mode: "login" | "signup" }) {
         </div>
         <div className="text-center" style={{ marginTop: 10 }}>
           <Link href="/" style={{ fontSize: 13, fontWeight: 800, color: "rgba(255,255,255,.75)" }}>
-            ← Back home
+            {"\u2190"} Back home
           </Link>
         </div>
       </div>

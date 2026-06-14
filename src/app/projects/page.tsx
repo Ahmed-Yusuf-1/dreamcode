@@ -4,6 +4,11 @@ import { cloudOpacity } from "@/lib/theme";
 import SceneTopBar, { GlassPill } from "@/components/SceneTopBar";
 import { projects } from "@/lib/data";
 
+export const metadata = {
+  title: "Projects - dreamcode",
+  description: "Guided, Independent, and Capstone projects. Apply your programming skills on real applications.",
+};
+
 const TIERS = [
   { name: "Guided", blurb: "We sketch the rooms, you build the house. Step-by-step, but every line is yours." },
   { name: "Independent", blurb: "A goal and a test suite - the plan, the code and the bugs are all yours." },
@@ -105,7 +110,7 @@ export default function ProjectsPage() {
                         {p.desc}
                       </p>
                       <div style={{ marginTop: 12, fontSize: 12, fontWeight: 900, color: locked ? "rgba(255,255,255,.65)" : "#ffe7f4" }}>
-                        {locked ? "Locked · unlocks further down the road" : p.state === "current" ? "In progress · open the workshop →" : "Start building →"}
+                        {locked ? "Locked \u00b7 unlocks further down the road" : p.state === "current" ? "In progress \u00b7 open the workshop \u2192" : "Start building \u2192"}
                       </div>
                     </div>
                   );
