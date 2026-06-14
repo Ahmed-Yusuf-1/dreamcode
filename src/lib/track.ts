@@ -1,0 +1,43 @@
+"use client";
+
+import { useState, useEffect } from "react";
+
+export type Track = "python" | "javascript";
+
+/**
+ * Persists and synchronizes the active curriculum track (Python vs JavaScript)
+ * across the frontend client using localStorage and custom event triggers.
+ * Prevents hydration mismatches by initializing to Python and updating in useEffect.
+ */
+export function useActiveTrack() {
+  const [track, setTrack] = useState<Track>("python");
+
+  useEffect(() => {
+    const saved = localStorage.getItem("dc_active_track") as Track;
+    if (saved === "python" || saved === "javascript") {
+      setTimeout(() => {
+        setTrack(saved);
+      }, 0);
+    }
+  }, []);
+
+  const changeTrack = (newTrack: Track) => {
+    setTrack(newTrack);
+    localStorage.setItem("dc_active_track", newTrack);
+    // Dispatch global event so all components update concurrently
+    window.dispatchEvent(new Event("dc_track_change"));
+  };
+
+  useEffect(() => {
+    const handleEvent = () => {
+      const saved = localStorage.getItem("dc_active_track") as Track;
+      if (saved === "python" || saved === "javascript") {
+        setTrack(saved);
+      }
+    };
+    window.addEventListener("dc_track_change", handleEvent);
+    return () => window.removeEventListener("dc_track_change", handleEvent);
+  }, []);
+
+  return { track, setTrack: changeTrack };
+}
