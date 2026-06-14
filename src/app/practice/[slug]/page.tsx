@@ -1,18 +1,29 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, use } from "react";
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import Cloud from "@/components/Cloud";
 import { cloudOpacity } from "@/lib/theme";
 import DreamGuide from "@/components/DreamGuide";
-import { parsonsLoops, fadedLoops, predictLoops } from "@/lib/data";
+import { practiceDatasets, PracticeDataset } from "@/lib/data";
+import { addXP, unlockBadge, completeStop } from "@/lib/profile";
+import { playChime } from "@/lib/sound";
 
 type Step = 0 | 1 | 2 | 3;
 const STEP_LABELS = ["Predict", "Arrange", "Fill in", "Done"];
 
 const cs = cloudOpacity.practice;
-export default function LoopsPracticePage() {
+
+export default function PracticePage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = use(params);
+  const data = practiceDatasets[slug];
+  if (!data) notFound();
+
   const [step, setStep] = useState<Step>(0);
+
+  // Determine back href based on slug
+  const backHref = slug === "loops" ? "/lesson/loops" : `/lesson/${slug}`;
 
   return (
     <div
@@ -32,7 +43,7 @@ export default function LoopsPracticePage() {
         style={{ top: "var(--nav-h)", gap: 12, padding: "12px clamp(16px, 4vw, 32px)", background: "rgba(24,20,70,.55)", borderBottom: "1px solid rgba(255,255,255,.18)" }}
       >
         <Link
-          href="/lesson/loops"
+          href={backHref}
           className="cursor-pointer transition-colors hover:bg-white/30"
           style={{
             background: "rgba(255,255,255,.16)",
@@ -44,11 +55,11 @@ export default function LoopsPracticePage() {
             borderRadius: 999,
           }}
         >
-          ← Back to lesson
+          {"\u2190"} Back to lesson
         </Link>
         <div className="flex items-center" style={{ gap: 14 }}>
           <div className="font-display" style={{ fontWeight: 700, fontSize: 17, color: "#ffffff" }}>
-            Practice · Loops
+            Practice {"\u00b7"} {slug.charAt(0).toUpperCase() + slug.slice(1)}
           </div>
           <div className="flex items-center" style={{ gap: 6 }}>
             {STEP_LABELS.slice(0, 3).map((label, i) => (
@@ -80,10 +91,10 @@ export default function LoopsPracticePage() {
       </div>
 
       <div className="relative z-5 mx-auto" style={{ maxWidth: 760, padding: "40px 28px 90px" }}>
-        {step === 0 && <PredictStep onDone={() => setStep(1)} />}
-        {step === 1 && <ParsonsStep onDone={() => setStep(2)} />}
-        {step === 2 && <FadedStep onDone={() => setStep(3)} />}
-        {step === 3 && <DoneStep />}
+        {step === 0 && <PredictStep data={data} onDone={() => setStep(1)} />}
+        {step === 1 && <ParsonsStep data={data} onDone={() => setStep(2)} />}
+        {step === 2 && <FadedStep data={data} onDone={() => setStep(3)} />}
+        {step === 3 && <DoneStep slug={slug} />}
       </div>
 
       <DreamGuide />
@@ -127,7 +138,7 @@ function PracticeCard({ kicker, title, children }: { kicker: string; title: stri
   );
 }
 
-function NextButton({ onClick, label = "Next →" }: { onClick: () => void; label?: string }) {
+function NextButton({ onClick, label = "Next \u2192" }: { onClick: () => void; label?: string }) {
   return (
     <button
       onClick={onClick}
@@ -170,23 +181,26 @@ function CodeBlock({ code }: { code: string }) {
 
 /* ---------- step 1: predict (read before write) ---------- */
 
-function PredictStep({ onDone }: { onDone: () => void }) {
+function PredictStep({ data, onDone }: { data: PracticeDataset; onDone: () => void }) {
   const [picked, setPicked] = useState<string | null>(null);
-  const chosen = predictLoops.options.find((o) => o.id === picked);
+  const chosen = data.predictOptions.find((o) => o.id === picked);
 
   return (
-    <PracticeCard kicker="PREDICT · READ BEFORE YOU WRITE" title={predictLoops.question}>
+    <PracticeCard kicker="PREDICT · READ BEFORE YOU WRITE" title={data.predictQuestion}>
       <p style={{ fontSize: 15, fontWeight: 600, color: "#41608f", margin: "0 0 16px", lineHeight: 1.6 }}>
         Read the program like the computer would, then call the output before you run anything.
       </p>
-      <CodeBlock code={predictLoops.code} />
+      <CodeBlock code={data.predictCode} />
       <div className="flex flex-col" style={{ gap: 10 }}>
-        {predictLoops.options.map((o) => {
+        {data.predictOptions.map((o) => {
           const isPicked = picked === o.id;
           return (
             <button
               key={o.id}
-              onClick={() => setPicked(o.id)}
+              onClick={() => {
+                setPicked(o.id);
+                if (o.correct) playChime("correct");
+              }}
               className="cursor-pointer text-left transition-colors"
               style={{
                 background: isPicked ? (o.correct ? "#effaf3" : "#fdeff3") : "#f3f7fc",
@@ -220,8 +234,8 @@ function PredictStep({ onDone }: { onDone: () => void }) {
 
 /* ---------- step 2: Parsons problem (arrange the fragments) ---------- */
 
-function ParsonsStep({ onDone }: { onDone: () => void }) {
-  const correct = parsonsLoops.fragments;
+function ParsonsStep({ data, onDone }: { data: PracticeDataset; onDone: () => void }) {
+  const correct = data.parsonsFragments;
   const [tray, setTray] = useState(() =>
     [...correct].sort(() => 0.5 - Math.random()).map((f) => f.id),
   );
@@ -243,7 +257,10 @@ function ParsonsStep({ onDone }: { onDone: () => void }) {
   const check = () => {
     const ok = solution.length === correct.length && solution.every((id, i) => id === correct[i].id);
     setChecked(ok);
-    if (ok) setTimeout(onDone, 1200);
+    if (ok) {
+      playChime("correct");
+      setTimeout(onDone, 1200);
+    }
   };
 
   const chipStyle = (indent: number): React.CSSProperties => ({
@@ -262,7 +279,7 @@ function ParsonsStep({ onDone }: { onDone: () => void }) {
   return (
     <PracticeCard kicker="ARRANGE · LOGIC BEFORE SYNTAX" title="Build the program from its pieces">
       <p style={{ fontSize: 15, fontWeight: 600, color: "#41608f", margin: "0 0 18px", lineHeight: 1.6 }}>
-        {parsonsLoops.prompt} Tap a piece to place it; tap again to take it back.
+        {data.prompt} Tap a piece to place it; tap again to take it back.
       </p>
 
       <div style={{ fontSize: 12, fontWeight: 900, letterSpacing: 0.8, color: "#7b93b8", marginBottom: 8 }}>YOUR PROGRAM</div>
@@ -301,12 +318,12 @@ function ParsonsStep({ onDone }: { onDone: () => void }) {
 
       {checked === false && (
         <div style={{ color: "#a13163", fontWeight: 700, fontSize: 14, marginBottom: 14 }}>
-          ✗ Not quite - which line has to exist before the loop can visit it?
+          ✗ Not quite - try matching the logic from the lessons.
         </div>
       )}
       {checked === true && (
         <div style={{ color: "#0f8a52", fontWeight: 700, fontSize: 14, marginBottom: 14 }}>
-          ✓ That&apos;s the shape - list first, loop second, work inside.
+          ✓ That&apos;s the shape - order and indentations match perfectly!
         </div>
       )}
 
@@ -319,33 +336,36 @@ function ParsonsStep({ onDone }: { onDone: () => void }) {
 
 /* ---------- step 3: faded example (fill the blanks) ---------- */
 
-function FadedStep({ onDone }: { onDone: () => void }) {
-  const allBlanks = fadedLoops.lines.flatMap((l) => l.blanks);
+function FadedStep({ data, onDone }: { data: PracticeDataset; onDone: () => void }) {
+  const allBlanks = data.fadedLines.flatMap((l) => l.blanks);
   const [values, setValues] = useState<string[]>(allBlanks.map(() => ""));
   const [checked, setChecked] = useState<null | boolean>(null);
 
   const check = () => {
     const ok = allBlanks.every((b, i) => values[i].trim().toLowerCase() === b.toLowerCase());
     setChecked(ok);
-    if (ok) setTimeout(onDone, 1200);
+    if (ok) {
+      playChime("correct");
+      setTimeout(onDone, 1200);
+    }
   };
 
   // index of each line's first blank within the flat allBlanks array
-  const lineOffsets = fadedLoops.lines.map((_, li) =>
-    fadedLoops.lines.slice(0, li).reduce((n, l) => n + l.blanks.length, 0),
+  const lineOffsets = data.fadedLines.map((_, li) =>
+    data.fadedLines.slice(0, li).reduce((n, l) => n + l.blanks.length, 0),
   );
 
   return (
     <PracticeCard kicker="FILL IN · THE SCAFFOLD FADES" title="Finish the faded program">
       <p style={{ fontSize: 15, fontWeight: 600, color: "#41608f", margin: "0 0 18px", lineHeight: 1.6 }}>
-        {fadedLoops.prompt}
+        {data.fadedPrompt}
       </p>
 
       <div
         className="font-mono"
         style={{ background: "#0e2247", borderRadius: 16, padding: "18px 20px", fontSize: 14, lineHeight: 2.4, color: "#dbe9ff", marginBottom: 18 }}
       >
-        {fadedLoops.lines.map((line, li) => {
+        {data.fadedLines.map((line, li) => {
           const parts = line.text.split("___");
           return (
             <div key={li} style={{ whiteSpace: "pre" }}>
@@ -386,11 +406,11 @@ function FadedStep({ onDone }: { onDone: () => void }) {
 
       {checked === false && (
         <div style={{ color: "#a13163", fontWeight: 700, fontSize: 14, marginBottom: 14 }}>
-          ✗ Run it in your head - how many numbers does your range give?
+          ✗ Not quite - verify the syntax and spelling of your inputs.
         </div>
       )}
       {checked === true && (
-        <div style={{ color: "#0f8a52", fontWeight: 700, fontSize: 14, marginBottom: 14 }}>✓ {fadedLoops.explain}</div>
+        <div style={{ color: "#0f8a52", fontWeight: 700, fontSize: 14, marginBottom: 14 }}>✓ {data.fadedExplain}</div>
       )}
 
       <div className="flex justify-end">
@@ -402,7 +422,14 @@ function FadedStep({ onDone }: { onDone: () => void }) {
 
 /* ---------- step 4: done ---------- */
 
-function DoneStep() {
+function DoneStep({ slug }: { slug: string }) {
+  useEffect(() => {
+    addXP(20);
+    completeStop(`practice:${slug}`);
+    unlockBadge("first-loop");
+    playChime("success");
+  }, [slug]);
+
   return (
     <div className="anim-pop-in text-center" style={{ padding: "30px 0" }}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -440,7 +467,7 @@ function DoneStep() {
             boxShadow: "0 0 16px rgba(110,230,255,.35)",
           }}
         >
-          Climb a peak →
+          Climb a peak {"\u2192"}
         </Link>
         <Link
           href="/journey"

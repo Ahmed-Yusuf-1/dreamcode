@@ -1,12 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import Cloud from "@/components/Cloud";
 import { cloudOpacity } from "@/lib/theme";
 import SceneTopBar, { GlassPill } from "@/components/SceneTopBar";
 import StreakFlame from "@/components/StreakFlame";
-import { user } from "@/lib/data";
+import { useUserProfile } from "@/lib/profile";
+import { badges } from "@/lib/data";
+import { useActiveTrack } from "@/lib/track";
 
 function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void }) {
   return (
@@ -43,9 +45,12 @@ function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void 
 
 const cs = cloudOpacity.profile;
 export default function ProfilePage() {
-  const [guideOn, setGuideOn] = useState(true);
-  const [remindersOn, setRemindersOn] = useState(true);
-  const [soundsOn, setSoundsOn] = useState(false);
+  const { profile, updateProfile } = useUserProfile();
+  const { track, setTrack } = useActiveTrack();
+
+  useEffect(() => {
+    document.title = "Profile - dreamcode";
+  }, []);
 
   return (
     <div
@@ -59,7 +64,7 @@ export default function ProfilePage() {
       <Cloud src="/assets/clouds-sunset/cutout-cloud-sunset-1-01.webp" speed={0.14} pos={{ left: "-3%", bottom: "8%" }} width="min(300px, 24vw)" opacity={0.6} anim="floatySm" duration={10} delay={0.8} scale={cs} />
       <Cloud src="/assets/clouds-sunset/cutout-cloud-sunset-15.webp" speed={0.1} pos={{ left: "-4%", top: "30%" }} width="min(260px, 22vw)" opacity={0.55} duration={12} delay={0.5} neon="cyan" scale={cs} />
 
-      <SceneTopBar back={{ href: "/dashboard", label: "← Dashboard" }} right={<GlassPill href="/login">Sign out</GlassPill>} />
+      <SceneTopBar back={{ href: "/dashboard", label: "\u2190 Dashboard" }} right={<GlassPill href="/login">Sign out</GlassPill>} />
 
       <div className="relative z-5 mx-auto" style={{ maxWidth: 640, padding: "3vh 28px 90px" }}>
         {/* identity card */}
@@ -78,24 +83,24 @@ export default function ProfilePage() {
               boxShadow: "0 0 30px rgba(255,170,230,.5)",
             }}
           >
-            {user.initial}
+            {profile.initial}
           </div>
           <div className="font-display" style={{ fontWeight: 800, fontSize: 28, color: "#ffffff", marginTop: 14, textShadow: "0 2px 12px rgba(20,16,50,.6)" }}>
-            {user.name}
+            {profile.name}
           </div>
           <div style={{ fontSize: 14, fontWeight: 700, color: "rgba(255,255,255,.85)", marginTop: 2 }}>
-            Level {user.level} · night driver since June 2026
+            Level {profile.level} {"\u00b7"} night driver since June 2026
           </div>
           <div className="flex justify-center" style={{ gap: 12, marginTop: 18 }}>
             <div className="flex items-center" style={{ gap: 7, background: "rgba(255,255,255,.92)", padding: "7px 14px", borderRadius: 999 }}>
               <StreakFlame />
-              <span style={{ fontWeight: 900, fontSize: 13, color: "#9c4a14" }}>{user.streak}-day streak</span>
+              <span style={{ fontWeight: 900, fontSize: 13, color: "#9c4a14" }}>{profile.streak}-day streak</span>
             </div>
             <div style={{ background: "rgba(255,255,255,.92)", padding: "7px 14px", borderRadius: 999, fontWeight: 900, fontSize: 13, color: "#5b4a8a" }}>
-              {user.badgesFound} badges
+              {profile.unlockedBadges.length} badges
             </div>
             <div style={{ background: "rgba(255,255,255,.92)", padding: "7px 14px", borderRadius: 999, fontWeight: 900, fontSize: 13, color: "#13335f" }}>
-              {user.xp} XP
+              {(profile.level - 4) * 800 + profile.xp + 540} XP
             </div>
           </div>
         </div>
@@ -114,7 +119,7 @@ export default function ProfilePage() {
                 optional; everything works with it off.
               </div>
             </div>
-            <Toggle on={guideOn} onChange={setGuideOn} />
+            <Toggle on={profile.guideEnabled} onChange={(v) => updateProfile({ guideEnabled: v })} />
           </div>
 
           <div className="flex items-center justify-between" style={{ gap: 16, marginBottom: 18 }}>
@@ -124,7 +129,7 @@ export default function ProfilePage() {
                 A gentle nudge when memories drift back and your streak is at risk.
               </div>
             </div>
-            <Toggle on={remindersOn} onChange={setRemindersOn} />
+            <Toggle on={profile.remindersEnabled} onChange={(v) => updateProfile({ remindersEnabled: v })} />
           </div>
 
           <div className="flex items-center justify-between" style={{ gap: 16 }}>
@@ -134,7 +139,7 @@ export default function ProfilePage() {
                 Soft chimes for passing tests and earning badges.
               </div>
             </div>
-            <Toggle on={soundsOn} onChange={setSoundsOn} />
+            <Toggle on={profile.soundsEnabled} onChange={(v) => updateProfile({ soundsEnabled: v })} />
           </div>
         </div>
 
@@ -144,35 +149,42 @@ export default function ProfilePage() {
             Your track
           </div>
           <div className="flex" style={{ gap: 10 }}>
-            <span
+            <button
+              onClick={() => setTrack("python")}
               style={{
-                background: "#ffffff",
-                color: "#13335f",
+                background: track === "python" ? "#ffffff" : "rgba(255,255,255,.12)",
+                border: track === "python" ? "2px solid #ffffff" : "2px solid rgba(255,255,255,.3)",
+                color: track === "python" ? "#13335f" : "rgba(255,255,255,.85)",
                 fontWeight: 900,
                 fontSize: 13,
                 padding: "9px 18px",
                 borderRadius: 999,
+                cursor: "pointer",
+                transition: "all .2s ease",
               }}
             >
-              Python, Chapter 1
-            </span>
-            <span
+              Python (Basics)
+            </button>
+            <button
+              onClick={() => setTrack("javascript")}
               style={{
-                background: "rgba(255,255,255,.18)",
-                border: "1px solid rgba(255,255,255,.4)",
-                color: "rgba(255,255,255,.85)",
+                background: track === "javascript" ? "#ffffff" : "rgba(255,255,255,.12)",
+                border: track === "javascript" ? "2px solid #ffffff" : "2px solid rgba(255,255,255,.3)",
+                color: track === "javascript" ? "#13335f" : "rgba(255,255,255,.85)",
                 fontWeight: 900,
                 fontSize: 13,
                 padding: "9px 18px",
                 borderRadius: 999,
+                cursor: "pointer",
+                transition: "all .2s ease",
               }}
             >
-              JavaScript, coming soon
-            </span>
+              JavaScript (Climbs)
+            </button>
           </div>
           <div style={{ marginTop: 14, fontSize: 13, fontWeight: 600, color: "rgba(255,255,255,.8)", lineHeight: 1.6 }}>
             Not sure where you belong?{" "}
-            <Link href="/journey" className="underline" style={{ color: "#ffd9ef", fontWeight: 800 }}>
+            <Link href="/placement" className="underline" style={{ color: "#ffd9ef", fontWeight: 800 }}>
               Take the placement flight
             </Link>{" "}
             and we&apos;ll drop you at the right stop.

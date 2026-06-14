@@ -4,13 +4,19 @@ import { cloudOpacity } from "@/lib/theme";
 import StreakFlame from "@/components/StreakFlame";
 import { peaks, user } from "@/lib/data";
 
+export const metadata = {
+  title: "Problem Peaks - dreamcode",
+  description: "Standalone climbs for the skills you've learned. Each peak is a real problem with real tests - no rails, just your plan and the night sky.",
+};
+
 const cs = cloudOpacity.peaks;
 export default function PeaksPage() {
   return (
     <div
-      className="relative overflow-hidden"
+      className="relative"
       style={{
         minHeight: "100vh",
+        overflowX: "clip",
         background:
           "linear-gradient(180deg, #1a1c52 0%, #38357e 26%, #6e5fae 52%, #b58fc6 76%, #f0aabe 100%)",
       }}
@@ -19,6 +25,9 @@ export default function PeaksPage() {
       <Cloud src="/assets/clouds-sunset/cutout-cloud-sunset-13.webp" speed={0.11} pos={{ right: "-5%", top: "30%" }} width="min(380px, 30vw)" opacity={0.8} duration={12} delay={1.1} scale={cs} />
       <Cloud src="/assets/clouds-sunset/cutout-cloud-sunset-15.webp" speed={0.09} pos={{ right: "1%", bottom: "12%" }} width="min(300px, 24vw)" opacity={0.7} duration={13} delay={0.7} neon="cyan" scale={cs} />
       <Cloud src="/assets/clouds-sunset/cutout-cloud-sunset-1-02.webp" speed={0.18} pos={{ left: "2%", bottom: "8%" }} width="min(320px, 26vw)" opacity={0.8} anim="floatySm" duration={10} delay={0.4} scale={cs} />
+
+      {/* spacer to clear the fixed global nav */}
+      <div style={{ height: "var(--nav-h)" }} />
 
       {/* HUD - sits just under the global nav */}
       <div
@@ -161,7 +170,7 @@ export default function PeaksPage() {
                     ? "Locked · climb the earlier peaks first"
                     : peak.state === "done"
                       ? "Summited · climb again?"
-                      : "Ready to climb →"}
+                      : "Ready to climb \u2192"}
                 </div>
               </div>
             );

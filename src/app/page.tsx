@@ -183,7 +183,7 @@ export default function Home() {
             className="font-display"
             style={{ fontWeight: 800, fontSize: 17, color: "#ffffff", marginTop: 3, textShadow: "0 1px 10px rgba(20,16,50,.6)" }}
           >
-            Loops · Lesson 3 of 5 →
+            Loops {"\u00b7"} Lesson 3 of 5 {"\u2192"}
           </div>
         </Link>
 
@@ -314,7 +314,7 @@ export default function Home() {
                   </div>
                   <div className="font-display" style={{ fontWeight: 800, fontSize: 20, color: "#ffffff", margin: "6px 0 6px" }}>
                     {s.name}
-                    {i < 3 && <span style={{ color: "rgba(255,255,255,.5)", marginLeft: 8 }}>→</span>}
+                    {i < 3 && <span style={{ color: "rgba(255,255,255,.5)", marginLeft: 8 }}>{"\u2192"}</span>}
                   </div>
                   <p style={{ fontSize: 14, fontWeight: 600, color: "rgba(255,255,255,.88)", lineHeight: 1.6, margin: 0 }}>{s.body}</p>
                 </div>
@@ -458,7 +458,7 @@ export default function Home() {
                 boxShadow: "0 0 24px rgba(255,255,255,.45), 0 14px 32px rgba(40,30,80,.35)",
               }}
             >
-              See the collection →
+              See the collection {"\u2192"}
             </Link>
           </div>
         </section>
@@ -491,7 +491,7 @@ export default function Home() {
                   boxShadow: "0 0 30px rgba(255,100,200,.7), 0 18px 40px rgba(20,10,50,.5)",
                 }}
               >
-                Start free tonight →
+                Start free tonight {"\u2192"}
               </Link>
               <Link
                 href="/lessons"
