@@ -7,6 +7,7 @@ import { cloudOpacity } from "@/lib/theme";
 import CodeEditor from "@/components/CodeEditor";
 import EditorFrame, { ConsolePanel } from "@/components/EditorFrame";
 import DreamGuide from "@/components/DreamGuide";
+import { usePyodide } from "@/lib/usePyodide";
 
 const STARTER = `# hop across every cloud in the sky
 sky = ["cumulus", "cirrus", "stratus"]
@@ -14,46 +15,42 @@ sky = ["cumulus", "cirrus", "stratus"]
 for cloud in sky:
     print("hop →", cloud)`;
 
-/**
- * Frontend-only "interpreter": handles the lesson's print-over-a-list shape so
- * the Run button feels alive. Real execution arrives with Pyodide/MicroPython.
- */
-function pretendRun(code: string): { lines: string[]; ok: boolean; note: string } {
-  if (!/for\s+\w+\s+in\s+/.test(code)) {
-    return { lines: [], ok: false, note: "✗ Hmm - no loop found. Try `for cloud in sky:`" };
-  }
-  const listMatch = code.match(/=\s*\[([^\]]*)\]/);
-  const items = listMatch
-    ? listMatch[1]
-        .split(",")
-        .map((s) => s.trim().replace(/^["']|["']$/g, ""))
-        .filter(Boolean)
-    : [];
-  const printMatch = code.match(/print\(\s*["']([^"']*)["']\s*(?:,\s*(\w+))?\s*\)/);
-  if (!printMatch) {
-    return { lines: [], ok: false, note: "✗ The loop runs, but nothing is printed inside it." };
-  }
-  const label = printMatch[1];
-  const usesVar = Boolean(printMatch[2]);
-  const lines = items.map((it) => (usesVar ? `${label} ${it}` : label));
-  return {
-    lines,
-    ok: true,
-    note: `✓ The loop ran ${items.length} times - once per cloud.`,
-  };
-}
-
 const cs = cloudOpacity.lesson;
 export default function LoopsLessonPage() {
   const [code, setCode] = useState(STARTER);
   const [output, setOutput] = useState<string[]>([]);
   const [note, setNote] = useState<{ text: string; ok: boolean } | undefined>();
+  const [running, setRunning] = useState(false);
+  const py = usePyodide();
 
-  const run = () => {
-    const res = pretendRun(code);
-    setOutput(res.lines);
-    setNote({ text: res.note, ok: res.ok });
+  const run = async () => {
+    if (running) return;
+    setRunning(true);
+    setOutput([]);
+    setNote({
+      text: py.status === "ready" ? "Running..." : "Booting Python (first run only)...",
+      ok: true,
+    });
+
+    const res = await py.run(code);
+
+    setOutput(res.stdout);
+    if (res.ok) {
+      setNote({ text: res.stdout.length ? "Done." : "Finished, with no output to show.", ok: true });
+    } else {
+      // Show the most useful line of the error (the last line of the traceback).
+      const summary =
+        (res.error || "").trim().split("\n").filter(Boolean).pop() || "Something went wrong.";
+      setNote({ text: summary, ok: false });
+    }
+    setRunning(false);
   };
+
+  const runLabel = running
+    ? py.status === "ready"
+      ? "Running..."
+      : "Booting Python..."
+    : "▶ Run";
 
   return (
     <div
@@ -225,22 +222,34 @@ export default function LoopsLessonPage() {
             filename="main.py"
             language="PYTHON"
             footer={
-              <div className="flex justify-end" style={{ padding: "0 18px 16px" }}>
+              <div className="flex items-center justify-between" style={{ padding: "0 18px 16px", gap: 12 }}>
+                <span
+                  className="font-mono"
+                  style={{ fontSize: 11, fontWeight: 600, color: "#9db8e8", letterSpacing: 0.3 }}
+                >
+                  {py.status === "error"
+                    ? "could not load Python"
+                    : "real Python, runs in your browser"}
+                </span>
                 <button
                   onClick={run}
-                  className="font-display cursor-pointer transition-transform hover:-translate-y-0.5"
+                  disabled={running}
+                  className="font-display transition-transform hover:-translate-y-0.5"
                   style={{
                     border: "none",
-                    background: "#a9ecc9",
+                    background: running ? "#7fc7a4" : "#a9ecc9",
                     color: "#0f5c38",
                     fontWeight: 800,
                     fontSize: 15,
                     padding: "10px 26px",
                     borderRadius: 999,
                     boxShadow: "0 10px 24px rgba(40,150,90,.35)",
+                    cursor: running ? "wait" : "pointer",
+                    opacity: running ? 0.85 : 1,
+                    whiteSpace: "nowrap",
                   }}
                 >
-                  ▶ Run
+                  {runLabel}
                 </button>
               </div>
             }
