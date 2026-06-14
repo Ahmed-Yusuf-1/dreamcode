@@ -7,10 +7,12 @@ import SceneTopBar, { GlassPill } from "@/components/SceneTopBar";
 import { lessons } from "@/lib/curriculum";
 import { gradientOpacity, cloudOpacity } from "@/lib/theme";
 import { useActiveTrack } from "@/lib/track";
+import { useUserProfile } from "@/lib/profile";
 
 const cs = cloudOpacity.lessons;
 export default function LessonsPage() {
   const { track, setTrack } = useActiveTrack();
+  const { profile } = useUserProfile();
   const filteredLessons = lessons.filter(
     (lesson) => (lesson.language || "python") === track
   );
@@ -141,16 +143,20 @@ export default function LessonsPage() {
                 STOP {String(lesson.order).padStart(2, "0")}
               </div>
               <div
-                className="font-display"
+                className="font-display flex items-center"
                 style={{
                   fontWeight: 800,
                   fontSize: 23,
                   color: "#ffffff",
                   margin: "8px 0 6px",
                   textShadow: "0 2px 12px rgba(60,60,130,.5)",
+                  gap: 8,
                 }}
               >
-                {lesson.catalogTitle}
+                {profile.completedStops?.includes(lesson.slug) && (
+                  <span style={{ color: "#a9ecc9", textShadow: "0 0 8px rgba(169,236,201,.6)" }}>✓</span>
+                )}
+                <span>{lesson.catalogTitle}</span>
               </div>
               <p
                 style={{

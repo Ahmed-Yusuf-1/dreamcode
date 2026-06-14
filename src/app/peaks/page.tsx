@@ -1,16 +1,40 @@
+"use client";
+
+import { useEffect } from "react";
 import Link from "next/link";
 import Cloud from "@/components/Cloud";
 import { cloudOpacity } from "@/lib/theme";
 import StreakFlame from "@/components/StreakFlame";
-import { peaks, user } from "@/lib/data";
-
-export const metadata = {
-  title: "Problem Peaks - dreamcode",
-  description: "Standalone climbs for the skills you've learned. Each peak is a real problem with real tests - no rails, just your plan and the night sky.",
-};
+import { peaks as staticPeaks } from "@/lib/data";
+import { useUserProfile } from "@/lib/profile";
+import type { Peak } from "@/lib/data";
 
 const cs = cloudOpacity.peaks;
+
+function getPeakState(id: string, orderedPeaks: Peak[], completedStops: string[]): "done" | "current" | "locked" {
+  if (completedStops.includes(id)) return "done";
+  const idx = orderedPeaks.findIndex(p => p.id === id);
+  if (idx === 0) return "current";
+  const prevPeak = orderedPeaks[idx - 1];
+  // If the previous peak is completed, the current one is current
+  if (completedStops.includes(prevPeak.id)) return "current";
+  return "locked";
+}
+
 export default function PeaksPage() {
+  const { profile } = useUserProfile();
+  const completed = profile.completedStops || [];
+
+  useEffect(() => {
+    document.title = "Problem Peaks - dreamcode";
+  }, []);
+
+  // Compute dynamic states for all peaks
+  const dynamicPeaks = staticPeaks.map((peak) => ({
+    ...peak,
+    state: getPeakState(peak.id, staticPeaks, completed),
+  }));
+
   return (
     <div
       className="relative"
@@ -82,7 +106,7 @@ export default function PeaksPage() {
           style={{ gap: 8, background: "rgba(255,255,255,.92)", padding: "7px 14px", borderRadius: 999 }}
         >
           <StreakFlame />
-          <span style={{ fontWeight: 900, fontSize: 13, color: "#9c4a14" }}>{user.streak}</span>
+          <span style={{ fontWeight: 900, fontSize: 13, color: "#9c4a14" }}>{profile.streak}-day streak</span>
         </div>
       </div>
 
@@ -112,11 +136,14 @@ export default function PeaksPage() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2" style={{ gap: 18 }}>
-          {peaks.map((peak) => {
+          {dynamicPeaks.map((peak) => {
             const locked = peak.state === "locked";
+            const hasChallenge = ["cloud-hopper", "rain-counter", "star-sorter"].includes(peak.id);
+            const href = hasChallenge ? `/challenge/${peak.id}` : "/peaks";
+
             const card = (
               <div
-                className={`glass h-full${locked ? "" : " glow-hover"}`}
+                className={`glass h-full${locked || !hasChallenge ? "" : " glow-hover"}`}
                 style={{
                   borderRadius: 22,
                   padding: "24px 26px",
@@ -168,19 +195,21 @@ export default function PeaksPage() {
                 <div style={{ marginTop: 12, fontSize: 12, fontWeight: 900, color: locked ? "rgba(255,255,255,.6)" : "#ffd9ef" }}>
                   {locked
                     ? "Locked · climb the earlier peaks first"
-                    : peak.state === "done"
-                      ? "Summited · climb again?"
-                      : "Ready to climb \u2192"}
+                    : !hasChallenge
+                      ? "Coming soon · check back later"
+                      : peak.state === "done"
+                        ? "Summited · climb again?"
+                        : "Ready to climb \u2192"}
                 </div>
               </div>
             );
 
-            return locked ? (
+            return locked || !hasChallenge ? (
               <div key={peak.id}>{card}</div>
             ) : (
               <Link
                 key={peak.id}
-                href="/challenge/cloud-hopper"
+                href={href}
                 className="block transition-transform hover:-translate-y-1"
               >
                 {card}

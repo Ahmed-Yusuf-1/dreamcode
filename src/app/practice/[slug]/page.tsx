@@ -9,6 +9,7 @@ import DreamGuide from "@/components/DreamGuide";
 import { practiceDatasets, PracticeDataset } from "@/lib/data";
 import { addXP, unlockBadge, completeStop } from "@/lib/profile";
 import { playChime } from "@/lib/sound";
+import { getAdjacent, getLesson } from "@/lib/curriculum";
 
 type Step = 0 | 1 | 2 | 3;
 const STEP_LABELS = ["Predict", "Arrange", "Fill in", "Done"];
@@ -430,6 +431,23 @@ function DoneStep({ slug }: { slug: string }) {
     playChime("success");
   }, [slug]);
 
+  const lesson = getLesson(slug);
+  const nextLesson = getAdjacent(slug).next;
+  let nextHref = "/peaks";
+  let nextLabel = "Climb a peak \u2192";
+
+  if (nextLesson) {
+    nextHref = `/lesson/${nextLesson.slug}`;
+    nextLabel = `Next: ${nextLesson.title} \u2192`;
+  } else {
+    const lang = lesson?.language || "python";
+    if (lang === "javascript") {
+      nextHref = "/challenge/cloud-hopper";
+    } else {
+      nextHref = "/challenge/rain-counter";
+    }
+  }
+
   return (
     <div className="anim-pop-in text-center" style={{ padding: "30px 0" }}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -454,7 +472,7 @@ function DoneStep({ slug }: { slug: string }) {
       </div>
       <div className="flex justify-center" style={{ gap: 12, marginTop: 28 }}>
         <Link
-          href="/challenge/cloud-hopper"
+          href={nextHref}
           className="font-display cursor-pointer backdrop-blur-sm transition-colors hover:bg-[rgba(110,230,255,.22)]"
           style={{
             background: "rgba(24,22,60,.4)",
@@ -467,7 +485,7 @@ function DoneStep({ slug }: { slug: string }) {
             boxShadow: "0 0 16px rgba(110,230,255,.35)",
           }}
         >
-          Climb a peak {"\u2192"}
+          {nextLabel}
         </Link>
         <Link
           href="/journey"

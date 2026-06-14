@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, use } from "react";
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import Cloud from "@/components/Cloud";
 import CodeEditor from "@/components/CodeEditor";
 import EditorFrame from "@/components/EditorFrame";
@@ -9,63 +10,106 @@ import DreamGuide from "@/components/DreamGuide";
 import { gradientOpacity, cloudOpacity } from "@/lib/theme";
 import { addXP, unlockBadge, completeStop } from "@/lib/profile";
 import { playChime } from "@/lib/sound";
-
-const STARTER = `function countTallClouds(heights, k) {
-  let count = 0;
-  for (const h of heights) {
-    if (h > k) {
-      count = count + 1;
-    }
-  }
-  return count;
-}`;
-
-interface TestCase {
-  label: string;
-  args: [number[], number];
-  expected: number;
-}
-
-const TESTS: TestCase[] = [
-  { label: "[3,7,2,9], k=5 \u2192 2", args: [[3, 7, 2, 9], 5], expected: 2 },
-  { label: "[], k=4 \u2192 0", args: [[], 4], expected: 0 },
-  { label: "[5,5,5], k=5 \u2192 0", args: [[5, 5, 5], 5], expected: 0 },
-];
+import { challenges } from "@/lib/data";
+import { usePyodide } from "@/lib/usePyodide";
 
 type TestState = "idle" | "pass" | "fail";
 
 const cs = cloudOpacity.challenge;
-export default function CloudHopperPage() {
-  const [code, setCode] = useState(STARTER);
-  const [results, setResults] = useState<TestState[]>(["idle", "idle", "idle"]);
+
+export default function DynamicChallengePage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = use(params);
+  const challenge = challenges[slug];
+  if (!challenge) notFound();
+
+  const [code, setCode] = useState(challenge.starter);
+  const [results, setResults] = useState<TestState[]>(() =>
+    challenge.testCases.map(() => "idle")
+  );
   const [error, setError] = useState<string | null>(null);
   const [won, setWon] = useState(false);
+  const [running, setRunning] = useState(false);
+  const py = usePyodide();
 
-  const runTests = () => {
+  const runTests = async () => {
     setError(null);
-    try {
-      // Learner code runs in the learner's own browser - same trust domain
-      // as the page. The real platform swaps this for a sandboxed worker.
-      const fn = new Function(`${code}; return countTallClouds;`)();
-      if (typeof fn !== "function") throw new Error("countTallClouds is not defined");
-      const next = TESTS.map((t) => {
-        try {
-          return fn(t.args[0].slice(), t.args[1]) === t.expected ? "pass" : "fail";
-        } catch {
-          return "fail";
+    setRunning(true);
+
+    if (challenge.language === "JavaScript") {
+      try {
+        const fn = new Function(`${code}; return ${challenge.functionName};`)();
+        if (typeof fn !== "function") throw new Error(`${challenge.functionName} is not defined`);
+
+        const next = challenge.testCases.map((t) => {
+          try {
+            const res = fn(...t.args);
+            return JSON.stringify(res) === JSON.stringify(t.expected) ? "pass" : "fail";
+          } catch {
+            return "fail";
+          }
+        }) as TestState[];
+
+        setResults(next);
+        if (next.every((r) => r === "pass")) {
+          setWon(true);
+          addXP(challenge.xp);
+          if (challenge.badge) unlockBadge(challenge.badge);
+          completeStop(challenge.slug);
+          playChime("badge");
         }
-      }) as TestState[];
-      setResults(next);
-      if (next.every((r) => r === "pass")) {
-        setWon(true);
-        addXP(40);
-        unlockBadge("cloud-hopper");
-        completeStop("cloud-hopper");
-        playChime("badge");
+      } catch (e) {
+        setError(e instanceof Error ? e.message : String(e));
+        setResults(challenge.testCases.map(() => "fail"));
+      } finally {
+        setRunning(false);
       }
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-      setResults(["fail", "fail", "fail"]);
+    } else {
+      // Python challenge execution using Pyodide
+      try {
+        // Construct a grading script
+        const runCode = `${code}
+import json
+test_cases = ${JSON.stringify(challenge.testCases.map(t => t.args))}
+results = []
+for args in test_cases:
+    try:
+        res = ${challenge.functionName}(*args)
+        results.append(res)
+    except Exception as e:
+        results.append(None)
+print("TEST_OUTPUTS:" + json.dumps(results))
+`;
+        const res = await py.run(runCode);
+
+        if (res.ok) {
+          const outLine = res.stdout.find((l) => l.startsWith("TEST_OUTPUTS:"));
+          if (outLine) {
+            const outputs = JSON.parse(outLine.substring("TEST_OUTPUTS:".length));
+            const next = challenge.testCases.map((t, idx) => {
+              const output = outputs[idx];
+              return JSON.stringify(output) === JSON.stringify(t.expected) ? "pass" : "fail";
+            }) as TestState[];
+
+            setResults(next);
+            if (next.every((r) => r === "pass")) {
+              setWon(true);
+              addXP(challenge.xp);
+              if (challenge.badge) unlockBadge(challenge.badge);
+              completeStop(challenge.slug);
+              playChime("badge");
+            }
+          } else {
+            throw new Error("No test output received from Python runner.");
+          }
+        } else {
+          throw new Error(res.error || "Execution failed.");
+        }
+      } catch (e) {
+        setError(e instanceof Error ? e.message : String(e));
+        setResults(challenge.testCases.map(() => "fail"));
+      } finally {
+        setRunning(false);
+      }
     }
   };
 
@@ -125,17 +169,17 @@ export default function CloudHopperPage() {
         </Link>
         <div className="flex items-center" style={{ gap: 12 }}>
           <div className="font-display" style={{ fontWeight: 700, fontSize: 17, color: "#13335f" }}>
-            Problem Peaks {"\u00b7"} Cloud Hopper
+            Problem Peaks {"\u00b7"} {challenge.name}
           </div>
           <span style={{ background: "#d9f5e6", color: "#0f5c38", fontWeight: 900, fontSize: 12, padding: "5px 12px", borderRadius: 999 }}>
-            Beginner
+            {challenge.level}
           </span>
           <span style={{ background: "#fff3c9", color: "#7a5410", fontWeight: 900, fontSize: 12, padding: "5px 12px", borderRadius: 999 }}>
-            JavaScript
+            {challenge.language}
           </span>
         </div>
         <div style={{ background: "#ffe1ef", color: "#a13163", fontWeight: 900, fontSize: 13, padding: "8px 16px", borderRadius: 999 }}>
-          Reward: badge + 40 XP
+          Reward: {challenge.badge ? "badge + " : ""}{challenge.xp} XP
         </div>
       </div>
 
@@ -149,52 +193,39 @@ export default function CloudHopperPage() {
           style={{ borderRadius: 20, boxShadow: "0 20px 44px rgba(60,80,150,.22)", padding: "26px 26px" }}
         >
           <h3 className="font-display" style={{ fontWeight: 800, fontSize: 24, color: "#13335f", margin: "0 0 12px" }}>
-            Cloud Hopper
+            {challenge.name}
           </h3>
           <p style={{ fontSize: 15, lineHeight: 1.7, color: "#41608f", fontWeight: 600, margin: "0 0 18px", textWrap: "pretty" }}>
-            You&apos;re hopping across the sky, but you can only land on clouds that rise{" "}
-            <strong style={{ color: "#13335f" }}>above height k</strong>. Given a list of cloud
-            heights, return how many clouds you can land on.
+            {challenge.instructions}
           </p>
-          <div style={{ fontSize: 12, fontWeight: 900, letterSpacing: 0.8, color: "#7b93b8", marginBottom: 8 }}>EXAMPLE</div>
-          <div
-            className="font-mono"
-            style={{ background: "#f1f7fe", borderRadius: 12, padding: "14px 16px", fontSize: 13, lineHeight: 1.9, color: "#2c4a7c", marginBottom: 14 }}
-          >
-            <div>countTallClouds([3, 7, 2, 9], 5)</div>
-            <div style={{ color: "#0f8a52" }}>
-              → 2&nbsp;&nbsp;<span style={{ color: "#7b93b8" }}>{"//"} 7 and 9 are above 5</span>
+          <div style={{ fontSize: 12, fontWeight: 900, letterSpacing: 0.8, color: "#7b93b8", marginBottom: 8 }}>EXAMPLES</div>
+          {challenge.testCases.slice(0, 2).map((tc, idx) => (
+            <div
+              key={idx}
+              className="font-mono"
+              style={{ background: "#f1f7fe", borderRadius: 12, padding: "14px 16px", fontSize: 13, lineHeight: 1.9, color: "#2c4a7c", marginBottom: 12 }}
+            >
+              <div>{challenge.functionName}({tc.label.split("\u2192")[0].trim()})</div>
+              <div style={{ color: "#0f8a52" }}>
+                → {JSON.stringify(tc.expected)}
+              </div>
             </div>
-          </div>
-          <div
-            className="font-mono"
-            style={{ background: "#f1f7fe", borderRadius: 12, padding: "14px 16px", fontSize: 13, lineHeight: 1.9, color: "#2c4a7c", marginBottom: 18 }}
-          >
-            <div>countTallClouds([], 4)</div>
-            <div style={{ color: "#0f8a52" }}>
-              → 0&nbsp;&nbsp;<span style={{ color: "#7b93b8" }}>{"//"} no clouds, no hops</span>
-            </div>
-          </div>
-          <div className="flex items-start" style={{ gap: 10, background: "#f4effe", borderRadius: 12, padding: "12px 14px" }}>
-            <span style={{ flexShrink: 0, width: 10, height: 10, borderRadius: "50%", background: "#cdb9f7", marginTop: 5 }} />
-            <span style={{ fontSize: 13, fontWeight: 700, color: "#5b4a8a", lineHeight: 1.6 }}>
-              Hint: you just learned the perfect tool for visiting every item in a list...
-            </span>
-          </div>
+          ))}
         </div>
 
         {/* editor */}
         <EditorFrame
-          filename="solution.js"
-          language="JAVASCRIPT"
+          filename={challenge.language === "JavaScript" ? "solution.js" : "solution.py"}
+          language={challenge.language.toUpperCase()}
           glassy
           footer={
             <div className="flex items-center justify-between" style={{ padding: "0 18px 16px" }}>
               <span className="font-mono" style={{ fontSize: 12, color: "#48618f" }}>
-                {error ? `✗ ${error}` : "Autosaved · just now"}
+                {error ? `✗ ${error}` : running ? "Running..." : "Autosaved · just now"}
               </span>
               <button
                 onClick={runTests}
+                disabled={running}
                 className="font-display cursor-pointer transition-transform hover:-translate-y-0.5"
                 style={{
                   border: "none",
@@ -207,13 +238,18 @@ export default function CloudHopperPage() {
                   boxShadow: "0 10px 24px rgba(40,150,90,.35)",
                 }}
               >
-                ▶ Run tests
+                {running ? "Running..." : "▶ Run tests"}
               </button>
             </div>
           }
         >
           <div style={{ padding: "10px 8px 6px", minHeight: 300 }}>
-            <CodeEditor value={code} onChange={setCode} language="javascript" minHeight="280px" />
+            <CodeEditor
+              value={code}
+              onChange={setCode}
+              language={challenge.language.toLowerCase() as "python" | "javascript"}
+              minHeight="280px"
+            />
           </div>
         </EditorFrame>
 
@@ -224,10 +260,10 @@ export default function CloudHopperPage() {
             style={{ borderRadius: 20, boxShadow: "0 20px 44px rgba(60,80,150,.22)", padding: "22px 22px" }}
           >
             <div className="font-display" style={{ fontWeight: 700, fontSize: 17, color: "#13335f", marginBottom: 14 }}>
-              Tests · {passing} of {TESTS.length} passing
+              Tests · {passing} of {challenge.testCases.length} passing
             </div>
             <div className="flex flex-col" style={{ gap: 10 }}>
-              {TESTS.map((t, i) => {
+              {challenge.testCases.map((t, i) => {
                 const st = results[i];
                 return (
                   <div
@@ -286,16 +322,16 @@ export default function CloudHopperPage() {
               style={{ display: "block", width: 130, height: "auto", margin: "0 auto", animation: "floatySm 5s ease-in-out infinite" }}
             />
             <div className="font-display" style={{ fontWeight: 800, fontSize: 18, color: "#13335f", marginTop: 12 }}>
-              Cloud Hopper badge
+              {challenge.badge ? `${challenge.name} badge` : "Concept Mastery"}
             </div>
             <div style={{ fontSize: 13, fontWeight: 700, color: "#7b93b8", marginTop: 4 }}>
-              Pass all 3 tests to add it to your sky
+              Pass all {challenge.testCases.length} tests to claim it
             </div>
             <div
               className="inline-block"
               style={{ marginTop: 12, background: "#fff3c9", color: "#7a5410", fontWeight: 900, fontSize: 13, padding: "7px 14px", borderRadius: 999 }}
             >
-              +40 XP
+              +{challenge.xp} XP
             </div>
           </div>
         </div>
@@ -323,16 +359,16 @@ export default function CloudHopperPage() {
               style={{ display: "block", width: 160, height: "auto", margin: "0 auto", animation: "floatySm 4s ease-in-out infinite" }}
             />
             <div className="font-display neon-title" style={{ fontWeight: 800, fontSize: 30, color: "#fff6fb", marginTop: 14 }}>
-              Badge earned!
+              {challenge.badge ? "Badge earned!" : "Challenge Solved!"}
             </div>
             <p style={{ color: "rgba(255,255,255,.92)", fontWeight: 700, fontSize: 15, margin: "10px 0 4px" }}>
-              Cloud Hopper joins your sky - every test passed.
+              {challenge.badge ? `${challenge.name} joins your sky - every test passed.` : `You completed ${challenge.name} successfully.`}
             </p>
             <div
               className="inline-block"
               style={{ background: "#fff3c9", color: "#7a5410", fontWeight: 900, fontSize: 13, padding: "7px 14px", borderRadius: 999, marginTop: 8 }}
             >
-              +40 XP
+              +{challenge.xp} XP
             </div>
             <div className="flex justify-center" style={{ gap: 12, marginTop: 24 }}>
               <button
@@ -351,7 +387,7 @@ export default function CloudHopperPage() {
                 Stay here
               </button>
               <Link
-                href="/badges"
+                href="/peaks"
                 className="font-display cursor-pointer"
                 style={{
                   background: "linear-gradient(135deg, #ff7ad9, #ff4fb0)",
@@ -363,7 +399,7 @@ export default function CloudHopperPage() {
                   boxShadow: "0 0 24px rgba(255,100,200,.6)",
                 }}
               >
-                See your collection {"\u2192"}
+                Back to peaks {"\u2192"}
               </Link>
             </div>
           </div>
