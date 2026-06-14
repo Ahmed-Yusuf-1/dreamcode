@@ -1,11 +1,19 @@
+"use client";
+
 import Link from "next/link";
 import SceneTopBar, { GlassPill } from "@/components/SceneTopBar";
-import { badges, user } from "@/lib/data";
+import { badges } from "@/lib/data";
+import { useUserProfile } from "@/lib/profile";
 import { gradientOpacity, cloudOpacity } from "@/lib/theme";
 import Cloud from "@/components/Cloud";
 
 const cs = cloudOpacity.badges;
 export default function BadgesPage() {
+  const { profile } = useUserProfile();
+  const mappedBadges = badges.map((b) => ({
+    ...b,
+    found: profile.unlockedBadges.includes(b.id),
+  }));
   return (
     <div
       className="relative overflow-hidden"
@@ -39,7 +47,7 @@ export default function BadgesPage() {
       <Cloud src="/assets/clouds-sunset/cutout-cloud-sunset-1-02.webp" speed={0.16} pos={{ left: "3%", bottom: "-4%" }} width="min(260px, 22vw)" opacity={0.65} anim="floatySm" duration={10} delay={1} scale={cs} />
 
       <SceneTopBar
-        right={<GlassPill>{user.badgesFound} of {user.badgesTotal} found</GlassPill>}
+        right={<GlassPill>{profile.unlockedBadges.length} of {badges.length} found</GlassPill>}
       />
 
       <div className="relative z-5 mx-auto text-center" style={{ maxWidth: 1060, padding: "4vh 32px 90px" }}>
@@ -68,12 +76,12 @@ export default function BadgesPage() {
             textWrap: "pretty",
           }}
         >
-          Every milestone earns a neon cloud for your collection - {user.badgesTotal} to find
+          Every milestone earns a neon cloud for your collection - {badges.length} to find
           between here and your first real project.
         </p>
 
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5" style={{ gap: 16 }}>
-          {badges.map((badge, i) => (
+          {mappedBadges.map((badge, i) => (
             <div
               key={badge.id}
               style={{
@@ -143,7 +151,7 @@ export default function BadgesPage() {
             boxShadow: "0 0 26px rgba(255,100,200,.6), 0 16px 36px rgba(30,16,60,.4)",
           }}
         >
-          Earn the next one →
+          Earn the next one {"\u2192"}
         </Link>
       </div>
     </div>

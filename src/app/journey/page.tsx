@@ -1,17 +1,42 @@
+"use client";
+
+import { useEffect } from "react";
 import Link from "next/link";
 import Cloud from "@/components/Cloud";
 import StreakFlame from "@/components/StreakFlame";
-import { user } from "@/lib/data";
+import { useUserProfile } from "@/lib/profile";
 import { cloudOpacity } from "@/lib/theme";
+import { useActiveTrack } from "@/lib/track";
 
 const cs = cloudOpacity.journey;
 
+const PYTHON_STOPS = ["variables", "strings", "loops", "functions"];
+const JS_STOPS = ["js-variables", "js-functions", "cloud-hopper", "fog-filter"];
+
+function getStopState(slug: string, orderedSlugs: string[], completedStops: string[]): "done" | "current" | "locked" {
+  if (completedStops.includes(slug)) return "done";
+  const idx = orderedSlugs.indexOf(slug);
+  if (idx === 0) return "current";
+  const prevSlug = orderedSlugs[idx - 1];
+  if (completedStops.includes(prevSlug)) return "current";
+  return "locked";
+}
+
 export default function JourneyPage() {
+  const { profile } = useUserProfile();
+  const { track } = useActiveTrack();
+  const completed = profile.completedStops || [];
+
+  useEffect(() => {
+    document.title = "Journey Map - dreamcode";
+  }, []);
+
   return (
     <div
-      className="relative overflow-hidden"
+      className="relative"
       style={{
         minHeight: "100vh",
+        overflowX: "clip",
         background:
           "linear-gradient(180deg, #1a1c52 0%, #2b2c63 20%, #4c4096 44%, #8E95CE 68%, #d9a9c7 86%, #F0AABE 100%)",
       }}
@@ -24,6 +49,9 @@ export default function JourneyPage() {
       <Cloud src="/assets/clouds-sunset/cutout-cloud-sunset-15.webp" speed={0.08} pos={{ right: "1%", top: "56%" }} width="min(330px, 26vw)" opacity={0.7} duration={11} delay={2} scale={cs} />
       <Cloud src="/assets/clouds-sunset/cutout-cloud-sunset-13.webp" speed={0.12} pos={{ left: "-4%", top: "62%" }} width="min(280px, 22vw)" opacity={0.6} anim="floatySm" duration={12} delay={0.8} scale={cs} />
       <Cloud src="/assets/clouds-sunset/cutout-cloud-sunset-14.webp" speed={0.16} pos={{ left: "3%", top: "78%" }} width="min(300px, 24vw)" opacity={0.65} anim="floatySm" duration={10} delay={1} scale={cs} />
+
+      {/* spacer to clear the fixed global nav */}
+      <div style={{ height: "var(--nav-h)" }} />
 
       {/* HUD - sits just under the global nav */}
       <div
@@ -80,16 +108,16 @@ export default function JourneyPage() {
             style={{ gap: 8, background: "rgba(255,255,255,.92)", padding: "7px 14px", borderRadius: 999 }}
           >
             <StreakFlame />
-            <span style={{ fontWeight: 900, fontSize: 13, color: "#9c4a14" }}>{user.streak}</span>
+            <span style={{ fontWeight: 900, fontSize: 13, color: "#9c4a14" }}>{profile.streak}</span>
           </div>
           <div className="flex flex-col" style={{ gap: 4 }}>
             <div
               className="flex justify-between"
               style={{ fontSize: 11, fontWeight: 900, color: "rgba(255,255,255,.95)" }}
             >
-              <span>Level {user.level}</span>
+              <span>Level {profile.level}</span>
               <span>
-                {user.xp} / {user.xpNext} XP
+                {profile.xp} / {profile.xpNext} XP
               </span>
             </div>
             <div
@@ -103,7 +131,7 @@ export default function JourneyPage() {
             >
               <div
                 style={{
-                  width: `${Math.round((user.xp / user.xpNext) * 100)}%`,
+                  width: `${Math.round((profile.xp / profile.xpNext) * 100)}%`,
                   height: "100%",
                   background: "linear-gradient(90deg, #a9ecc9, #ffe49a)",
                   borderRadius: 99,
@@ -125,7 +153,7 @@ export default function JourneyPage() {
               fontSize: 15,
             }}
           >
-            {user.initial}
+            {profile.initial}
           </Link>
         </div>
       </div>
@@ -135,7 +163,7 @@ export default function JourneyPage() {
           className="font-display glow-heading"
           style={{ fontWeight: 800, fontSize: 42, color: "#ffffff", margin: 0 }}
         >
-          Python Basics - Chapter 1
+          {track === "javascript" ? "JavaScript Climbs - Chapter 1" : "Python Basics - Chapter 1"}
         </h2>
         <p
           style={{
@@ -196,10 +224,85 @@ export default function JourneyPage() {
         </div>
 
         {/* nodes */}
-        <MapNode left={190} top={1160} state="done" title="1 · Variables" sub="Complete · +60 XP" href="/lesson/loops" cloud="/assets/clouds-sunset/cutout-cloud-sunset-1-02.webp" />
-        <MapNode left={530} top={910} state="done" title="2 · Strings" sub="Complete · +60 XP" href="/lesson/loops" cloud="/assets/clouds-sunset/cutout-cloud-sunset-1-03.webp" />
-        <MapNode left={190} top={670} state="current" title="3 · Loops" sub="Lesson 3 of 5 · Continue →" href="/lesson/loops" cloud="/assets/clouds-neon/cutout-cloud-neon-1-01.webp" />
-        <MapNode left={530} top={430} state="locked" title="4 · Functions" sub="Finish Loops to unlock" cloud="/assets/clouds-sunset/cutout-cloud-sunset-1-04.webp" />
+        {track === "javascript" ? (
+          <>
+            <MapNode
+              left={190}
+              top={1160}
+              state={getStopState("js-variables", JS_STOPS, completed)}
+              title="1 · Let and Const"
+              sub={completed.includes("js-variables") ? "Complete · +60 XP" : "Lesson 1 of 2 · Start \u2192"}
+              href="/lesson/js-variables"
+              cloud="/assets/clouds-sunset/cutout-cloud-sunset-1-02.webp"
+            />
+            <MapNode
+              left={530}
+              top={910}
+              state={getStopState("js-functions", JS_STOPS, completed)}
+              title="2 \u00b7 Arrow Functions"
+              sub={completed.includes("js-functions") ? "Complete · +60 XP" : getStopState("js-functions", JS_STOPS, completed) === "current" ? "Lesson 2 of 2 \u00b7 Continue \u2192" : "Locked"}
+              href="/lesson/js-functions"
+              cloud="/assets/clouds-sunset/cutout-cloud-sunset-1-03.webp"
+            />
+            <MapNode
+              left={190}
+              top={670}
+              state={getStopState("cloud-hopper", JS_STOPS, completed)}
+              title="3 · Cloud Hopper"
+              sub={completed.includes("cloud-hopper") ? "Complete · +40 XP" : getStopState("cloud-hopper", JS_STOPS, completed) === "current" ? "Challenge \u00b7 Continue \u2192" : "Finish Functions to unlock"}
+              href="/challenge/cloud-hopper"
+              cloud="/assets/clouds-neon/cutout-cloud-neon-1-01.webp"
+            />
+            <MapNode
+              left={530}
+              top={430}
+              state={getStopState("fog-filter", JS_STOPS, completed)}
+              title="4 · Fog Filter"
+              sub={completed.includes("fog-filter") ? "Complete · +60 XP" : "Finish Cloud Hopper to unlock"}
+              href="/peaks"
+              cloud="/assets/clouds-sunset/cutout-cloud-sunset-1-04.webp"
+            />
+          </>
+        ) : (
+          <>
+            <MapNode
+              left={190}
+              top={1160}
+              state={getStopState("variables", PYTHON_STOPS, completed)}
+              title="1 · Variables"
+              sub={completed.includes("variables") ? "Complete · +60 XP" : "Lesson 1 of 4 · Start \u2192"}
+              href="/lesson/variables"
+              cloud="/assets/clouds-sunset/cutout-cloud-sunset-1-02.webp"
+            />
+            <MapNode
+              left={530}
+              top={910}
+              state={getStopState("strings", PYTHON_STOPS, completed)}
+              title="2 · Strings"
+              sub={completed.includes("strings") ? "Complete · +60 XP" : getStopState("strings", PYTHON_STOPS, completed) === "current" ? "Lesson 2 of 4 \u00b7 Continue \u2192" : "Locked"}
+              href="/lesson/strings"
+              cloud="/assets/clouds-sunset/cutout-cloud-sunset-1-03.webp"
+            />
+            <MapNode
+              left={190}
+              top={670}
+              state={getStopState("loops", PYTHON_STOPS, completed)}
+              title="3 \u00b7 Loops"
+              sub={completed.includes("loops") ? "Complete · +60 XP" : getStopState("loops", PYTHON_STOPS, completed) === "current" ? "Lesson 3 of 4 \u00b7 Continue \u2192" : "Locked"}
+              href="/lesson/loops"
+              cloud="/assets/clouds-neon/cutout-cloud-neon-1-01.webp"
+            />
+            <MapNode
+              left={530}
+              top={430}
+              state={getStopState("functions", PYTHON_STOPS, completed)}
+              title="4 · Functions"
+              sub={completed.includes("functions") ? "Complete · +60 XP" : getStopState("functions", PYTHON_STOPS, completed) === "current" ? "Lesson 4 of 4 \u00b7 Continue \u2192" : "Finish Loops to unlock"}
+              href="/lesson/functions"
+              cloud="/assets/clouds-sunset/cutout-cloud-sunset-1-04.webp"
+            />
+          </>
+        )}
 
         {/* boss: the Sky House on a big neon cloud */}
         <div
@@ -267,7 +370,7 @@ export default function JourneyPage() {
               className="font-display"
               style={{ fontWeight: 800, fontSize: 16, color: "#ffffff", textShadow: "0 2px 10px rgba(20,12,50,.6)" }}
             >
-              Chapter Project · Sky House
+              {track === "javascript" ? "Chapter Project · Star Map" : "Chapter Project · Sky House"}
             </div>
             <div style={{ fontSize: 11, fontWeight: 900, color: "#ffd9ef", textShadow: "0 0 10px rgba(255,138,222,.6)" }}>
               Build a tiny program of your own · +200 XP

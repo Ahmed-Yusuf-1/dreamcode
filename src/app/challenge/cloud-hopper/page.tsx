@@ -7,6 +7,8 @@ import CodeEditor from "@/components/CodeEditor";
 import EditorFrame from "@/components/EditorFrame";
 import DreamGuide from "@/components/DreamGuide";
 import { gradientOpacity, cloudOpacity } from "@/lib/theme";
+import { addXP, unlockBadge, completeStop } from "@/lib/profile";
+import { playChime } from "@/lib/sound";
 
 const STARTER = `function countTallClouds(heights, k) {
   let count = 0;
@@ -25,9 +27,9 @@ interface TestCase {
 }
 
 const TESTS: TestCase[] = [
-  { label: "[3,7,2,9], k=5 → 2", args: [[3, 7, 2, 9], 5], expected: 2 },
-  { label: "[], k=4 → 0", args: [[], 4], expected: 0 },
-  { label: "[5,5,5], k=5 → 0", args: [[5, 5, 5], 5], expected: 0 },
+  { label: "[3,7,2,9], k=5 \u2192 2", args: [[3, 7, 2, 9], 5], expected: 2 },
+  { label: "[], k=4 \u2192 0", args: [[], 4], expected: 0 },
+  { label: "[5,5,5], k=5 \u2192 0", args: [[5, 5, 5], 5], expected: 0 },
 ];
 
 type TestState = "idle" | "pass" | "fail";
@@ -54,7 +56,13 @@ export default function CloudHopperPage() {
         }
       }) as TestState[];
       setResults(next);
-      if (next.every((r) => r === "pass")) setWon(true);
+      if (next.every((r) => r === "pass")) {
+        setWon(true);
+        addXP(40);
+        unlockBadge("cloud-hopper");
+        completeStop("cloud-hopper");
+        playChime("badge");
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
       setResults(["fail", "fail", "fail"]);
@@ -113,11 +121,11 @@ export default function CloudHopperPage() {
             borderRadius: 999,
           }}
         >
-          ← Back to peaks
+          {"\u2190"} Back to peaks
         </Link>
         <div className="flex items-center" style={{ gap: 12 }}>
           <div className="font-display" style={{ fontWeight: 700, fontSize: 17, color: "#13335f" }}>
-            Problem Peaks · Cloud Hopper
+            Problem Peaks {"\u00b7"} Cloud Hopper
           </div>
           <span style={{ background: "#d9f5e6", color: "#0f5c38", fontWeight: 900, fontSize: 12, padding: "5px 12px", borderRadius: 999 }}>
             Beginner
@@ -248,7 +256,7 @@ export default function CloudHopperPage() {
                       {st === "pass" ? "✓" : st === "fail" ? "✗" : "·"}
                     </span>
                     <span className="font-mono" style={{ fontSize: 12, color: st === "idle" ? "#7b93b8" : "#2c4a7c" }}>
-                      {st === "idle" ? `${t.label.split("→")[0]}→ run to check` : t.label}
+                      {st === "idle" ? `${t.label.split("\u2192")[0]}\u2192 run to check` : t.label}
                     </span>
                   </div>
                 );
@@ -355,7 +363,7 @@ export default function CloudHopperPage() {
                   boxShadow: "0 0 24px rgba(255,100,200,.6)",
                 }}
               >
-                See your collection →
+                See your collection {"\u2192"}
               </Link>
             </div>
           </div>
