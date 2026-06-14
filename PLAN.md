@@ -1,17 +1,22 @@
-# Plan: "Dreamcode" — A Programming Learning Platform
+# Plan: "Dreamcode" - A Programming Learning Platform
 
-> **Status: PLANNING ONLY.** Nothing is implemented. This revision integrates the user's research PDF (*Coding Platform Research Strategy.pdf*) into the prior plan. **Do not start building until explicitly approved** — the user may still add more research.
+> **Status (June 2026): Frontend prototype built.** The complete page-and-flow
+> skeleton and design system exist, with one fully worked Python lesson and a real
+> Spotify player. There is no backend yet and the curriculum is mock data. For the
+> current state of the codebase (what is done, where things live, how to run it,
+> conventions, and next steps) read **`PROJECT.md`**. This file remains the
+> strategic plan and the research rationale behind the product decisions.
 
 ---
 
 ## Context
 
-The user wants to build an authentic, highly effective platform for learning to program — from absolute beginner to expert, covering every dimension (syntax → concepts → problem-solving → real projects). Start with **Python**, then add **JavaScript/TypeScript**. AI is a *supplement, not the headline feature*.
+The user wants to build an authentic, highly effective platform for learning to program - from absolute beginner to expert, covering every dimension (syntax → concepts → problem-solving → real projects). Start with **Python**, then add **JavaScript/TypeScript**. AI is a *supplement, not the headline feature*.
 
 This plan is grounded in: my own web research (pedagogy, platform comparisons, execution tech, retention) **plus** the user's detailed engineering/pedagogy research document, which contributed cognitive-science framing, the PRIMM model, Parsons problems, a tiered code-execution architecture, expert curricular depth, a 5-phase Socratic AI workflow, SDT-based gamification, and a telemetry layer.
 
 **Decisions locked with the user:**
-- **First milestone:** Python + the core learning loop, done excellently — full-stack with accounts. The broad feature-rich vision is documented as explicit later phases.
+- **First milestone:** Python + the core learning loop, done excellently - full-stack with accounts. The broad feature-rich vision is documented as explicit later phases.
 - **Stack:** recommend a modern stack (below).
 - **AI:** optional Socratic hint-based tutor, a later phase.
 
@@ -21,18 +26,18 @@ This plan is grounded in: my own web research (pedagogy, platform comparisons, e
 
 1. **Reject the "geek gene."** Programming is a *learned* skill; the bimodal "some people just can't" myth is empirically false. We design for everyone and pour resources into struggling learners rather than assuming innate limits.
 2. **Design against "tutorial hell."** The #1 reason beginners fail is passively copying an instructor who already did the problem-solving. We protect *productive struggle* and fade scaffolding to independence. We also fight *blank-editor syndrome* (small, well-specified starts) and the beginner→intermediate *"valley of despair."*
-3. **Manage cognitive load (Cognitive Load Theory).** Keep total load under working-memory capacity: chunk concepts (intrinsic), eliminate UI friction and split-attention (extraneous), and direct effort to schema-building (germane). **Concrete rule:** instructions, diagrams, and the code editor live in *one integrated workspace* — never split across disconnected panes (Mayer's multimedia principles: coherence, signaling, spatial contiguity).
+3. **Manage cognitive load (Cognitive Load Theory).** Keep total load under working-memory capacity: chunk concepts (intrinsic), eliminate UI friction and split-attention (extraneous), and direct effort to schema-building (germane). **Concrete rule:** instructions, diagrams, and the code editor live in *one integrated workspace* - never split across disconnected panes (Mayer's multimedia principles: coherence, signaling, spatial contiguity).
 4. **Reading before writing (PRIMM + semantic wave).** Comprehension precedes creation. Lessons move contextualized → abstract syntax → real-world application.
 5. **Active retrieval + spaced repetition.** Retrieval beats re-reading (~80% vs ~34% week-later retention); spacing helps in ~96% of studies. Every concept is exercised and later resurfaced (FSRS scheduling).
-6. **Validate semantics, not syntax.** Grade with *real hidden test suites*, never brittle regex matching (Codecademy's core flaw — it rejects valid alternative solutions). Accept any correct approach.
+6. **Validate semantics, not syntax.** Grade with *real hidden test suites*, never brittle regex matching (Codecademy's core flaw - it rejects valid alternative solutions). Accept any correct approach.
 7. **Minimize friction between intent-to-code and execution.** Fewest possible steps; instant in-browser runs; fast load on weak devices/networks.
-8. **Gamify mastery, not vanity.** Ground motivation in Self-Determination Theory (autonomy, competence, relatedness). Tie XP/achievements to *real concept mastery* and gate advanced material behind it — never confuse clicks/streaks/badges with learning.
+8. **Gamify mastery, not vanity.** Ground motivation in Self-Determination Theory (autonomy, competence, relatedness). Tie XP/achievements to *real concept mastery* and gate advanced material behind it - never confuse clicks/streaks/badges with learning.
 
-**What we learned from competitors' pitfalls:** Codecademy — rigid regex validation + over-scaffolding stunts independence. LeetCode — no structured teaching, optimization over fundamentals. Hyperskill — drops complex projects (e.g., state machines) without scaffolding. Odin — firehose of external links, no real-time feedback. Boot.dev — strong RPG structure but local-setup onboarding friction. Scrimba — brilliant interactive screencasts but frontend-only depth.
+**What we learned from competitors' pitfalls:** Codecademy - rigid regex validation + over-scaffolding stunts independence. LeetCode - no structured teaching, optimization over fundamentals. Hyperskill - drops complex projects (e.g., state machines) without scaffolding. Odin - firehose of external links, no real-time feedback. Boot.dev - strong RPG structure but local-setup onboarding friction. Scrimba - brilliant interactive screencasts but frontend-only depth.
 
 ---
 
-## The core learning loop (heart of the MVP) — PRIMM + Review
+## The core learning loop (heart of the MVP) - PRIMM + Review
 
 Every concept cycles through this. Nailing it for Python *is* the first milestone.
 
@@ -50,7 +55,7 @@ Exercise types that implement the loop (a richer toolbox than "write code & run"
 |---|---|---|
 | **Runnable worked example** | Read & predict, low intrinsic load | Predict / Run |
 | **Code-tracing / output prediction** | Build program-comprehension before writing | Investigate |
-| **2D Parsons / Faded Parsons Problems** | Order + indent given fragments — focus on logic, not syntax; structured bridge to writing | Investigate → Modify |
+| **2D Parsons / Faded Parsons Problems** | Order + indent given fragments - focus on logic, not syntax; structured bridge to writing | Investigate → Modify |
 | **Faded worked examples** | Progressively blank out parts of a solution | Modify |
 | **Test-driven challenge** | Write original code vs hidden tests; instant pass/fail + targeted error explanation + graduated hints | Make |
 | **MCQ check-in** | Low-stakes confirmation a concept is understood before advancing | Review / gate |
@@ -60,7 +65,7 @@ Exercise types that implement the loop (a richer toolbox than "write code & run"
 
 ## Curriculum architecture (beginner → expert)
 
-Content is **data, not code** — authored as Markdown + a YAML/JSON schema (exercise type, starter code, hidden tests, hints, fragments for Parsons, MCQ options). Lets the curriculum grow without app changes and supports future contributors.
+Content is **data, not code** - authored as Markdown + a YAML/JSON schema (exercise type, starter code, hidden tests, hints, fragments for Parsons, MCQ options). Lets the curriculum grow without app changes and supports future contributors.
 
 ```
 Track (Python) → Course → Module → Lesson (concept + worked example)
@@ -68,7 +73,7 @@ Track (Python) → Course → Module → Lesson (concept + worked example)
                           → Module Project → Capstone Project
 ```
 
-**Four-phase trajectory (applies to both languages; MVP = Phase 1–2 of Python):**
+**Four-phase trajectory (applies to both languages; MVP = Phase 1-2 of Python):**
 
 | Phase | Python focus | JS/TS focus | Projects | Assessment emphasis |
 |---|---|---|---|---|
@@ -77,7 +82,7 @@ Track (Python) → Course → Module → Lesson (concept + worked example)
 | **3 System optimization** | metaclasses, dynamic attributes, decorators, testing | Proxy/Reflect, custom decorators, bundling | custom test libs, ORM mapping | open-ended tasks under performance budgets |
 | **4 Concurrency & internals** | `asyncio`, GIL, threading vs multiprocessing, CPython pipeline (tokenize→AST→bytecode→PVM, refcount/GC) | event loop (call stack, heap, web APIs, macro/microtask queues), Web Workers, V8 (Ignition→TurboFan JIT, deopt, generational GC) | concurrent scrapers, high-perf server loops | profiling, execution-path tracing, memory-leak analysis |
 
-A **"Problem-solving & debugging" strand runs across all phases** (decomposition, reading errors, tracing, test-first thinking) — the part most curricula skip, where learners stall. Every level is tagged beginner/intermediate/advanced to support multiple entry points + placement later.
+A **"Problem-solving & debugging" strand runs across all phases** (decomposition, reading errors, tracing, test-first thinking) - the part most curricula skip, where learners stall. Every level is tagged beginner/intermediate/advanced to support multiple entry points + placement later.
 
 ---
 
@@ -96,14 +101,14 @@ A **"Problem-solving & debugging" strand runs across all phases** (decomposition
 
 ### Tiered code-execution architecture (a key upgrade from the research)
 
-Default to **client-side WASM** — secure isolation, no untrusted code on our servers, near-zero exec cost, instant feedback. Pick the lightest engine per task:
+Default to **client-side WASM** - secure isolation, no untrusted code on our servers, near-zero exec cost, instant feedback. Pick the lightest engine per task:
 
 | Engine | Use for | Notes |
 |---|---|---|
 | **MicroPython-WASM** | intro syntax drills, quick exercises | very low startup latency; strict CPU/memory caps stop infinite loops |
-| **Pyodide (CPython→WASM) in a Web Worker** | data/scientific lessons & projects (NumPy/Pandas/Matplotlib) | full Python, but ~5–15s startup + large download → lazy-load, cache, and **run in a Web Worker** so long tasks never freeze the UI |
+| **Pyodide (CPython→WASM) in a Web Worker** | data/scientific lessons & projects (NumPy/Pandas/Matplotlib) | full Python, but ~5-15s startup + large download → lazy-load, cache, and **run in a Web Worker** so long tasks never freeze the UI |
 | **WebContainers (StackBlitz)** | JS/TS full-stack & multi-file Node projects, `npm` | client-side Node runtime; caveat: native C/C++ deps (e.g. `sharp`/libvips) need WASM shims (e.g. Squoosh) |
-| **Judge0 CE (remote sandbox)** | advanced/multi-file backend or other languages | Linux namespaces + cgroups limit CPU/memory/network; only when client-side can't do it — scales as infra cost, so it's the exception not the default |
+| **Judge0 CE (remote sandbox)** | advanced/multi-file backend or other languages | Linux namespaces + cgroups limit CPU/memory/network; only when client-side can't do it - scales as infra cost, so it's the exception not the default |
 
 **MVP uses MicroPython-WASM for drills + Pyodide-in-Worker for richer Python.** WebContainers/Judge0 arrive with the JS track and advanced projects.
 
@@ -113,7 +118,7 @@ Default to **client-side WASM** — secure isolation, no untrusted code on our s
 
 ```
 Browser
- ├─ Next.js UI — single integrated workspace (instructions + diagram + editor together)
+ ├─ Next.js UI - single integrated workspace (instructions + diagram + editor together)
  ├─ CodeMirror 6 + (MicroPython-WASM | Pyodide Web Worker | WebContainer)  ← runs & tests code locally
  └─ calls ─► Next.js API ─► Postgres (users, progress, SRS, submissions, telemetry)
                        └─► (later) AI tutor ─► Claude API (Socratic hints only)
@@ -124,7 +129,7 @@ Browser
 
 ---
 
-## AI Socratic mentorship (Phase 3 — opt-in, never the main feature)
+## AI Socratic mentorship (Phase 3 - opt-in, never the main feature)
 
 A direct code-generator bypasses the struggle that builds memory. So the AI is a **Socratic mentor** constrained by a system prompt (concise responses, **no direct code generation**), running a 5-phase workflow:
 
@@ -142,7 +147,7 @@ Power-ups earned through clean problem-solving can reduce hint XP costs. The pla
 
 ## Retention, gamification & analytics
 
-- **SDT-aligned, mastery-gated gamification.** XP, achievements across skill categories, daily streaks, RPG-style progression — but advanced material **unlocks only after mastering foundations**. Avoid vanity metrics; reward real outcomes. (Gamified courses reach far higher completion than ungamified.)
+- **SDT-aligned, mastery-gated gamification.** XP, achievements across skill categories, daily streaks, RPG-style progression - but advanced material **unlocks only after mastering foundations**. Avoid vanity metrics; reward real outcomes. (Gamified courses reach far higher completion than ungamified.)
 - **Interactive screencasts (Scrimba-style, later phase).** Record DOM events (clicks/keystrokes) not video pixels → tiny files, smooth on low bandwidth, and **learners can pause and edit the instructor's code directly** in the player.
 - **Telemetry layer (drives continuous improvement).** Log an `events` stream and monitor, each with an automatic mitigation:
 
@@ -158,41 +163,41 @@ Power-ups earned through clean problem-solving can reduce hint XP costs. The pla
 
 ## Phased roadmap
 
-- **Phase 0 — Foundations:** repo + Next.js/TS + Tailwind; DB + auth; curriculum content schema; one lesson rendered in the integrated workspace.
-- **Phase 1 — MVP (the first milestone):** accounts + cloud progress; CodeMirror + MicroPython-WASM (drills) + Pyodide-in-Worker (richer Python); typed exercises incl. **Parsons/faded examples**; hidden-test grading with graduated hints; FSRS review queue; dashboard (progress, due reviews, streak). *Goal: zero → writing & passing real Python with retention built in.*
-- **Phase 2 — Breadth:** JavaScript **+ TypeScript** track (WebContainers); projects system (guided→independent→capstone); SDT-based gamification; placement assessment.
-- **Phase 3 — Optional AI Socratic tutor:** the 5-phase workflow above; error explanations; targeted extra practice in weak areas.
-- **Phase 4 — Scale & depth:** Judge0 server-side sandbox; expert tracks (metaprogramming, concurrency, internals); interactive screencasts; community/peer review; **institutional/admin direction** (class dashboards, CSTA-standard alignment, multilingual + cross-OS/low-bandwidth UX); analytics-driven curriculum tuning.
+- **Phase 0 - Foundations:** repo + Next.js/TS + Tailwind; DB + auth; curriculum content schema; one lesson rendered in the integrated workspace.
+- **Phase 1 - MVP (the first milestone):** accounts + cloud progress; CodeMirror + MicroPython-WASM (drills) + Pyodide-in-Worker (richer Python); typed exercises incl. **Parsons/faded examples**; hidden-test grading with graduated hints; FSRS review queue; dashboard (progress, due reviews, streak). *Goal: zero → writing & passing real Python with retention built in.*
+- **Phase 2 - Breadth:** JavaScript **+ TypeScript** track (WebContainers); projects system (guided→independent→capstone); SDT-based gamification; placement assessment.
+- **Phase 3 - Optional AI Socratic tutor:** the 5-phase workflow above; error explanations; targeted extra practice in weak areas.
+- **Phase 4 - Scale & depth:** Judge0 server-side sandbox; expert tracks (metaprogramming, concurrency, internals); interactive screencasts; community/peer review; **institutional/admin direction** (class dashboards, CSTA-standard alignment, multilingual + cross-OS/low-bandwidth UX); analytics-driven curriculum tuning.
 
 ---
 
 ## Open questions to resolve before/while building
-- **Name** — is "Dreamcode" the product name?
-- **Auth** — Clerk (faster) vs Auth.js (own it)? Default Auth.js + Supabase.
-- **Monetization** — free / freemium / paid? Affects gating, not the MVP build.
-- **Audience priority** — individual self-learners first, or also schools/institutions (changes how soon admin dashboards/standards alignment matter)?
-- **Content authoring** — write curriculum ourselves vs support community/imported content later.
+- **Name** - is "Dreamcode" the product name?
+- **Auth** - Clerk (faster) vs Auth.js (own it)? Default Auth.js + Supabase.
+- **Monetization** - free / freemium / paid? Affects gating, not the MVP build.
+- **Audience priority** - individual self-learners first, or also schools/institutions (changes how soon admin dashboards/standards alignment matter)?
+- **Content authoring** - write curriculum ourselves vs support community/imported content later.
 - **Accessibility & i18n** targets for v1.
 
 ---
 
 ## Verification (how we'll prove the MVP works, once built)
-1. **Run locally** — `npm run dev`, sign up, land on the dashboard.
-2. **End-to-end PRIMM loop** — predict a worked example's output, run it (MicroPython/Pyodide), solve a Parsons problem, fail a test-driven challenge → see targeted feedback + graduated hints → pass; confirm progress persists across logout/login.
-3. **Spaced review** — complete concepts; confirm `srs_cards` get FSRS due dates and resurface on later (simulated) dates.
-4. **Sandbox safety** — learner code runs only in the browser sandbox; infinite loops are killed by CPU/time caps and never reach our server; Pyodide runs off the main thread (UI stays responsive).
-5. **Grading correctness** — verify hidden-test grading accepts *alternative correct* solutions (no regex brittleness); unit tests for the grader + FSRS; a Playwright e2e test of the full loop.
-6. **Telemetry** — confirm `events` capture TTFS and drop-off so the mitigation loop has data.
-7. **Concept dogfood** — run the first Python course end-to-end; verify the learner writes/reads code at every step (no long passive stretches) and scaffolding visibly fades.
+1. **Run locally** - `npm run dev`, sign up, land on the dashboard.
+2. **End-to-end PRIMM loop** - predict a worked example's output, run it (MicroPython/Pyodide), solve a Parsons problem, fail a test-driven challenge → see targeted feedback + graduated hints → pass; confirm progress persists across logout/login.
+3. **Spaced review** - complete concepts; confirm `srs_cards` get FSRS due dates and resurface on later (simulated) dates.
+4. **Sandbox safety** - learner code runs only in the browser sandbox; infinite loops are killed by CPU/time caps and never reach our server; Pyodide runs off the main thread (UI stays responsive).
+5. **Grading correctness** - verify hidden-test grading accepts *alternative correct* solutions (no regex brittleness); unit tests for the grader + FSRS; a Playwright e2e test of the full loop.
+6. **Telemetry** - confirm `events` capture TTFS and drop-off so the mitigation loop has data.
+7. **Concept dogfood** - run the first Python course end-to-end; verify the learner writes/reads code at every step (no long passive stretches) and scaffolding visibly fades.
 
 ---
 
 ## Sources
 
-**User-provided:** *Coding Platform Research Strategy.pdf* (in repo) — cognitive load, PRIMM, Parsons/faded examples, tiered WASM execution (MicroPython/Pyodide/WebContainers/Judge0), expert curricular depth, 5-phase Socratic AI, SDT gamification, telemetry. Its own works-cited list (68 refs) covers the primary literature.
+**User-provided:** *Coding Platform Research Strategy.pdf* (in repo) - cognitive load, PRIMM, Parsons/faded examples, tiered WASM execution (MicroPython/Pyodide/WebContainers/Judge0), expert curricular depth, 5-phase Socratic AI, SDT gamification, telemetry. Its own works-cited list (68 refs) covers the primary literature.
 
 **My web research:**
-- Pedagogy: [Active Learning in CS Education — systematic review (MDPI)](https://www.mdpi.com/2414-4088/8/6/50)
+- Pedagogy: [Active Learning in CS Education - systematic review (MDPI)](https://www.mdpi.com/2414-4088/8/6/50)
 - Retrieval/spacing: [Evidence for Active Recall & Spaced Repetition](https://recallify.ai/evidence-for-active-recall-and-spaced-repetition/)
 - Platforms: [freeCodeCamp vs Codecademy (BitDegree)](https://www.bitdegree.org/tutorials/freecodecamp-vs-codecademy) · [Boot.dev/Exercism alternatives](https://blog.boot.dev/misc/code-academy-alternatives/)
 - Tutorial hell: [7 reasons people quit coding (DEV)](https://dev.to/educative/7-reasons-people-quit-learning-to-code-how-to-avoid-them-26k5) · [Why you're stuck in tutorial hell (AlgoCademy)](https://algocademy.com/blog/why-youre-stuck-in-tutorial-hell-even-after-completing-10-courses/)
