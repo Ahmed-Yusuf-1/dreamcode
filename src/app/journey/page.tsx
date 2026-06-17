@@ -7,13 +7,31 @@ import StreakFlame from "@/components/StreakFlame";
 import { useUserProfile } from "@/lib/profile";
 import { cloudOpacity } from "@/lib/theme";
 import { useActiveTrack } from "@/lib/track";
+import { lessons } from "@/lib/curriculum";
 
 const cs = cloudOpacity.journey;
 
-const PYTHON_STOPS = ["variables", "strings", "loops", "functions", "lists", "dictionaries"];
-const JS_STOPS = ["js-variables", "js-functions", "js-loops", "js-arrays", "js-objects", "cloud-hopper"];
+// Cloud platforms are cycled across the nodes so the road stays varied at any length.
+const NODE_CLOUDS = [
+  "/assets/clouds-sunset/cutout-cloud-sunset-1-02.webp",
+  "/assets/clouds-sunset/cutout-cloud-sunset-1-03.webp",
+  "/assets/clouds-neon/cutout-cloud-neon-1-01.webp",
+  "/assets/clouds-sunset/cutout-cloud-sunset-1-04.webp",
+  "/assets/clouds-neon/cutout-cloud-neon-1-02.webp",
+];
 
-function getStopState(slug: string, orderedSlugs: string[], completedStops: string[]): "done" | "current" | "locked" {
+// Map layout constants (SVG units; the container is 720 wide).
+const GAP = 175;
+const BOSS_Y = 150;
+const X_LEFT = 190;
+const X_RIGHT = 530;
+const X_CENTER = 360;
+
+function getStopState(
+  slug: string,
+  orderedSlugs: string[],
+  completedStops: string[],
+): "done" | "current" | "locked" {
   if (completedStops.includes(slug)) return "done";
   const idx = orderedSlugs.indexOf(slug);
   if (idx === 0) return "current";
@@ -30,6 +48,39 @@ export default function JourneyPage() {
   useEffect(() => {
     document.title = "Journey Map - dreamcode";
   }, []);
+
+  // Build the road from the curriculum: this track's lessons, in order.
+  const stops = lessons
+    .filter((l) => (l.language || "python") === track)
+    .sort((a, b) => a.order - b.order);
+  const orderedSlugs = stops.map((s) => s.slug);
+  const n = stops.length;
+
+  // Vertical layout: START at the bottom, boss at the top, lessons evenly between.
+  const startY = BOSS_Y + (n + 1) * GAP;
+  const mapHeight = startY + 120;
+  const nodeX = (j: number) => (j % 2 === 1 ? X_LEFT : X_RIGHT); // j is 1-based
+  const nodeY = (j: number) => startY - j * GAP;
+
+  // The dashed road: a smooth serpentine through START -> lessons -> boss.
+  const points = [
+    { x: X_CENTER, y: startY },
+    ...stops.map((_, i) => ({ x: nodeX(i + 1), y: nodeY(i + 1) })),
+    { x: X_CENTER, y: BOSS_Y },
+  ];
+  let pathD = `M ${points[0].x} ${points[0].y}`;
+  for (let k = 1; k < points.length; k++) {
+    const a = points[k - 1];
+    const b = points[k];
+    const midY = (a.y + b.y) / 2;
+    pathD += ` C ${a.x} ${midY}, ${b.x} ${midY}, ${b.x} ${b.y}`;
+  }
+
+  const chapterTitle =
+    stops[0]?.chapter ||
+    (track === "javascript" ? "JavaScript Climbs - Chapter 1" : "Python Basics - Chapter 1");
+  const projectLabel =
+    track === "javascript" ? "Chapter Project · Star Map" : "Chapter Project · Sky House";
 
   return (
     <div
@@ -163,7 +214,7 @@ export default function JourneyPage() {
           className="font-display glow-heading"
           style={{ fontWeight: 800, fontSize: 42, color: "#ffffff", margin: 0 }}
         >
-          {track === "javascript" ? "JavaScript Climbs - Chapter 1" : "Python Basics - Chapter 1"}
+          {chapterTitle}
         </h2>
         <p
           style={{
@@ -178,15 +229,15 @@ export default function JourneyPage() {
         </p>
       </div>
 
-      {/* the map - start at the bottom, boss at the top */}
-      <div className="relative z-5" style={{ width: 720, maxWidth: "94vw", height: 1480, margin: "10px auto 0" }}>
+      {/* the map - generated from the curriculum: start at the bottom, boss at the top */}
+      <div className="relative z-5" style={{ width: 720, maxWidth: "94vw", height: mapHeight, margin: "10px auto 0" }}>
         <svg
-          viewBox="0 0 720 1480"
+          viewBox={`0 0 720 ${mapHeight}`}
           className="absolute inset-0 h-full w-full"
           style={{ overflow: "visible", filter: "drop-shadow(0 0 10px rgba(255,190,240,.45))" }}
         >
           <path
-            d="M 360 1390 C 240 1370, 190 1290, 190 1200 C 190 1110, 530 1100, 530 1025 C 530 950, 190 925, 190 850 C 190 775, 530 750, 530 675 C 530 600, 190 575, 190 500 C 190 425, 530 400, 530 325 C 530 250, 360 220, 360 150"
+            d={pathD}
             fill="none"
             stroke="rgba(255,255,255,.85)"
             strokeWidth={7}
@@ -198,7 +249,7 @@ export default function JourneyPage() {
         {/* start: a small cloud landing */}
         <div
           className="absolute flex flex-col items-center"
-          style={{ left: 360, top: 1390, transform: "translate(-50%,-50%)", gap: 2 }}
+          style={{ left: X_CENTER, top: startY, transform: "translate(-50%,-50%)", gap: 2 }}
         >
           <div
             className="backdrop-blur-md"
@@ -223,127 +274,34 @@ export default function JourneyPage() {
           />
         </div>
 
-        {/* nodes */}
-        {track === "javascript" ? (
-          <>
+        {/* lesson nodes, generated from the curriculum */}
+        {stops.map((stop, i) => {
+          const j = i + 1;
+          const state = getStopState(stop.slug, orderedSlugs, completed);
+          const sub =
+            state === "done"
+              ? "Complete"
+              : state === "current"
+                ? `Lesson ${j} of ${n} · ${j === 1 ? "Start" : "Continue"} →`
+                : "Locked";
+          return (
             <MapNode
-              left={190}
-              top={1200}
-              state={getStopState("js-variables", JS_STOPS, completed)}
-              title="1 · Let and Const"
-              sub={completed.includes("js-variables") ? "Complete · +60 XP" : "Lesson 1 of 5 · Start \u2192"}
-              href="/lesson/js-variables"
-              cloud="/assets/clouds-sunset/cutout-cloud-sunset-1-02.webp"
+              key={stop.slug}
+              left={nodeX(j)}
+              top={nodeY(j)}
+              state={state}
+              title={`${stop.order} · ${stop.catalogTitle}`}
+              sub={sub}
+              href={`/lesson/${stop.slug}`}
+              cloud={NODE_CLOUDS[i % NODE_CLOUDS.length]}
             />
-            <MapNode
-              left={530}
-              top={1025}
-              state={getStopState("js-functions", JS_STOPS, completed)}
-              title="2 · Arrow Functions"
-              sub={completed.includes("js-functions") ? "Complete · +60 XP" : getStopState("js-functions", JS_STOPS, completed) === "current" ? "Lesson 2 of 5 \u00b7 Continue \u2192" : "Locked"}
-              href="/lesson/js-functions"
-              cloud="/assets/clouds-sunset/cutout-cloud-sunset-1-03.webp"
-            />
-            <MapNode
-              left={190}
-              top={850}
-              state={getStopState("js-loops", JS_STOPS, completed)}
-              title="3 · Repeating Code"
-              sub={completed.includes("js-loops") ? "Complete · +60 XP" : getStopState("js-loops", JS_STOPS, completed) === "current" ? "Lesson 3 of 5 \u00b7 Continue \u2192" : "Locked"}
-              href="/lesson/js-loops"
-              cloud="/assets/clouds-neon/cutout-cloud-neon-1-01.webp"
-            />
-            <MapNode
-              left={530}
-              top={675}
-              state={getStopState("js-arrays", JS_STOPS, completed)}
-              title="4 · Array Lists"
-              sub={completed.includes("js-arrays") ? "Complete · +60 XP" : getStopState("js-arrays", JS_STOPS, completed) === "current" ? "Lesson 4 of 5 \u00b7 Continue \u2192" : "Locked"}
-              href="/lesson/js-arrays"
-              cloud="/assets/clouds-sunset/cutout-cloud-sunset-1-04.webp"
-            />
-            <MapNode
-              left={190}
-              top={500}
-              state={getStopState("js-objects", JS_STOPS, completed)}
-              title="5 · Labeled Structures"
-              sub={completed.includes("js-objects") ? "Complete · +60 XP" : getStopState("js-objects", JS_STOPS, completed) === "current" ? "Lesson 5 of 5 \u00b7 Continue \u2192" : "Locked"}
-              href="/lesson/js-objects"
-              cloud="/assets/clouds-sunset/cutout-cloud-sunset-1-02.webp"
-            />
-            <MapNode
-              left={530}
-              top={325}
-              state={getStopState("cloud-hopper", JS_STOPS, completed)}
-              title="6 · Cloud Hopper"
-              sub={completed.includes("cloud-hopper") ? "Complete · +40 XP" : getStopState("cloud-hopper", JS_STOPS, completed) === "current" ? "Challenge \u00b7 Continue \u2192" : "Locked"}
-              href="/challenge/cloud-hopper"
-              cloud="/assets/clouds-neon/cutout-cloud-neon-1-02.webp"
-            />
-          </>
-        ) : (
-          <>
-            <MapNode
-              left={190}
-              top={1200}
-              state={getStopState("variables", PYTHON_STOPS, completed)}
-              title="1 · Variables"
-              sub={completed.includes("variables") ? "Complete · +60 XP" : "Lesson 1 of 6 · Start \u2192"}
-              href="/lesson/variables"
-              cloud="/assets/clouds-sunset/cutout-cloud-sunset-1-02.webp"
-            />
-            <MapNode
-              left={530}
-              top={1025}
-              state={getStopState("strings", PYTHON_STOPS, completed)}
-              title="2 · Strings"
-              sub={completed.includes("strings") ? "Complete · +60 XP" : getStopState("strings", PYTHON_STOPS, completed) === "current" ? "Lesson 2 of 6 \u00b7 Continue \u2192" : "Locked"}
-              href="/lesson/strings"
-              cloud="/assets/clouds-sunset/cutout-cloud-sunset-1-03.webp"
-            />
-            <MapNode
-              left={190}
-              top={850}
-              state={getStopState("loops", PYTHON_STOPS, completed)}
-              title="3 · Loops"
-              sub={completed.includes("loops") ? "Complete · +60 XP" : getStopState("loops", PYTHON_STOPS, completed) === "current" ? "Lesson 3 of 6 \u00b7 Continue \u2192" : "Locked"}
-              href="/lesson/loops"
-              cloud="/assets/clouds-neon/cutout-cloud-neon-1-01.webp"
-            />
-            <MapNode
-              left={530}
-              top={675}
-              state={getStopState("functions", PYTHON_STOPS, completed)}
-              title="4 · Functions"
-              sub={completed.includes("functions") ? "Complete · +60 XP" : getStopState("functions", PYTHON_STOPS, completed) === "current" ? "Lesson 4 of 6 \u00b7 Continue \u2192" : "Locked"}
-              href="/lesson/functions"
-              cloud="/assets/clouds-sunset/cutout-cloud-sunset-1-04.webp"
-            />
-            <MapNode
-              left={190}
-              top={500}
-              state={getStopState("lists", PYTHON_STOPS, completed)}
-              title="5 · Lists"
-              sub={completed.includes("lists") ? "Complete · +60 XP" : getStopState("lists", PYTHON_STOPS, completed) === "current" ? "Lesson 5 of 6 \u00b7 Continue \u2192" : "Locked"}
-              href="/lesson/lists"
-              cloud="/assets/clouds-sunset/cutout-cloud-sunset-1-02.webp"
-            />
-            <MapNode
-              left={530}
-              top={325}
-              state={getStopState("dictionaries", PYTHON_STOPS, completed)}
-              title="6 · Dictionaries"
-              sub={completed.includes("dictionaries") ? "Complete · +60 XP" : getStopState("dictionaries", PYTHON_STOPS, completed) === "current" ? "Lesson 6 of 6 \u00b7 Continue \u2192" : "Locked"}
-              href="/lesson/dictionaries"
-              cloud="/assets/clouds-sunset/cutout-cloud-sunset-1-03.webp"
-            />
-          </>
-        )}
+          );
+        })}
 
         {/* boss: the Sky House on a big neon cloud */}
         <div
           className="absolute z-4"
-          style={{ left: 360, top: 150, transform: "translate(-50%,-50%)" }}
+          style={{ left: X_CENTER, top: BOSS_Y, transform: "translate(-50%,-50%)" }}
         >
         <div
           className="flex flex-col items-center"
@@ -406,10 +364,10 @@ export default function JourneyPage() {
               className="font-display"
               style={{ fontWeight: 800, fontSize: 16, color: "#ffffff", textShadow: "0 2px 10px rgba(20,12,50,.6)" }}
             >
-              {track === "javascript" ? "Chapter Project · Star Map" : "Chapter Project · Sky House"}
+              {projectLabel}
             </div>
             <div style={{ fontSize: 11, fontWeight: 900, color: "#ffd9ef", textShadow: "0 0 10px rgba(255,138,222,.6)" }}>
-              Build a tiny program of your own · +200 XP
+              Build a tiny program of your own
             </div>
           </Link>
         </div>

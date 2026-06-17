@@ -173,6 +173,7 @@ export default function SpotifyPlayer() {
   // Spotify SDK Integration states
   const [clientId, setClientId] = useState("");
   const [clientIdInput, setClientIdInput] = useState("");
+  const [isGlobalClient, setIsGlobalClient] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [isPremium, setIsPremium] = useState(true);
   const [useEmbedFallback, setUseEmbedFallback] = useState(false);
@@ -205,19 +206,12 @@ export default function SpotifyPlayer() {
   // Read saved configurations on client mount
   useEffect(() => {
     try {
-      const envClientId = process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_ID || "";
-      const storedClientId = envClientId || localStorage.getItem(STORAGE_CLIENT_KEY) || "";
       const savedStyle = localStorage.getItem(STORAGE_STYLE_KEY);
       const savedFallback = localStorage.getItem(STORAGE_FALLBACK_KEY);
       const savedPlaylist = localStorage.getItem("dc_spotify_active_playlist");
       const isConnected = localStorage.getItem(STORAGE_KEY) === "1";
 
       setTimeout(() => {
-        setClientId(storedClientId);
-        setClientIdInput(storedClientId);
-        if (isConnected) {
-          setConnected(true);
-        }
         if (savedStyle) {
           const idx = BUTTON_STYLES.findIndex((s) => s.id === savedStyle);
           if (idx !== -1) setStyleIndex(idx);
@@ -228,13 +222,46 @@ export default function SpotifyPlayer() {
         if (savedPlaylist) {
           setActivePlaylistId(savedPlaylist);
         }
-        if (!storedClientId) {
-          setShowSettings(true);
-        } else {
-          setShowSettings(false);
+        if (isConnected) {
+          setConnected(true);
         }
       }, 0);
     } catch { }
+
+    // Fetch client ID from server dynamically at runtime
+    fetch("/api/spotify/config")
+      .then((res) => res.json())
+      .then((data) => {
+        const serverClientId = data.clientId || "";
+        const storedClientId = serverClientId || localStorage.getItem(STORAGE_CLIENT_KEY) || "";
+
+        setTimeout(() => {
+          setClientId(storedClientId);
+          setClientIdInput(storedClientId);
+          if (serverClientId) {
+            setIsGlobalClient(true);
+          }
+
+          if (!storedClientId) {
+            setShowSettings(true);
+          } else {
+            setShowSettings(false);
+          }
+        }, 0);
+      })
+      .catch((err) => {
+        console.error("Failed to fetch Spotify config:", err);
+        const storedClientId = localStorage.getItem(STORAGE_CLIENT_KEY) || "";
+        setTimeout(() => {
+          setClientId(storedClientId);
+          setClientIdInput(storedClientId);
+          if (!storedClientId) {
+            setShowSettings(true);
+          } else {
+            setShowSettings(false);
+          }
+        }, 0);
+      });
   }, []);
 
   // Handle OAuth code callback in the URL
@@ -242,17 +269,35 @@ export default function SpotifyPlayer() {
     const searchParams = new URLSearchParams(window.location.search);
     const code = searchParams.get("code");
     if (code) {
-      const envClientId = process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_ID || "";
-      const storedClientId = envClientId || localStorage.getItem(STORAGE_CLIENT_KEY) || "";
-      if (storedClientId) {
-        exchangeCodeForToken(storedClientId, code).then((token) => {
-          if (token) {
-            setConnected(true);
-            setOpen(true); // Open settings to show they connected
+      // Fetch the config dynamically to get the client ID for token exchange
+      fetch("/api/spotify/config")
+        .then((res) => res.json())
+        .then((data) => {
+          const serverClientId = data.clientId || "";
+          const storedClientId = serverClientId || localStorage.getItem(STORAGE_CLIENT_KEY) || "";
+          if (storedClientId) {
+            exchangeCodeForToken(storedClientId, code).then((token) => {
+              if (token) {
+                setConnected(true);
+                setOpen(true); // Open settings to show they connected
+              }
+              cleanUrlParams();
+            });
           }
-          cleanUrlParams();
+        })
+        .catch((err) => {
+          console.error("Failed to fetch Spotify config in OAuth callback:", err);
+          const storedClientId = localStorage.getItem(STORAGE_CLIENT_KEY) || "";
+          if (storedClientId) {
+            exchangeCodeForToken(storedClientId, code).then((token) => {
+              if (token) {
+                setConnected(true);
+                setOpen(true);
+              }
+              cleanUrlParams();
+            });
+          }
         });
-      }
     }
   }, []);
 
@@ -1076,11 +1121,11 @@ export default function SpotifyPlayer() {
             <div style={{ fontWeight: 900, fontSize: 13 }} className={theme.textColor}>
               Spotify Settings
             </div>
-            {process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_ID ? (
+            {isGlobalClient ? (
               <div style={{ fontSize: 11, lineHeight: 1.45 }} className={theme.mutedTextColor}>
                 Spotify integration is configured globally by the application.
                 <div className="mt-2 text-xs font-mono select-all text-white/70">
-                  Client ID: {process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_ID.substring(0, 8)}...
+                  Client ID: {clientId.substring(0, 8)}...
                 </div>
               </div>
             ) : (
@@ -1128,7 +1173,7 @@ export default function SpotifyPlayer() {
                 </div>
               </>
             )}
-            {process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_ID && (
+            {isGlobalClient && (
               <div className="flex flex-col gap-2 mt-2 pt-2 border-t border-white/5">
                 <button
                   type="button"

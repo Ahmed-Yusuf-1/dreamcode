@@ -21,10 +21,32 @@ const jetbrains = JetBrains_Mono({
   weight: ["400", "500", "600"],
 });
 
+// The public site URL. Defaults to the production domain; override per
+// environment with NEXT_PUBLIC_SITE_URL (e.g. http://localhost:3000 in dev).
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://dreamcoder.dev";
+
+const title = "dreamcode - learn · solve · dream";
+const description =
+  "Tiny lessons and glowing problems, served all night. Python and JavaScript, one neon mile at a time.";
+
 export const metadata: Metadata = {
-  title: "dreamcode - learn · solve · dream",
-  description:
-    "Tiny lessons and glowing problems, served all night. Python and JavaScript, one neon mile at a time.",
+  metadataBase: new URL(siteUrl),
+  applicationName: "dreamcode",
+  title,
+  description,
+  alternates: { canonical: "/" },
+  openGraph: {
+    type: "website",
+    siteName: "dreamcode",
+    url: siteUrl,
+    title,
+    description,
+  },
+  twitter: {
+    card: "summary_large_image",
+    title,
+    description,
+  },
 };
 
 export default function RootLayout({

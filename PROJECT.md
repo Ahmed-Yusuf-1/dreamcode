@@ -79,7 +79,7 @@ Routes (`src/app/*/page.tsx` unless noted):
 - `/` home, `/start` onboarding, `/login` `/signup` (real Supabase auth)
 - `/dashboard` hub, `/lessons` catalog (track filter + completion checks)
 - `/lesson/[slug]` (SSG), `/practice/[slug]`, `/challenge/[slug]`, `/project/[slug]` (dynamic, real grading)
-- `/peaks` challenge library (gated), `/projects` catalog, `/journey` map, `/badges`, `/review` (FSRS), `/profile` (settings, track pills, AI toggle), `/placement` quiz
+- `/peaks` challenge library (gated), `/projects` catalog, `/journey` (map generated dynamically from `curriculum.ts`, per active track), `/badges`, `/review` (FSRS), `/profile` (settings, track pills, AI toggle), `/placement` quiz
 - API: `/api/{profile,progress,submissions,srs,badges}` (RLS-backed, Zod, 401 when signed out); `/api/guide` (AI hint, signed-in gated, provider-agnostic)
 - Auth: `/auth/callback` (OAuth code exchange), `/auth/signout`
 
@@ -121,13 +121,26 @@ Other: `src/proxy.ts` (Next 16 Proxy = renamed Middleware; refreshes the session
 
 1. Create a project at supabase.com; from Project Settings -> API copy the Project
    URL, anon public key, and service_role key.
-2. Copy `.env.local.example` to `.env.local` and paste those three values.
+2. Copy `.env.local.example` to `.env.local` and paste those three values. Set
+   `NEXT_PUBLIC_SITE_URL` (prod `https://dreamcoder.dev`, dev `http://localhost:3000`).
 3. Run `supabase/migrations/0001_init.sql` in the Supabase SQL editor (tables +
    RLS + auto-profile-on-signup trigger).
 4. Auth -> Providers: enable Google and GitHub (add each one's client id/secret).
-5. Auth -> URL Configuration: Site URL = app origin; add `${origin}/auth/callback`
-   as a redirect URL (and in the Google/GitHub OAuth apps).
+5. Auth -> URL Configuration: Site URL = `https://dreamcoder.dev`. Add BOTH
+   `https://dreamcoder.dev/auth/callback` and `http://localhost:3000/auth/callback`
+   as redirect URLs (and add the same callback URLs in the Google and GitHub OAuth
+   apps). Redirects use the live browser origin, so they follow whatever domain
+   the app is served from.
 6. Optional: Auth -> Email, turn off "Confirm email" for instant dev signups.
+
+### Custom domain (dreamcoder.dev)
+The product name stays **dreamcode**; `dreamcoder.dev` is just the web address.
+In code, the site URL is env-driven (`NEXT_PUBLIC_SITE_URL` -> `metadataBase` /
+Open Graph in `src/app/layout.tsx`), and all auth + Spotify redirects use the live
+origin, so they work on the domain with no code change. Owner action in external
+dashboards (add the domain ALONGSIDE localhost, do not remove localhost):
+Supabase Auth (step 5 above), the Google + GitHub OAuth apps, and the Spotify app
+(add `https://dreamcoder.dev` as a Redirect URI - exact origin, no trailing slash).
 
 ## Gotchas
 
