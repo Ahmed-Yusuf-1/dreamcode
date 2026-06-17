@@ -205,7 +205,8 @@ export default function SpotifyPlayer() {
   // Read saved configurations on client mount
   useEffect(() => {
     try {
-      const storedClientId = localStorage.getItem(STORAGE_CLIENT_KEY) || "";
+      const envClientId = process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_ID || "";
+      const storedClientId = envClientId || localStorage.getItem(STORAGE_CLIENT_KEY) || "";
       const savedStyle = localStorage.getItem(STORAGE_STYLE_KEY);
       const savedFallback = localStorage.getItem(STORAGE_FALLBACK_KEY);
       const savedPlaylist = localStorage.getItem("dc_spotify_active_playlist");
@@ -229,6 +230,8 @@ export default function SpotifyPlayer() {
         }
         if (!storedClientId) {
           setShowSettings(true);
+        } else {
+          setShowSettings(false);
         }
       }, 0);
     } catch { }
@@ -239,7 +242,8 @@ export default function SpotifyPlayer() {
     const searchParams = new URLSearchParams(window.location.search);
     const code = searchParams.get("code");
     if (code) {
-      const storedClientId = localStorage.getItem(STORAGE_CLIENT_KEY) || "";
+      const envClientId = process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_ID || "";
+      const storedClientId = envClientId || localStorage.getItem(STORAGE_CLIENT_KEY) || "";
       if (storedClientId) {
         exchangeCodeForToken(storedClientId, code).then((token) => {
           if (token) {
@@ -1072,47 +1076,76 @@ export default function SpotifyPlayer() {
             <div style={{ fontWeight: 900, fontSize: 13 }} className={theme.textColor}>
               Spotify Settings
             </div>
-            <div style={{ fontSize: 11, lineHeight: 1.45 }} className={theme.mutedTextColor}>
-              Connect your Spotify account using a developer Client ID:
-              <ol className="list-decimal pl-4 mt-2 flex flex-col gap-1">
-                <li>Create a Developer App on the <a href="https://developer.spotify.com/dashboard" target="_blank" rel="noopener noreferrer" className="underline text-cyan-glow hover:text-white">Spotify Dashboard</a>.</li>
-                <li>Set the **Redirect URI** to exactly: <code className="bg-white/10 px-1 py-0.5 rounded font-mono text-[10px] select-all">{typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000'}</code> (Ensure no trailing slash).</li>
-                <li>Paste your **Client ID** below:</li>
-              </ol>
-            </div>
-            <div className="flex flex-col gap-1.5 mt-1">
-              <input
-                type="text"
-                placeholder="Spotify Client ID"
-                value={clientIdInput}
-                onChange={(e) => setClientIdInput(e.target.value)}
-                className={`w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-[12px] font-mono outline-none transition-colors ${theme.textColor} focus:border-white/40`}
-                style={{ borderColor: theme.textAccent + "33" }}
-              />
-              <div className="flex gap-2 mt-1">
+            {process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_ID ? (
+              <div style={{ fontSize: 11, lineHeight: 1.45 }} className={theme.mutedTextColor}>
+                Spotify integration is configured globally by the application.
+                <div className="mt-2 text-xs font-mono select-all text-white/70">
+                  Client ID: {process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_ID.substring(0, 8)}...
+                </div>
+              </div>
+            ) : (
+              <>
+                <div style={{ fontSize: 11, lineHeight: 1.45 }} className={theme.mutedTextColor}>
+                  Connect your Spotify account using a developer Client ID:
+                  <ol className="list-decimal pl-4 mt-2 flex flex-col gap-1">
+                    <li>Create a Developer App on the <a href="https://developer.spotify.com/dashboard" target="_blank" rel="noopener noreferrer" className="underline text-cyan-glow hover:text-white">Spotify Dashboard</a>.</li>
+                    <li>Set the **Redirect URI** to exactly: <code className="bg-white/10 px-1 py-0.5 rounded font-mono text-[10px] select-all">{typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000'}</code> (Ensure no trailing slash).</li>
+                    <li>Paste your **Client ID** below:</li>
+                  </ol>
+                </div>
+                <div className="flex flex-col gap-1.5 mt-1">
+                  <input
+                    type="text"
+                    placeholder="Spotify Client ID"
+                    value={clientIdInput}
+                    onChange={(e) => setClientIdInput(e.target.value)}
+                    className={`w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-[12px] font-mono outline-none transition-colors ${theme.textColor} focus:border-white/40`}
+                    style={{ borderColor: theme.textAccent + "33" }}
+                  />
+                  <div className="flex gap-2 mt-1">
+                    <button
+                      type="button"
+                      onClick={saveSettings}
+                      className="flex-1 cursor-pointer rounded-lg py-2 text-[12px] font-extrabold hover:bg-white/10 active:scale-95 transition-all text-center border"
+                      style={{
+                        borderColor: theme.textAccent + "66",
+                        backgroundColor: theme.textAccent + "1c",
+                        color: theme.isDark ? "#ffffff" : theme.textAccent,
+                      }}
+                    >
+                      Save & Connect
+                    </button>
+                    {clientId && (
+                      <button
+                        type="button"
+                        onClick={() => setShowSettings(false)}
+                        className="cursor-pointer bg-white/5 border border-white/10 text-white/80 rounded-lg px-3 py-2 text-[12px] font-bold hover:bg-white/10"
+                      >
+                        Cancel
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </>
+            )}
+            {process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_ID && (
+              <div className="flex flex-col gap-2 mt-2 pt-2 border-t border-white/5">
                 <button
                   type="button"
-                  onClick={saveSettings}
-                  className="flex-1 cursor-pointer rounded-lg py-2 text-[12px] font-extrabold hover:bg-white/10 active:scale-95 transition-all text-center border"
-                  style={{
-                    borderColor: theme.textAccent + "66",
-                    backgroundColor: theme.textAccent + "1c",
-                    color: theme.isDark ? "#ffffff" : theme.textAccent,
-                  }}
+                  onClick={toggleFallback}
+                  className="w-full cursor-pointer bg-white/5 border border-white/10 text-white/80 rounded-lg py-2 text-[12px] font-bold hover:bg-white/10 active:scale-95 transition-all text-center"
                 >
-                  Save & Connect
+                  {useEmbedFallback ? "Switch to SDK Player" : "Switch to Embed Player"}
                 </button>
-                {clientId && (
-                  <button
-                    type="button"
-                    onClick={() => setShowSettings(false)}
-                    className="cursor-pointer bg-white/5 border border-white/10 text-white/80 rounded-lg px-3 py-2 text-[12px] font-bold hover:bg-white/10"
-                  >
-                    Cancel
-                  </button>
-                )}
+                <button
+                  type="button"
+                  onClick={() => setShowSettings(false)}
+                  className="w-full cursor-pointer bg-white/10 border border-white/20 text-white rounded-lg py-2 text-[12px] font-bold hover:bg-white/20 active:scale-95 transition-all text-center"
+                >
+                  Close Settings
+                </button>
               </div>
-            </div>
+            )}
           </div>
         ) : (
           // Active Playback view

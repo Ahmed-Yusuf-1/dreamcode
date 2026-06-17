@@ -319,7 +319,19 @@ export function updateProfile(updates: Partial<UserProfile>): UserProfile {
   saveUserProfile(updated);
 
   if (isUserSignedIn && isSupabaseConfigured()) {
-    const patchBody: any = {};
+    const patchBody: {
+      name?: string;
+      xp?: number;
+      streak?: number;
+      lastActiveDate?: string | null;
+      settings?: {
+        soundsEnabled: boolean;
+        guideEnabled: boolean;
+        remindersEnabled: boolean;
+        weekActivity: number[];
+        activeTrack: string;
+      };
+    } = {};
     if (updates.name !== undefined) patchBody.name = updates.name;
     if (updates.xp !== undefined || updates.level !== undefined) {
       const targetLevel = updates.level !== undefined ? updates.level : updated.level;

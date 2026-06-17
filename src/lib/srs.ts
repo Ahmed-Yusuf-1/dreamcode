@@ -45,6 +45,15 @@ if (typeof window !== "undefined" && isSupabaseConfigured()) {
   });
 }
 
+interface ApiSrsCard {
+  cardId: string;
+  dueAt: string;
+  stability: number;
+  difficulty: number;
+  reps: number;
+  updatedAt?: string;
+}
+
 /** Synchronizes the client SRS cache with the database. */
 async function syncSrsFromApi() {
   try {
@@ -53,7 +62,7 @@ async function syncSrsFromApi() {
       const data = await res.json();
       if (data.cards && Array.isArray(data.cards)) {
         const fullStates: Record<string, FSRSCardState> = {};
-        data.cards.forEach((card: any) => {
+        data.cards.forEach((card: ApiSrsCard) => {
           fullStates[card.cardId] = {
             cardId: card.cardId,
             dueAt: new Date(card.dueAt).getTime(),
