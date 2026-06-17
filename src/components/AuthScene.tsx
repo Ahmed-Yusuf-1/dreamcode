@@ -5,10 +5,13 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { gradientOpacity, cloudOpacity } from "@/lib/theme";
 import Cloud from "./Cloud";
+import { createClient } from "@/lib/supabase/client";
+import { isSupabaseConfigured } from "@/lib/supabase/config";
 
 /**
  * Shared login/signup scene: doorway-clouds background + frosted card.
- * Frontend-only - "submitting" just routes to the dashboard.
+ * Uses Supabase auth (email/password + Google/GitHub). Until Supabase is
+ * configured it falls back to the old demo routing so the app still runs.
  */
 const cs = cloudOpacity.auth;
 export default function AuthScene({ mode }: { mode: "login" | "signup" }) {
@@ -16,12 +19,69 @@ export default function AuthScene({ mode }: { mode: "login" | "signup" }) {
   const isSignup = mode === "signup";
   // New sign-ups get the guided first-run; returning logins go to the hub.
   const dest = isSignup ? "/start" : "/dashboard";
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  const submit = (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    router.push(dest);
+    setError(null);
+    setNotice(null);
+
+    if (!isSupabaseConfigured()) {
+      router.push(dest);
+      return;
+    }
+
+    setLoading(true);
+    const supabase = createClient();
+    try {
+      if (isSignup) {
+        const { data, error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data: { full_name: name || undefined },
+            emailRedirectTo: `${window.location.origin}/auth/callback?next=${dest}`,
+          },
+        });
+        if (error) {
+          setError(error.message);
+          return;
+        }
+        if (data.session) {
+          router.push(dest);
+          return;
+        }
+        setNotice("Check your email to confirm your account, then sign in.");
+      } else {
+        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        if (error) {
+          setError(error.message);
+          return;
+        }
+        router.push(dest);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const oauth = async (provider: "google" | "github") => {
+    setError(null);
+    if (!isSupabaseConfigured()) {
+      router.push(dest);
+      return;
+    }
+    const supabase = createClient();
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider,
+      options: { redirectTo: `${window.location.origin}/auth/callback?next=${dest}` },
+    });
+    if (error) setError(error.message);
   };
 
   const fieldStyle: React.CSSProperties = {
@@ -83,7 +143,12 @@ export default function AuthScene({ mode }: { mode: "login" | "signup" }) {
           style={{ borderRadius: 26, padding: "28px 28px", boxShadow: "0 24px 60px rgba(30,30,80,.35)" }}
         >
           {isSignup && (
-            <input placeholder="What should the clouds call you?" style={{ ...fieldStyle, marginBottom: 12 }} />
+            <input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="What should the clouds call you?"
+              style={{ ...fieldStyle, marginBottom: 12 }}
+            />
           )}
           <input
             type="email"
@@ -101,8 +166,19 @@ export default function AuthScene({ mode }: { mode: "login" | "signup" }) {
             placeholder="Password"
             style={{ ...fieldStyle, marginBottom: 18 }}
           />
+          {error && (
+            <div style={{ background: "rgba(255,90,140,.18)", border: "1px solid rgba(255,120,160,.5)", color: "#ffe1ec", fontSize: 13, fontWeight: 700, padding: "10px 12px", borderRadius: 12, marginBottom: 12 }}>
+              {error}
+            </div>
+          )}
+          {notice && (
+            <div style={{ background: "rgba(120,230,170,.18)", border: "1px solid rgba(120,230,170,.5)", color: "#defff0", fontSize: 13, fontWeight: 700, padding: "10px 12px", borderRadius: 12, marginBottom: 12 }}>
+              {notice}
+            </div>
+          )}
           <button
             type="submit"
+            disabled={loading}
             className="font-display w-full cursor-pointer transition-transform hover:-translate-y-0.5"
             style={{
               border: "none",
@@ -113,9 +189,11 @@ export default function AuthScene({ mode }: { mode: "login" | "signup" }) {
               padding: "14px 0",
               borderRadius: 999,
               boxShadow: "0 0 26px rgba(255,100,200,.55), 0 14px 32px rgba(40,16,60,.4)",
+              opacity: loading ? 0.7 : 1,
+              cursor: loading ? "wait" : "pointer",
             }}
           >
-            {isSignup ? "Start the night drive \u2192" : "Sign in \u2192"}
+            {loading ? "One moment..." : isSignup ? "Start the night drive \u2192" : "Sign in \u2192"}
           </button>
 
           <div className="flex items-center" style={{ gap: 12, margin: "18px 0" }}>
@@ -126,7 +204,7 @@ export default function AuthScene({ mode }: { mode: "login" | "signup" }) {
 
           <button
             type="button"
-            onClick={() => router.push(dest)}
+            onClick={() => oauth("google")}
             className="w-full cursor-pointer transition-colors hover:bg-white"
             style={{
               background: "rgba(255,255,255,.92)",
@@ -142,7 +220,7 @@ export default function AuthScene({ mode }: { mode: "login" | "signup" }) {
           </button>
           <button
             type="button"
-            onClick={() => router.push(dest)}
+            onClick={() => oauth("github")}
             className="w-full cursor-pointer transition-colors hover:bg-white"
             style={{
               background: "rgba(255,255,255,.92)",

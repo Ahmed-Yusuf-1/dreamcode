@@ -1,13 +1,14 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { updateProfile } from "@/lib/profile";
 
 export type Track = "python" | "javascript";
 
 /**
  * Persists and synchronizes the active curriculum track (Python vs JavaScript)
  * across the frontend client using localStorage and custom event triggers.
- * Prevents hydration mismatches by initializing to Python and updating in useEffect.
+ * Syncs the selection to the database user settings when logged in.
  */
 export function useActiveTrack() {
   const [track, setTrack] = useState<Track>("python");
@@ -26,6 +27,15 @@ export function useActiveTrack() {
     localStorage.setItem("dc_active_track", newTrack);
     // Dispatch global event so all components update concurrently
     window.dispatchEvent(new Event("dc_track_change"));
+
+    // Sync with the backend user profile settings
+    try {
+      updateProfile({
+        activeTrack: newTrack,
+      });
+    } catch (e) {
+      console.error("Failed to sync track selection to backend", e);
+    }
   };
 
   useEffect(() => {

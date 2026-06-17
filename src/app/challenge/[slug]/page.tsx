@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, use } from "react";
+import { useState, use } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import Cloud from "@/components/Cloud";
@@ -8,7 +8,7 @@ import CodeEditor from "@/components/CodeEditor";
 import EditorFrame from "@/components/EditorFrame";
 import DreamGuide from "@/components/DreamGuide";
 import { gradientOpacity, cloudOpacity } from "@/lib/theme";
-import { addXP, unlockBadge, completeStop } from "@/lib/profile";
+import { addXP, unlockBadge, completeStop, recordSubmission } from "@/lib/profile";
 import { playChime } from "@/lib/sound";
 import { challenges } from "@/lib/data";
 import { usePyodide } from "@/lib/usePyodide";
@@ -50,7 +50,9 @@ export default function DynamicChallengePage({ params }: { params: Promise<{ slu
         }) as TestState[];
 
         setResults(next);
-        if (next.every((r) => r === "pass")) {
+        const allPassed = next.every((r) => r === "pass");
+        recordSubmission(challenge.slug, code, allPassed);
+        if (allPassed) {
           setWon(true);
           addXP(challenge.xp);
           if (challenge.badge) unlockBadge(challenge.badge);
@@ -91,7 +93,9 @@ print("TEST_OUTPUTS:" + json.dumps(results))
             }) as TestState[];
 
             setResults(next);
-            if (next.every((r) => r === "pass")) {
+            const allPassed = next.every((r) => r === "pass");
+            recordSubmission(challenge.slug, code, allPassed);
+            if (allPassed) {
               setWon(true);
               addXP(challenge.xp);
               if (challenge.badge) unlockBadge(challenge.badge);

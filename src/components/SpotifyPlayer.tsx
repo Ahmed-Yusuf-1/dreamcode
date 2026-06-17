@@ -87,6 +87,83 @@ function getCloudSvgDataUri(color: string) {
   return `url("data:image/svg+xml;base64,${base64}")`;
 }
 
+interface SpotifyPlayerInstance {
+  connect: () => Promise<boolean>;
+  disconnect: () => void;
+  addListener: (event: string, callback: (data: never) => void) => void;
+  removeListener: (event: string, callback?: (data: never) => void) => void;
+  getCurrentState: () => Promise<unknown>;
+  setName: (name: string) => Promise<void>;
+  getVolume: () => Promise<number>;
+  setVolume: (volume: number) => Promise<void>;
+  pause: () => Promise<void>;
+  resume: () => Promise<void>;
+  togglePlay: () => Promise<void>;
+  seek: (positionMs: number) => Promise<void>;
+  previousTrack: () => Promise<void>;
+  nextTrack: () => Promise<void>;
+}
+
+interface SpotifyDevice {
+  id: string;
+  name: string;
+  type: string;
+  is_active: boolean;
+  is_private_session: boolean;
+  is_restricted: boolean;
+  volume_percent: number;
+}
+
+interface SpotifyPlaylist {
+  id: string;
+  name: string;
+  images?: { url: string }[];
+  tracks?: { total: number };
+  owner?: { display_name: string };
+}
+
+interface SpotifyArtist {
+  name: string;
+}
+
+interface SpotifyTrack {
+  name: string;
+  artists: SpotifyArtist[];
+  album: {
+    images: { url: string }[];
+  };
+}
+
+interface SpotifyPlayerState {
+  paused: boolean;
+  position: number;
+  duration: number;
+  shuffle: boolean;
+  repeat_mode: number;
+  track_window: {
+    current_track: SpotifyTrack;
+  };
+}
+
+interface CustomStyle extends React.CSSProperties {
+  "--glow-color"?: string;
+  "--thumb-image"?: string;
+  "--track-background"?: string;
+}
+
+declare global {
+  interface Window {
+    Spotify?: {
+      Player: new (options: {
+        name: string;
+        getOAuthToken: (cb: (token: string) => void) => void;
+        volume: number;
+      }) => SpotifyPlayerInstance;
+    };
+    onSpotifyWebPlaybackSDKReady?: () => void;
+  }
+}
+
 export default function SpotifyPlayer() {
   const [connected, setConnected] = useState(false);
   const [open, setOpen] = useState(false);
@@ -99,7 +176,7 @@ export default function SpotifyPlayer() {
   const [showSettings, setShowSettings] = useState(false);
   const [isPremium, setIsPremium] = useState(true);
   const [useEmbedFallback, setUseEmbedFallback] = useState(false);
-  const [player, setPlayer] = useState<any>(null);
+  const [player, setPlayer] = useState<SpotifyPlayerInstance | null>(null);
   const [deviceId, setDeviceId] = useState<string | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTrack, setCurrentTrack] = useState<{
@@ -116,10 +193,10 @@ export default function SpotifyPlayer() {
   const [durationMs, setDurationMs] = useState(0);
   const [shuffle, setShuffle] = useState(false);
   const [repeatMode, setRepeatMode] = useState<"off" | "context" | "track">("off");
-  const [devices, setDevices] = useState<any[]>([]);
+  const [devices, setDevices] = useState<SpotifyDevice[]>([]);
   const [showDeviceList, setShowDeviceList] = useState(false);
   const [playlistTab, setPlaylistTab] = useState<"vibes" | "my-playlists">("my-playlists");
-  const [myPlaylists, setMyPlaylists] = useState<any[]>([]);
+  const [myPlaylists, setMyPlaylists] = useState<SpotifyPlaylist[]>([]);
   const [loadingPlaylists, setLoadingPlaylists] = useState(false);
   const [playlistsError, setPlaylistsError] = useState<string | null>(null);
   const [showLowerSection, setShowLowerSection] = useState(false);
@@ -129,32 +206,31 @@ export default function SpotifyPlayer() {
   useEffect(() => {
     try {
       const storedClientId = localStorage.getItem(STORAGE_CLIENT_KEY) || "";
-      setClientId(storedClientId);
-      setClientIdInput(storedClientId);
-
-      if (localStorage.getItem(STORAGE_KEY) === "1") {
-        setConnected(true);
-      }
-
       const savedStyle = localStorage.getItem(STORAGE_STYLE_KEY);
-      if (savedStyle) {
-        const idx = BUTTON_STYLES.findIndex((s) => s.id === savedStyle);
-        if (idx !== -1) setStyleIndex(idx);
-      }
-
       const savedFallback = localStorage.getItem(STORAGE_FALLBACK_KEY);
-      if (savedFallback) {
-        setUseEmbedFallback(savedFallback === "1");
-      }
-
       const savedPlaylist = localStorage.getItem("dc_spotify_active_playlist");
-      if (savedPlaylist) {
-        setActivePlaylistId(savedPlaylist);
-      }
+      const isConnected = localStorage.getItem(STORAGE_KEY) === "1";
 
-      if (!storedClientId) {
-        setShowSettings(true);
-      }
+      setTimeout(() => {
+        setClientId(storedClientId);
+        setClientIdInput(storedClientId);
+        if (isConnected) {
+          setConnected(true);
+        }
+        if (savedStyle) {
+          const idx = BUTTON_STYLES.findIndex((s) => s.id === savedStyle);
+          if (idx !== -1) setStyleIndex(idx);
+        }
+        if (savedFallback) {
+          setUseEmbedFallback(savedFallback === "1");
+        }
+        if (savedPlaylist) {
+          setActivePlaylistId(savedPlaylist);
+        }
+        if (!storedClientId) {
+          setShowSettings(true);
+        }
+      }, 0);
     } catch { }
   }, []);
 
@@ -181,23 +257,25 @@ export default function SpotifyPlayer() {
     if (!connected || !clientId || useEmbedFallback || !isPremium) {
       if (player) {
         player.disconnect();
-        setPlayer(null);
+        setTimeout(() => {
+          setPlayer(null);
+        }, 0);
       }
       return;
     }
 
-    let activePlayer: any = null;
+    let activePlayer: SpotifyPlayerInstance | null = null;
 
     const setupSDK = async () => {
       try {
         // 1. Load SDK Script
         await new Promise<void>((resolve, reject) => {
-          if (typeof window !== "undefined" && !(window as any).isSecureContext && window.location.hostname !== "localhost" && window.location.hostname !== "127.0.0.1") {
+          if (typeof window !== "undefined" && !(window as Window & { isSecureContext?: boolean }).isSecureContext && window.location.hostname !== "localhost" && window.location.hostname !== "127.0.0.1") {
             reject(new Error("Spotify SDK cannot run on insecure HTTP domains/IPs."));
             return;
           }
 
-          if ((window as any).Spotify) {
+          if (window.Spotify) {
             resolve();
             return;
           }
@@ -210,7 +288,7 @@ export default function SpotifyPlayer() {
             script.async = true;
             document.body.appendChild(script);
           }
-          (window as any).onSpotifyWebPlaybackSDKReady = () => {
+          (window as Window & { onSpotifyWebPlaybackSDKReady?: () => void }).onSpotifyWebPlaybackSDKReady = () => {
             resolve();
           };
         });
@@ -223,7 +301,7 @@ export default function SpotifyPlayer() {
           return;
         }
 
-        const p = new (window as any).Spotify.Player({
+        const p = new window.Spotify!.Player({
           name: "Dreamcode Player",
           getOAuthToken: (cb: (t: string) => void) => {
             getValidToken(clientId).then((t) => cb(t || ""));
@@ -252,7 +330,7 @@ export default function SpotifyPlayer() {
           console.error("Spotify Playback Error:", message);
         });
 
-        p.addListener("player_state_changed", (state: any) => {
+        p.addListener("player_state_changed", (state: SpotifyPlayerState | null) => {
           if (!state) return;
           setIsPlaying(!state.paused);
           setProgressMs(state.position || 0);
@@ -264,7 +342,7 @@ export default function SpotifyPlayer() {
           if (track) {
             setCurrentTrack({
               name: track.name,
-              artists: track.artists.map((a: any) => a.name).join(", "),
+              artists: track.artists.map((a: SpotifyArtist) => a.name).join(", "),
               image: track.album.images[0]?.url || "",
             });
           }
@@ -355,7 +433,7 @@ export default function SpotifyPlayer() {
     return () => clearInterval(interval);
   }, [open, connected, clientId, useEmbedFallback, isPremium]);
 
-  const fetchDevices = async () => {
+  async function fetchDevices() {
     const tok = await getValidToken(clientId);
     if (!tok) return;
     try {
@@ -369,7 +447,7 @@ export default function SpotifyPlayer() {
     } catch (err) {
       console.error("Failed to fetch devices:", err);
     }
-  };
+  }
 
   const transferDevice = async (targetDeviceId: string) => {
     const tok = await getValidToken(clientId);
@@ -490,7 +568,7 @@ export default function SpotifyPlayer() {
     }
   };
 
-  const fetchMyPlaylists = async () => {
+  async function fetchMyPlaylists() {
     const tok = await getValidToken(clientId);
     if (!tok) return;
     setLoadingPlaylists(true);
@@ -512,7 +590,7 @@ export default function SpotifyPlayer() {
     } finally {
       setLoadingPlaylists(false);
     }
-  };
+  }
 
   const handleTabChange = (tab: "vibes" | "my-playlists") => {
     setPlaylistTab(tab);
@@ -1071,8 +1149,8 @@ export default function SpotifyPlayer() {
                     boxShadow: styleIndex === 0
                       ? `0 10px 25px rgba(0,0,0,0.5), 0 0 ${isPlaying ? '18px' : '6px'} ${theme.glowColor}`
                       : `0 8px 20px rgba(0,0,0,0.3), 0 0 ${isPlaying ? '18px' : '6px'} ${theme.glowColor}`,
-                    ["--glow-color" as any]: theme.glowColor,
-                  }}
+                    "--glow-color": theme.glowColor,
+                  } as CustomStyle}
                 >
                   {currentTrack?.image ? (
                     // eslint-disable-next-line @next/next/no-img-element
@@ -1220,10 +1298,10 @@ export default function SpotifyPlayer() {
                       onChange={handleSeek}
                       className={`w-full dreamcode-range seek-range ${styleIndex === 0 ? 'wood-range' : ''}`}
                       style={{
-                        ["--glow-color" as any]: theme.textAccent,
-                        ["--thumb-image" as any]: getCloudSvgDataUri(theme.textAccent),
-                        ["--track-background" as any]: `linear-gradient(to right, ${theme.textAccent} 0%, ${theme.textAccent} ${durationMs ? (progressMs / durationMs) * 100 : 0}%, ${styleIndex === 0 ? 'rgba(0,0,0,0.45)' : (theme.isDark ? 'rgba(255,255,255,0.12)' : 'rgba(14,34,71,0.1)')} ${durationMs ? (progressMs / durationMs) * 100 : 0}%, ${styleIndex === 0 ? 'rgba(0,0,0,0.45)' : (theme.isDark ? 'rgba(255,255,255,0.12)' : 'rgba(14,34,71,0.1)')} 100%)`,
-                      }}
+                        "--glow-color": theme.textAccent,
+                        "--thumb-image": getCloudSvgDataUri(theme.textAccent),
+                        "--track-background": `linear-gradient(to right, ${theme.textAccent} 0%, ${theme.textAccent} ${durationMs ? (progressMs / durationMs) * 100 : 0}%, ${styleIndex === 0 ? 'rgba(0,0,0,0.45)' : (theme.isDark ? 'rgba(255,255,255,0.12)' : 'rgba(14,34,71,0.1)')} ${durationMs ? (progressMs / durationMs) * 100 : 0}%, ${styleIndex === 0 ? 'rgba(0,0,0,0.45)' : (theme.isDark ? 'rgba(255,255,255,0.12)' : 'rgba(14,34,71,0.1)')} 100%)`,
+                      } as CustomStyle}
                     />
                     <div className="flex justify-between text-[8.5px] font-mono px-0.5 text-white/85 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)] font-bold">
                       <span>{formatTime(progressMs)}</span>
@@ -1254,10 +1332,10 @@ export default function SpotifyPlayer() {
                           margin: 0,
                           padding: 0,
                           cursor: "pointer",
-                          ["--glow-color" as any]: theme.textAccent,
-                          ["--thumb-image" as any]: getCloudSvgDataUri(theme.textAccent),
-                          ["--track-background" as any]: `linear-gradient(to right, ${theme.textAccent} 0%, ${theme.textAccent} ${volume * 100}%, ${styleIndex === 0 ? 'rgba(0, 0, 0, 0.6)' : 'rgba(255, 255, 255, 0.35)'} ${volume * 100}%, ${styleIndex === 0 ? 'rgba(0, 0, 0, 0.6)' : 'rgba(255, 255, 255, 0.35)'} 100%)`,
-                        }}
+                          "--glow-color": theme.textAccent,
+                          "--thumb-image": getCloudSvgDataUri(theme.textAccent),
+                          "--track-background": `linear-gradient(to right, ${theme.textAccent} 0%, ${theme.textAccent} ${volume * 100}%, ${styleIndex === 0 ? 'rgba(0, 0, 0, 0.6)' : 'rgba(255, 255, 255, 0.35)'} ${volume * 100}%, ${styleIndex === 0 ? 'rgba(0, 0, 0, 0.6)' : 'rgba(255, 255, 255, 0.35)'} 100%)`,
+                        } as CustomStyle}
                       />
                     </div>
                   </div>

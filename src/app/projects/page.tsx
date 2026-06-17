@@ -1,13 +1,14 @@
+"use client";
+
 import Link from "next/link";
 import Cloud from "@/components/Cloud";
 import { cloudOpacity } from "@/lib/theme";
 import SceneTopBar, { GlassPill } from "@/components/SceneTopBar";
 import { projects } from "@/lib/data";
+import { useUserProfile } from "@/lib/profile";
+import { useActiveTrack } from "@/lib/track";
 
-export const metadata = {
-  title: "Projects - dreamcode",
-  description: "Guided, Independent, and Capstone projects. Apply your programming skills on real applications.",
-};
+import { useEffect } from "react";
 
 const TIERS = [
   { name: "Guided", blurb: "We sketch the rooms, you build the house. Step-by-step, but every line is yours." },
@@ -17,6 +18,34 @@ const TIERS = [
 
 const cs = cloudOpacity.projects;
 export default function ProjectsPage() {
+  const { profile } = useUserProfile();
+  const completed = profile.completedStops || [];
+
+  useEffect(() => {
+    document.title = "Projects - dreamcode";
+  }, []);
+
+  const getProjectState = (id: string, lang: string): "done" | "current" | "locked" => {
+    if (completed.includes(id)) return "done";
+    
+    if (id === "sky-house") {
+      return "current";
+    }
+    if (id === "cloud-diary") {
+      return completed.includes("sky-house") ? "current" : "locked";
+    }
+    if (id === "star-map") {
+      return "current";
+    }
+    if (id === "weather-window") {
+      return completed.includes("cloud-diary") ? "current" : "locked";
+    }
+    if (id === "dream-api") {
+      return completed.includes("weather-window") && completed.includes("star-map") ? "current" : "locked";
+    }
+    return "locked";
+  };
+
   return (
     <div
       className="relative overflow-hidden"
@@ -72,7 +101,8 @@ export default function ProjectsPage() {
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2" style={{ gap: 16, marginTop: 14 }}>
                 {tierProjects.map((p) => {
-                  const locked = p.state === "locked";
+                  const state = getProjectState(p.id, p.language);
+                  const locked = state === "locked";
                   const card = (
                     <div
                       className={`glass h-full${locked ? "" : " glow-hover"}`}
@@ -110,7 +140,11 @@ export default function ProjectsPage() {
                         {p.desc}
                       </p>
                       <div style={{ marginTop: 12, fontSize: 12, fontWeight: 900, color: locked ? "rgba(255,255,255,.65)" : "#ffe7f4" }}>
-                        {locked ? "Locked \u00b7 unlocks further down the road" : p.state === "current" ? "In progress \u00b7 open the workshop \u2192" : "Start building \u2192"}
+                        {locked 
+                          ? "Locked \u00b7 unlocks further down the road" 
+                          : state === "done" 
+                            ? "Completed! Build again \u2192" 
+                            : "Start building \u2192"}
                       </div>
                     </div>
                   );
@@ -118,7 +152,7 @@ export default function ProjectsPage() {
                   return locked ? (
                     <div key={p.id}>{card}</div>
                   ) : (
-                    <Link key={p.id} href="/lesson/loops" className="block transition-transform hover:-translate-y-1">
+                    <Link key={p.id} href={`/project/${p.id}`} className="block transition-transform hover:-translate-y-1">
                       {card}
                     </Link>
                   );

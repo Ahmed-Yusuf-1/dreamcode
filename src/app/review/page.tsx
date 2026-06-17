@@ -35,7 +35,9 @@ export default function ReviewPage() {
       addXP(20);
       unlockBadge("streak-keeper");
       playChime("success");
-      setXpAwarded(true);
+      setTimeout(() => {
+        setXpAwarded(true);
+      }, 0);
     }
   }, [done, dueCards.length, xpAwarded]);
 
@@ -44,17 +46,7 @@ export default function ReviewPage() {
     if (rating !== "again") {
       playChime("correct");
     }
-    const currentNow = Date.now();
-    let nextDue = currentNow;
-    if (rating === "again") {
-      nextDue = currentNow + 60 * 1000; // 1 minute
-    } else if (rating === "good") {
-      nextDue = currentNow + 3 * 24 * 3600 * 1000; // 3 days
-    } else if (rating === "easy") {
-      nextDue = currentNow + 7 * 24 * 3600 * 1000; // 7 days
-    }
-
-    saveSRSState(card.id, nextDue);
+    const nextDue = saveSRSState(card.id, rating);
     setSrsStates((prev) => ({ ...prev, [card.id]: nextDue }));
     setRevealed(false);
     setIdx((prevIdx) => prevIdx + 1);

@@ -10,8 +10,8 @@ import { useActiveTrack } from "@/lib/track";
 
 const cs = cloudOpacity.journey;
 
-const PYTHON_STOPS = ["variables", "strings", "loops", "functions"];
-const JS_STOPS = ["js-variables", "js-functions", "cloud-hopper", "fog-filter"];
+const PYTHON_STOPS = ["variables", "strings", "loops", "functions", "lists", "dictionaries"];
+const JS_STOPS = ["js-variables", "js-functions", "js-loops", "js-arrays", "js-objects", "cloud-hopper"];
 
 function getStopState(slug: string, orderedSlugs: string[], completedStops: string[]): "done" | "current" | "locked" {
   if (completedStops.includes(slug)) return "done";
@@ -186,7 +186,7 @@ export default function JourneyPage() {
           style={{ overflow: "visible", filter: "drop-shadow(0 0 10px rgba(255,190,240,.45))" }}
         >
           <path
-            d="M 360 1390 C 240 1350, 190 1270, 190 1160 C 190 1050, 530 1020, 530 910 C 530 800, 190 780, 190 670 C 190 560, 530 540, 530 430 C 530 320, 360 280, 360 170"
+            d="M 360 1390 C 240 1370, 190 1290, 190 1200 C 190 1110, 530 1100, 530 1025 C 530 950, 190 925, 190 850 C 190 775, 530 750, 530 675 C 530 600, 190 575, 190 500 C 190 425, 530 400, 530 325 C 530 250, 360 220, 360 150"
             fill="none"
             stroke="rgba(255,255,255,.85)"
             strokeWidth={7}
@@ -228,78 +228,114 @@ export default function JourneyPage() {
           <>
             <MapNode
               left={190}
-              top={1160}
+              top={1200}
               state={getStopState("js-variables", JS_STOPS, completed)}
               title="1 · Let and Const"
-              sub={completed.includes("js-variables") ? "Complete · +60 XP" : "Lesson 1 of 2 · Start \u2192"}
+              sub={completed.includes("js-variables") ? "Complete · +60 XP" : "Lesson 1 of 5 · Start \u2192"}
               href="/lesson/js-variables"
               cloud="/assets/clouds-sunset/cutout-cloud-sunset-1-02.webp"
             />
             <MapNode
               left={530}
-              top={910}
+              top={1025}
               state={getStopState("js-functions", JS_STOPS, completed)}
-              title="2 \u00b7 Arrow Functions"
-              sub={completed.includes("js-functions") ? "Complete · +60 XP" : getStopState("js-functions", JS_STOPS, completed) === "current" ? "Lesson 2 of 2 \u00b7 Continue \u2192" : "Locked"}
+              title="2 · Arrow Functions"
+              sub={completed.includes("js-functions") ? "Complete · +60 XP" : getStopState("js-functions", JS_STOPS, completed) === "current" ? "Lesson 2 of 5 \u00b7 Continue \u2192" : "Locked"}
               href="/lesson/js-functions"
               cloud="/assets/clouds-sunset/cutout-cloud-sunset-1-03.webp"
             />
             <MapNode
               left={190}
-              top={670}
-              state={getStopState("cloud-hopper", JS_STOPS, completed)}
-              title="3 · Cloud Hopper"
-              sub={completed.includes("cloud-hopper") ? "Complete · +40 XP" : getStopState("cloud-hopper", JS_STOPS, completed) === "current" ? "Challenge \u00b7 Continue \u2192" : "Finish Functions to unlock"}
-              href="/challenge/cloud-hopper"
+              top={850}
+              state={getStopState("js-loops", JS_STOPS, completed)}
+              title="3 · Repeating Code"
+              sub={completed.includes("js-loops") ? "Complete · +60 XP" : getStopState("js-loops", JS_STOPS, completed) === "current" ? "Lesson 3 of 5 \u00b7 Continue \u2192" : "Locked"}
+              href="/lesson/js-loops"
               cloud="/assets/clouds-neon/cutout-cloud-neon-1-01.webp"
             />
             <MapNode
               left={530}
-              top={430}
-              state={getStopState("fog-filter", JS_STOPS, completed)}
-              title="4 · Fog Filter"
-              sub={completed.includes("fog-filter") ? "Complete · +60 XP" : "Finish Cloud Hopper to unlock"}
-              href="/peaks"
+              top={675}
+              state={getStopState("js-arrays", JS_STOPS, completed)}
+              title="4 · Array Lists"
+              sub={completed.includes("js-arrays") ? "Complete · +60 XP" : getStopState("js-arrays", JS_STOPS, completed) === "current" ? "Lesson 4 of 5 \u00b7 Continue \u2192" : "Locked"}
+              href="/lesson/js-arrays"
               cloud="/assets/clouds-sunset/cutout-cloud-sunset-1-04.webp"
+            />
+            <MapNode
+              left={190}
+              top={500}
+              state={getStopState("js-objects", JS_STOPS, completed)}
+              title="5 · Labeled Structures"
+              sub={completed.includes("js-objects") ? "Complete · +60 XP" : getStopState("js-objects", JS_STOPS, completed) === "current" ? "Lesson 5 of 5 \u00b7 Continue \u2192" : "Locked"}
+              href="/lesson/js-objects"
+              cloud="/assets/clouds-sunset/cutout-cloud-sunset-1-02.webp"
+            />
+            <MapNode
+              left={530}
+              top={325}
+              state={getStopState("cloud-hopper", JS_STOPS, completed)}
+              title="6 · Cloud Hopper"
+              sub={completed.includes("cloud-hopper") ? "Complete · +40 XP" : getStopState("cloud-hopper", JS_STOPS, completed) === "current" ? "Challenge \u00b7 Continue \u2192" : "Locked"}
+              href="/challenge/cloud-hopper"
+              cloud="/assets/clouds-neon/cutout-cloud-neon-1-02.webp"
             />
           </>
         ) : (
           <>
             <MapNode
               left={190}
-              top={1160}
+              top={1200}
               state={getStopState("variables", PYTHON_STOPS, completed)}
               title="1 · Variables"
-              sub={completed.includes("variables") ? "Complete · +60 XP" : "Lesson 1 of 4 · Start \u2192"}
+              sub={completed.includes("variables") ? "Complete · +60 XP" : "Lesson 1 of 6 · Start \u2192"}
               href="/lesson/variables"
               cloud="/assets/clouds-sunset/cutout-cloud-sunset-1-02.webp"
             />
             <MapNode
               left={530}
-              top={910}
+              top={1025}
               state={getStopState("strings", PYTHON_STOPS, completed)}
               title="2 · Strings"
-              sub={completed.includes("strings") ? "Complete · +60 XP" : getStopState("strings", PYTHON_STOPS, completed) === "current" ? "Lesson 2 of 4 \u00b7 Continue \u2192" : "Locked"}
+              sub={completed.includes("strings") ? "Complete · +60 XP" : getStopState("strings", PYTHON_STOPS, completed) === "current" ? "Lesson 2 of 6 \u00b7 Continue \u2192" : "Locked"}
               href="/lesson/strings"
               cloud="/assets/clouds-sunset/cutout-cloud-sunset-1-03.webp"
             />
             <MapNode
               left={190}
-              top={670}
+              top={850}
               state={getStopState("loops", PYTHON_STOPS, completed)}
-              title="3 \u00b7 Loops"
-              sub={completed.includes("loops") ? "Complete · +60 XP" : getStopState("loops", PYTHON_STOPS, completed) === "current" ? "Lesson 3 of 4 \u00b7 Continue \u2192" : "Locked"}
+              title="3 · Loops"
+              sub={completed.includes("loops") ? "Complete · +60 XP" : getStopState("loops", PYTHON_STOPS, completed) === "current" ? "Lesson 3 of 6 \u00b7 Continue \u2192" : "Locked"}
               href="/lesson/loops"
               cloud="/assets/clouds-neon/cutout-cloud-neon-1-01.webp"
             />
             <MapNode
               left={530}
-              top={430}
+              top={675}
               state={getStopState("functions", PYTHON_STOPS, completed)}
               title="4 · Functions"
-              sub={completed.includes("functions") ? "Complete · +60 XP" : getStopState("functions", PYTHON_STOPS, completed) === "current" ? "Lesson 4 of 4 \u00b7 Continue \u2192" : "Finish Loops to unlock"}
+              sub={completed.includes("functions") ? "Complete · +60 XP" : getStopState("functions", PYTHON_STOPS, completed) === "current" ? "Lesson 4 of 6 \u00b7 Continue \u2192" : "Locked"}
               href="/lesson/functions"
               cloud="/assets/clouds-sunset/cutout-cloud-sunset-1-04.webp"
+            />
+            <MapNode
+              left={190}
+              top={500}
+              state={getStopState("lists", PYTHON_STOPS, completed)}
+              title="5 · Lists"
+              sub={completed.includes("lists") ? "Complete · +60 XP" : getStopState("lists", PYTHON_STOPS, completed) === "current" ? "Lesson 5 of 6 \u00b7 Continue \u2192" : "Locked"}
+              href="/lesson/lists"
+              cloud="/assets/clouds-sunset/cutout-cloud-sunset-1-02.webp"
+            />
+            <MapNode
+              left={530}
+              top={325}
+              state={getStopState("dictionaries", PYTHON_STOPS, completed)}
+              title="6 · Dictionaries"
+              sub={completed.includes("dictionaries") ? "Complete · +60 XP" : getStopState("dictionaries", PYTHON_STOPS, completed) === "current" ? "Lesson 6 of 6 \u00b7 Continue \u2192" : "Locked"}
+              href="/lesson/dictionaries"
+              cloud="/assets/clouds-sunset/cutout-cloud-sunset-1-03.webp"
             />
           </>
         )}

@@ -231,6 +231,137 @@ console.log(double(21));`,
     language: "javascript",
     practiceSlug: "js-functions",
   },
+  {
+    slug: "lists",
+    order: 5,
+    chapter: CHAPTER,
+    kicker: "PYTHON BASICS",
+    title: "Lists of things",
+    catalogTitle: "Lists",
+    blurb: "Keep many things in one place, in the order you put them.",
+    catalogCode: 'clouds = ["wispy", "puffy"]',
+    intro:
+      "A **list** keeps multiple values together. Write square brackets with commas in between. Access individual items with square brackets and their **index** (position), starting at **0**.",
+    example: `clouds = ["wispy", "puffy"]
+print(len(clouds))
+print(clouds[1])`,
+    reads: [
+      { dot: DOT_PINK, text: '`["wispy", "puffy"]` creates a list with two text items.' },
+      { dot: DOT_MINT, text: '`clouds[1]` looks up the item at position 1 (the second item).' },
+      { dot: DOT_LAVENDER, text: '`len(clouds)` counts the total items in the list, here 2.' },
+    ],
+    tip: "Indexes start at 0. So the first item is `clouds[0]`, and the second is `clouds[1]`.",
+    starter: `# print the list, then print the first item
+clouds = ["cirrus", "cumulus", "stratus"]
+print(clouds)
+print(clouds[0])`,
+    practiceSlug: "lists",
+  },
+  {
+    slug: "dictionaries",
+    order: 6,
+    chapter: CHAPTER,
+    kicker: "PYTHON BASICS",
+    title: "Labeling values",
+    catalogTitle: "Dictionaries",
+    blurb: "Label every value with a key so you can find it fast.",
+    catalogCode: 'cloud = {"shape": "puffy"}',
+    intro:
+      "A **dictionary** stores values mapped to **keys** (labels). Define it with curly braces `{}` and key-value pairs separated by colons. Retrieve values using their keys.",
+    example: `star = {"name": "Sirius", "mag": -1.46}
+print(star["name"])
+print(star["mag"])`,
+    reads: [
+      { dot: DOT_PINK, text: '`{"name": "Sirius"}` maps the key `"name"` to the value `"Sirius"`.' },
+      { dot: DOT_MINT, text: '`star["name"]` retrieves the value stored under the key `"name"`.' },
+    ],
+    tip: "If you try to look up a key that doesn't exist, Python will raise a KeyError. Check spelling.",
+    starter: `# complete the dictionary and lookup the color
+sky_item = {"name": "cloud", "color": "neon"}
+print(sky_item["name"])
+print(sky_item["color"])`,
+    practiceSlug: "dictionaries",
+  },
+  {
+    slug: "js-loops",
+    order: 3,
+    chapter: "JavaScript Climbs - Chapter 1",
+    kicker: "JAVASCRIPT CLIMBS",
+    title: "Repeating code",
+    catalogTitle: "Loops",
+    blurb: "Repeat steps using standard for loops and for...of iteration.",
+    catalogCode: "for (let i = 0; i < 3; i++)",
+    intro:
+      "In JavaScript, you can repeat code using a **for** loop. The loop initialization, condition, and increment go inside parentheses, separated by semicolons.",
+    example: `for (let i = 0; i < 3; i++) {
+  console.log("hop " + i);
+}`,
+    reads: [
+      { dot: DOT_PINK, text: "`let i = 0` initializes a counter variable at 0." },
+      { dot: DOT_MINT, text: "`i < 3` keeps looping as long as the counter is less than 3." },
+      { dot: DOT_LAVENDER, text: "`i++` adds 1 to the counter at the end of each turn." },
+    ],
+    tip: "You can also loop over arrays using the modern `for (const item of array)` syntax.",
+    starter: `// write a loop that counts from 0 to 4
+for (let i = 0; i < 5; i++) {
+  console.log(i);
+}`,
+    language: "javascript",
+    practiceSlug: "js-loops",
+  },
+  {
+    slug: "js-arrays",
+    order: 4,
+    chapter: "JavaScript Climbs - Chapter 1",
+    kicker: "JAVASCRIPT CLIMBS",
+    title: "Array lists",
+    catalogTitle: "Arrays",
+    blurb: "Keep ordered collections of elements in JavaScript arrays.",
+    catalogCode: "const clouds = ['wispy'];",
+    intro:
+      "JavaScript **arrays** are list-like objects used to store multiple values. They are zero-indexed and support built-in helper functions like `.push()` and `.length`.",
+    example: `const clouds = ["cirrus", "stratus"];
+console.log(clouds.length);
+console.log(clouds[0]);`,
+    reads: [
+      { dot: DOT_PINK, text: '`["cirrus", "stratus"]` declares an array of two strings.' },
+      { dot: DOT_MINT, text: '`clouds.length` gets the number of elements in the array.' },
+    ],
+    tip: "You can add elements to the end of an array using the `.push(value)` method.",
+    starter: `// print the array and push a new cloud
+const sky = ["puffy", "grey"];
+sky.push("neon");
+console.log(sky);
+console.log(sky.length);`,
+    language: "javascript",
+    practiceSlug: "js-arrays",
+  },
+  {
+    slug: "js-objects",
+    order: 5,
+    chapter: "JavaScript Climbs - Chapter 1",
+    kicker: "JAVASCRIPT CLIMBS",
+    title: "Labeled structures",
+    catalogTitle: "Objects",
+    blurb: "Store keyed collections of properties using JavaScript objects.",
+    catalogCode: "const star = { mag: 1 };",
+    intro:
+      "JavaScript **objects** store key-value properties. You can declare them using curly braces `{}` and retrieve values using dot notation or bracket notation.",
+    example: `const star = { name: "Polaris", mag: 1.97 };
+console.log(star.name);
+console.log(star["mag"]);`,
+    reads: [
+      { dot: DOT_PINK, text: '`star.name` uses dot notation to read the name property.' },
+      { dot: DOT_MINT, text: '`star["mag"]` uses bracket notation to retrieve the magnitude.' },
+    ],
+    tip: "Objects are similar to Python dictionaries. Use keys (which must be valid strings) to store data.",
+    starter: `// complete the object and read its property
+const cloud = { shape: "wispy", height: 3000 };
+console.log(cloud.shape);
+console.log(cloud.height);`,
+    language: "javascript",
+    practiceSlug: "js-objects",
+  },
 ];
 
 export const lessonCount = lessons.length;

@@ -105,14 +105,107 @@ export interface Project {
   xp: number;
   state: NodeState;
   language: "Python" | "JavaScript";
+  instructions?: string;
+  starter?: string;
+  functionName?: string;
+  testCases?: ChallengeTestCase[];
 }
 
 export const projects: Project[] = [
-  { id: "sky-house", tier: "Guided", title: "Sky House", desc: "Build a tiny program of your own - a greeter that remembers names.", xp: 200, state: "current", language: "Python" },
-  { id: "cloud-diary", tier: "Guided", title: "Cloud Diary", desc: "A journal that saves a line a day and reads it back.", xp: 220, state: "locked", language: "Python" },
-  { id: "star-map", tier: "Independent", title: "Star Map", desc: "Plot constellations from a list of points - your plan, your code.", xp: 320, state: "locked", language: "JavaScript" },
-  { id: "weather-window", tier: "Independent", title: "Weather Window", desc: "Pull a forecast and paint it in the console.", xp: 340, state: "locked", language: "Python" },
-  { id: "dream-api", tier: "Capstone", title: "Dream API", desc: "A small web service that serves dreams on request. The first real one.", xp: 600, state: "locked", language: "Python" },
+  {
+    id: "sky-house",
+    tier: "Guided",
+    title: "Sky House",
+    desc: "Build a tiny program of your own - a greeter that remembers names.",
+    xp: 200,
+    state: "current",
+    language: "Python",
+    instructions: "Write a function `build_greeter(names)` that takes a list of name strings and returns a list of greeting strings. Each greeting should be 'Hello, [name]! Welcome to the Sky House.' (Note: casing and punctuation must match exactly).",
+    starter: `def build_greeter(names):
+    greetings = []
+    # Write your code here
+    return greetings`,
+    functionName: "build_greeter",
+    testCases: [
+      { label: "['Nova', 'Luka'] -> greetings", args: [["Nova", "Luka"]], expected: ["Hello, Nova! Welcome to the Sky House.", "Hello, Luka! Welcome to the Sky House."] },
+      { label: "[] -> []", args: [[]], expected: [] },
+      { label: "['Dreamer'] -> greetings", args: [["Dreamer"]], expected: ["Hello, Dreamer! Welcome to the Sky House."] }
+    ]
+  },
+  {
+    id: "cloud-diary",
+    tier: "Guided",
+    title: "Cloud Diary",
+    desc: "A journal that saves a line a day and reads it back.",
+    xp: 220,
+    state: "locked",
+    language: "Python",
+    instructions: "Write a function `filter_diary(entries, query)` that takes a list of diary entry strings and a query string. Return a new list of entries that contain the query string (case-insensitive).",
+    starter: `def filter_diary(entries, query):
+    matching = []
+    # Write your code here
+    return matching`,
+    functionName: "filter_diary",
+    testCases: [
+      { label: "['Saw a cyan cloud', 'Had a starry dream', 'Puffy cloud today'], query='cloud'", args: [["Saw a cyan cloud", "Had a starry dream", "Puffy cloud today"], "cloud"], expected: ["Saw a cyan cloud", "Puffy cloud today"] },
+      { label: "['Clear skies', 'Sunset was magenta'], query='rain'", args: [["Clear skies", "Sunset was magenta"], "rain"], expected: [] }
+    ]
+  },
+  {
+    id: "star-map",
+    tier: "Independent",
+    title: "Star Map",
+    desc: "Plot constellations from a list of points - your plan, your code.",
+    xp: 320,
+    state: "locked",
+    language: "JavaScript",
+    instructions: "Write an arrow function `getMapBounds(points)` that takes an array of points, where each point is an object `{ x: number, y: number }`. Return an object `{ minX, maxX, minY, maxY }` representing the bounding box. If the array is empty, return `{ minX: 0, maxX: 0, minY: 0, maxY: 0 }`.",
+    starter: `const getMapBounds = (points) => {
+  // Write your code here
+  return { minX: 0, maxX: 0, minY: 0, maxY: 0 };
+};`,
+    functionName: "getMapBounds",
+    testCases: [
+      { label: "points with coords -> box", args: [[{ x: 2, y: 5 }, { x: 8, y: 1 }, { x: -3, y: 4 }]], expected: { minX: -3, maxX: 8, minY: 1, maxY: 5 } },
+      { label: "[] -> zero box", args: [[]], expected: { minX: 0, maxX: 0, minY: 0, maxY: 0 } }
+    ]
+  },
+  {
+    id: "weather-window",
+    tier: "Independent",
+    title: "Weather Window",
+    desc: "Pull a forecast and paint it in the console.",
+    xp: 340,
+    state: "locked",
+    language: "Python",
+    instructions: "Write a function `analyze_weather(forecasts)` that takes a list of dictionary forecasts (each containing 'temp' and 'condition' keys). Return a dictionary with the average temperature ('avg_temp') and a list of unique conditions ('conditions'). If the input list is empty, return {'avg_temp': 0, 'conditions': []}.",
+    starter: `def analyze_weather(forecasts):
+    # Write your code here
+    return {"avg_temp": 0, "conditions": []}`,
+    functionName: "analyze_weather",
+    testCases: [
+      { label: "forecasts list -> analysis", args: [[{ "temp": 20, "condition": "rainy" }, { "temp": 24, "condition": "cloudy" }, { "temp": 22, "condition": "rainy" }]], expected: { "avg_temp": 22.0, "conditions": ["rainy", "cloudy"] } },
+      { label: "[] -> empty", args: [[]], expected: { "avg_temp": 0, "conditions": [] } }
+    ]
+  },
+  {
+    id: "dream-api",
+    tier: "Capstone",
+    title: "Dream API",
+    desc: "A small web service that serves dreams on request. The first real one.",
+    xp: 600,
+    state: "locked",
+    language: "Python",
+    instructions: "Write a function `parse_dream_query(query, dream_db)` that takes a query string and a dictionary database of dreams (mapping topic strings to list of dream descriptions). Search the topics. If a topic matches the query (case-insensitive), return the list of dreams. If no topic matches, return the message 'No dreams found for topic: [query]'.",
+    starter: `def parse_dream_query(query, dream_db):
+    # Write your code here
+    return []`,
+    functionName: "parse_dream_query",
+    testCases: [
+      { label: "topic matches -> list", args: ["flight", { "flight": ["Soaring over neon clouds", "Falling gently"], "sea": ["Deep blue water"] }], expected: ["Soaring over neon clouds", "Falling gently"] },
+      { label: "no match -> message", args: ["forest", { "flight": ["Soaring"] }], expected: "No dreams found for topic: forest" }
+    ]
+  }
 ];
 
 export const user = {
@@ -251,13 +344,122 @@ export const practiceDatasets: Record<string, PracticeDataset> = {
       { id: "b", label: "Error: missing return statement", correct: false, why: "Single-expression arrow functions don't require braces or explicit return." },
       { id: "c", label: "a + b", correct: false, why: "It evaluates the mathematical addition, not string concatenation here." },
     ]
+  },
+  lists: {
+    prompt: "Arrange the lines to append 'cirrus' to the clouds list and print it.",
+    parsonsFragments: [
+      { id: "l1", text: "clouds = ['cumulus', 'stratus']", indent: 0 },
+      { id: "l2", text: "clouds.append('cirrus')", indent: 0 },
+      { id: "l3", text: "print(clouds)", indent: 0 },
+    ],
+    fadedPrompt: "Fill in the blank to print the first cloud in the list.",
+    fadedLines: [
+      { text: "clouds = ['cumulus', 'stratus', 'cirrus']", blanks: [] },
+      { text: "print(clouds[___])", blanks: ["0"] },
+    ],
+    fadedExplain: "Lists are 0-indexed, so index 0 retrieves the very first element.",
+    predictCode: "items = [10, 20, 30]\nprint(len(items))",
+    predictQuestion: "What does this program print?",
+    predictOptions: [
+      { id: "a", label: "3", correct: true, why: "len() counts the number of items in the list." },
+      { id: "b", label: "2", correct: false, why: "Lists have 3 items, even though the max index is 2." },
+      { id: "c", label: "30", correct: false, why: "It prints the length, not the last item." },
+    ],
+  },
+  dictionaries: {
+    prompt: "Arrange the lines to create a dictionary representing a star and print its name.",
+    parsonsFragments: [
+      { id: "d1", text: "star = {", indent: 0 },
+      { id: "d2", text: "  'name': 'Vega',", indent: 1 },
+      { id: "d3", text: "  'mag': 0.03", indent: 1 },
+      { id: "d4", text: "}", indent: 0 },
+      { id: "d5", text: "print(star['name'])", indent: 0 },
+    ],
+    fadedPrompt: "Fill in the blank to retrieve the altitude of a cloud.",
+    fadedLines: [
+      { text: "cloud = {'shape': 'wispy', 'altitude': 5000}", blanks: [] },
+      { text: "print(cloud[___])", blanks: ["'altitude'"] },
+    ],
+    fadedExplain: "Keys in dictionaries are strings; you must wrap the key name in quotes.",
+    predictCode: "data = {'x': 10}\ndata['y'] = 20\nprint(len(data))",
+    predictQuestion: "What does this program print?",
+    predictOptions: [
+      { id: "a", label: "1", correct: false, why: "y was added to the dictionary, making the length 2." },
+      { id: "b", label: "2", correct: true, why: "The dictionary has two keys: 'x' and 'y'." },
+      { id: "c", label: "Error", correct: false, why: "Adding keys dynamically is completely valid in Python." },
+    ],
+  },
+  "js-loops": {
+    prompt: "Arrange the lines to run a JS loop that counts from 1 to 3.",
+    parsonsFragments: [
+      { id: "jl1", text: "for (let i = 1; i <= 3; i++) {", indent: 0 },
+      { id: "jl2", text: "  console.log(i);", indent: 1 },
+      { id: "jl3", text: "}", indent: 0 },
+    ],
+    fadedPrompt: "Fill in the blanks to complete a standard loop that runs 4 times (0 to 3).",
+    fadedLines: [
+      { text: "for (let i = 0; i ___ 4; i___) {", blanks: ["<", "++"] },
+      { text: "  console.log(i);", blanks: [] },
+      { text: "}", blanks: [] },
+    ],
+    fadedExplain: "The condition i < 4 stops the loop when i reaches 4. i++ increments it by 1 on each turn.",
+    predictCode: "let sum = 0;\nfor (let i = 1; i < 3; i++) {\n  sum += i;\n}\nconsole.log(sum);",
+    predictQuestion: "What does this program print?",
+    predictOptions: [
+      { id: "a", label: "3", correct: true, why: "The loop runs for i=1 and i=2. 1 + 2 = 3." },
+      { id: "b", label: "6", correct: false, why: "The condition is i < 3, so it does not run for i=3." },
+      { id: "c", label: "0", correct: false, why: "The loop executes and accumulates values in sum." },
+    ],
+  },
+  "js-arrays": {
+    prompt: "Arrange the lines to push 'Vega' into the stars array and log it.",
+    parsonsFragments: [
+      { id: "ja1", text: "const stars = ['Polaris'];", indent: 0 },
+      { id: "ja2", text: "stars.push('Vega');", indent: 0 },
+      { id: "ja3", text: "console.log(stars);", indent: 0 },
+    ],
+    fadedPrompt: "Fill in the blank to log the number of elements in the array.",
+    fadedLines: [
+      { text: "const clouds = ['cirrus', 'cumulus'];", blanks: [] },
+      { text: "console.log(clouds.___);", blanks: ["length"] },
+    ],
+    fadedExplain: "In JavaScript, the .length property retrieves the number of elements in an array.",
+    predictCode: "const arr = [10, 20];\narr[0] = 99;\nconsole.log(arr);",
+    predictQuestion: "What does this program print?",
+    predictOptions: [
+      { id: "a", label: "[99, 20]", correct: true, why: "Arrays are mutable, so you can overwrite values at specific indexes." },
+      { id: "b", label: "[10, 20]", correct: false, why: "Index 0 was updated to 99." },
+      { id: "c", label: "Error", correct: false, why: "Even though declared with const, the array contents can be modified." },
+    ],
+  },
+  "js-objects": {
+    prompt: "Arrange the lines to create an object and access its 'shape' property.",
+    parsonsFragments: [
+      { id: "jo1", text: "const cloud = {", indent: 0 },
+      { id: "jo2", text: "  shape: 'wispy'", indent: 1 },
+      { id: "jo3", text: "};", indent: 0 },
+      { id: "jo4", text: "console.log(cloud.shape);", indent: 0 },
+    ],
+    fadedPrompt: "Fill in the blank to access the magnitude property using bracket notation.",
+    fadedLines: [
+      { text: "const star = { name: 'Vega', mag: 0.03 };", blanks: [] },
+      { text: "console.log(star[___]);", blanks: ["'mag'"] },
+    ],
+    fadedExplain: "Bracket notation requires the property name to be specified as a string.",
+    predictCode: "const user = { name: 'Dreamer' };\nuser.level = 5;\nconsole.log(user.level);",
+    predictQuestion: "What does this program print?",
+    predictOptions: [
+      { id: "a", label: "5", correct: true, why: "You can dynamically add properties to JavaScript objects using dot notation." },
+      { id: "b", label: "undefined", correct: false, why: "level was successfully added and assigned to 5." },
+      { id: "c", label: "Error", correct: false, why: "Adding properties to const-declared objects is fully valid." },
+    ],
   }
 };
 
 export interface ChallengeTestCase {
   label: string;
-  args: any[];
-  expected: any;
+  args: unknown[];
+  expected: unknown;
 }
 
 export interface Challenge {
@@ -334,15 +536,112 @@ export const challenges: Record<string, Challenge> = {
     functionName: "sort_stars",
     testCases: [
       {
-        label: "Sirius & Vega → Sirius first",
+        label: "Sirius & Vega -> Sirius first",
         args: [[{ name: "Vega", mag: 0.03 }, { name: "Sirius", mag: -1.46 }]],
         expected: [{ name: "Sirius", mag: -1.46 }, { name: "Vega", mag: 0.03 }]
       },
       {
-        label: "No stars → []",
+        label: "No stars -> []",
         args: [[]],
         expected: []
       }
+    ]
+  },
+  "list-wrangler": {
+    slug: "list-wrangler",
+    name: "List Wrangler",
+    level: "Beginner",
+    language: "Python",
+    xp: 40,
+    badge: "list-wrangler",
+    blurb: "Filter a list of numbers by a threshold.",
+    instructions: "Given a list of numbers representing daily temperatures, write a function `find_cold_days(temps, threshold)` that filters and returns a list of all temperatures that are strictly below the threshold.",
+    starter: `def find_cold_days(temps, threshold):
+    cold = []
+    # Write your code here
+    return cold`,
+    functionName: "find_cold_days",
+    testCases: [
+      { label: "temps=[15, 22, 12], threshold=15 -> [12]", args: [[15, 22, 12, 25, 9], 15], expected: [12, 9] },
+      { label: "empty list -> []", args: [[], 0], expected: [] },
+      { label: "no cold days -> []", args: [[18, 20], 15], expected: [] }
+    ]
+  },
+  "dict-diver": {
+    slug: "dict-diver",
+    name: "Dict Diver",
+    level: "Beginner",
+    language: "Python",
+    xp: 40,
+    badge: "dict-diver",
+    blurb: "Find the brightest star in a dictionary.",
+    instructions: "Given a dictionary mapping star names to their magnitude values, write a function `find_brightest(stars)` that returns the name of the brightest star (the one with the lowest magnitude). If the dictionary is empty, return None.",
+    starter: `def find_brightest(stars):
+    # Write your code here
+    return None`,
+    functionName: "find_brightest",
+    testCases: [
+      { label: "multiple stars -> Sirius", args: [{ "Vega": 0.03, "Sirius": -1.46, "Betelgeuse": 0.50 }], expected: "Sirius" },
+      { label: "empty dict -> None", args: [{}], expected: null },
+      { label: "single star -> Polaris", args: [{ "Polaris": 1.97 }], expected: "Polaris" }
+    ]
+  },
+  "js-loops-challenge": {
+    slug: "js-loops-challenge",
+    name: "Sum Up To",
+    level: "Beginner",
+    language: "JavaScript",
+    xp: 40,
+    blurb: "Repeat arithmetic updates in a loop.",
+    instructions: "Write a function `sumUpTo(n)` that takes an integer n and returns the sum of all numbers from 1 to n (inclusive). If n is less than 1, return 0.",
+    starter: `function sumUpTo(n) {
+  let sum = 0;
+  // Write your code here
+  return sum;
+}`,
+    functionName: "sumUpTo",
+    testCases: [
+      { label: "n=5 -> 15", args: [5], expected: 15 },
+      { label: "n=0 -> 0", args: [0], expected: 0 },
+      { label: "n=10 -> 55", args: [10], expected: 55 }
+    ]
+  },
+  "js-arrays-challenge": {
+    slug: "js-arrays-challenge",
+    name: "Double Evens",
+    level: "Beginner",
+    language: "JavaScript",
+    xp: 40,
+    blurb: "Filter and map elements in an array.",
+    instructions: "Write a function `doubleEvens(arr)` that takes an array of numbers, filters out the odd numbers, doubles the even numbers, and returns the new array.",
+    starter: `function doubleEvens(arr) {
+  // Write your code here
+  return [];
+}`,
+    functionName: "doubleEvens",
+    testCases: [
+      { label: "mix of numbers -> evens doubled", args: [[1, 2, 3, 4]], expected: [4, 8] },
+      { label: "all odds -> []", args: [[5, 7, 9]], expected: [] },
+      { label: "empty array -> []", args: [[]], expected: [] }
+    ]
+  },
+  "js-objects-challenge": {
+    slug: "js-objects-challenge",
+    name: "Property Lookup",
+    level: "Beginner",
+    language: "JavaScript",
+    xp: 40,
+    blurb: "Validate and lookup properties in objects.",
+    instructions: "Write a function `lookupProperty(obj, key)` that takes an object and a key string. If the object has that property (not undefined), return its value. Otherwise, return 'Property not found'.",
+    starter: `function lookupProperty(obj, key) {
+  // Write your code here
+  return "";
+}`,
+    functionName: "lookupProperty",
+    testCases: [
+      { label: "key exists -> value", args: [{ name: "Nova", level: 4 }, "name"], expected: "Nova" },
+      { label: "key missing -> not found", args: [{ name: "Nova" }, "xp"], expected: "Property not found" },
+      { label: "empty obj -> not found", args: [{}], expected: "Property not found" }
     ]
   }
 };

@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { createClient } from "@/lib/supabase/client";
+import { isSupabaseConfigured } from "@/lib/supabase/config";
 
 export interface UserProfile {
   name: string;
@@ -16,6 +18,7 @@ export interface UserProfile {
   guideEnabled: boolean;
   remindersEnabled: boolean;
   completedStops: string[];
+  activeTrack?: string;
 }
 
 const DEFAULT_PROFILE: UserProfile = {
@@ -32,7 +35,72 @@ const DEFAULT_PROFILE: UserProfile = {
   guideEnabled: true,
   remindersEnabled: true,
   completedStops: ["variables", "strings", "js-variables"],
+  activeTrack: "python",
 };
+
+let isUserSignedIn = false;
+let supabase: ReturnType<typeof createClient> | null = null;
+
+if (typeof window !== "undefined" && isSupabaseConfigured()) {
+  supabase = createClient();
+  // Check active session on startup
+  supabase.auth.getSession().then(({ data }) => {
+    isUserSignedIn = !!data.session;
+    if (isUserSignedIn) {
+      syncProfileFromApi();
+    }
+  });
+  // Listen for auth state changes
+  supabase.auth.onAuthStateChange((_event, session) => {
+    isUserSignedIn = !!session;
+    if (isUserSignedIn) {
+      syncProfileFromApi();
+    }
+  });
+}
+
+/** Synchronizes the client profile cache with the database. */
+async function syncProfileFromApi() {
+  try {
+    const res = await fetch("/api/profile");
+    if (res.ok) {
+      const data = await res.json();
+      if (data.profile) {
+        const serverProfile = data.profile;
+        const profile = getUserProfile();
+        const settings = serverProfile.settings || {};
+        
+        const merged: UserProfile = {
+          name: serverProfile.name,
+          initial: serverProfile.name.charAt(0).toUpperCase() || "D",
+          level: serverProfile.level,
+          xp: serverProfile.xp % 800,
+          xpNext: 800,
+          streak: serverProfile.streak,
+          lastActiveDate: serverProfile.lastActiveDate,
+          unlockedBadges: serverProfile.unlockedBadges || [],
+          weekActivity: settings.weekActivity || profile.weekActivity,
+          soundsEnabled: settings.soundsEnabled !== false,
+          guideEnabled: settings.guideEnabled !== false,
+          remindersEnabled: settings.remindersEnabled !== false,
+          completedStops: serverProfile.completedStops || [],
+          activeTrack: settings.activeTrack || "python",
+        };
+        
+        localStorage.setItem("dc_user_profile", JSON.stringify(merged));
+        window.dispatchEvent(new Event("dc_profile_change"));
+
+        // Sync track setting if saved on server
+        if (settings.activeTrack === "python" || settings.activeTrack === "javascript") {
+          localStorage.setItem("dc_active_track", settings.activeTrack);
+          window.dispatchEvent(new Event("dc_track_change"));
+        }
+      }
+    }
+  } catch (e) {
+    console.error("Failed to sync profile from API", e);
+  }
+}
 
 function getTodayString(): string {
   const date = new Date();
@@ -48,14 +116,12 @@ export function getUserProfile(): UserProfile {
     const saved = localStorage.getItem("dc_user_profile");
     if (saved) {
       const parsed = JSON.parse(saved);
-      // Ensure it has all required properties
       return { ...DEFAULT_PROFILE, ...parsed };
     }
   } catch (e) {
     console.error("Failed to parse user profile", e);
   }
 
-  // If new user, set lastActiveDate to today but initialize streak to 7 for consistency with demo
   const initialProfile = {
     ...DEFAULT_PROFILE,
     lastActiveDate: getTodayString(),
@@ -80,7 +146,6 @@ export function saveUserProfile(profile: UserProfile) {
 export function addXP(amount: number): UserProfile {
   const profile = getUserProfile();
   
-  // Add to total/current XP
   let newXp = profile.xp + amount;
   let newLevel = profile.level;
   
@@ -92,9 +157,6 @@ export function addXP(amount: number): UserProfile {
   profile.xp = newXp;
   profile.level = newLevel;
 
-  // Update weekly activity chart
-  // getDay() is 0 for Sunday, 1 for Monday... 6 for Saturday.
-  // We want Mon=0, Tue=1... Sun=6.
   const dayOfWeek = new Date().getDay();
   const dayIndex = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
   
@@ -102,10 +164,31 @@ export function addXP(amount: number): UserProfile {
   activity[dayIndex] = (activity[dayIndex] || 0) + amount;
   profile.weekActivity = activity;
 
-  // Also update streak since user did an activity
   updateStreakInPlace(profile);
 
   saveUserProfile(profile);
+
+  // Sync to database if logged in
+  if (isUserSignedIn && isSupabaseConfigured()) {
+    const totalXp = (newLevel - 1) * 800 + newXp;
+    fetch("/api/profile", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        xp: totalXp,
+        streak: profile.streak,
+        lastActiveDate: profile.lastActiveDate,
+        settings: {
+          soundsEnabled: profile.soundsEnabled,
+          guideEnabled: profile.guideEnabled,
+          remindersEnabled: profile.remindersEnabled,
+          weekActivity: profile.weekActivity,
+          activeTrack: profile.activeTrack || localStorage.getItem("dc_active_track") || "python",
+        },
+      }),
+    }).catch((err) => console.error("Failed to patch profile XP", err));
+  }
+
   return profile;
 }
 
@@ -117,6 +200,14 @@ export function unlockBadge(badgeId: string): UserProfile {
   if (!profile.unlockedBadges.includes(badgeId)) {
     profile.unlockedBadges = [...profile.unlockedBadges, badgeId];
     saveUserProfile(profile);
+
+    if (isUserSignedIn && isSupabaseConfigured()) {
+      fetch("/api/badges", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ badgeId }),
+      }).catch((err) => console.error("Failed to sync badge to API", err));
+    }
   }
   return profile;
 }
@@ -130,6 +221,14 @@ export function completeStop(slug: string): UserProfile {
   if (!completed.includes(slug)) {
     profile.completedStops = [...completed, slug];
     saveUserProfile(profile);
+
+    if (isUserSignedIn && isSupabaseConfigured()) {
+      fetch("/api/progress", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ slug }),
+      }).catch((err) => console.error("Failed to sync progress to API", err));
+    }
   }
   return profile;
 }
@@ -148,17 +247,14 @@ function updateStreakInPlace(profile: UserProfile) {
     return; // Already active today
   }
 
-  // Calculate day difference
   const lastDate = new Date(lastActive);
   const todayDate = new Date(todayStr);
   const diffTime = Math.abs(todayDate.getTime() - lastDate.getTime());
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
   if (diffDays === 1) {
-    // Consecutive day
     profile.streak += 1;
   } else if (diffDays > 1) {
-    // Streak broken
     profile.streak = 1;
   }
   
@@ -170,9 +266,56 @@ function updateStreakInPlace(profile: UserProfile) {
  */
 export function updateProfile(updates: Partial<UserProfile>): UserProfile {
   const profile = getUserProfile();
+  
+  if (updates.name !== undefined) {
+    updates.initial = updates.name.charAt(0).toUpperCase() || "D";
+  }
+  
   const updated = { ...profile, ...updates };
   saveUserProfile(updated);
+
+  if (isUserSignedIn && isSupabaseConfigured()) {
+    const patchBody: any = {};
+    if (updates.name !== undefined) patchBody.name = updates.name;
+    if (updates.xp !== undefined || updates.level !== undefined) {
+      const targetLevel = updates.level !== undefined ? updates.level : updated.level;
+      const targetXp = updates.xp !== undefined ? updates.xp : updated.xp;
+      patchBody.xp = (targetLevel - 1) * 800 + targetXp;
+    }
+    if (updates.streak !== undefined) patchBody.streak = updates.streak;
+    if (updates.lastActiveDate !== undefined) patchBody.lastActiveDate = updates.lastActiveDate;
+    
+    patchBody.settings = {
+      soundsEnabled: updated.soundsEnabled,
+      guideEnabled: updated.guideEnabled,
+      remindersEnabled: updated.remindersEnabled,
+      weekActivity: updated.weekActivity,
+      activeTrack: updated.activeTrack || localStorage.getItem("dc_active_track") || "python",
+    };
+
+    fetch("/api/profile", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(patchBody),
+    }).catch((err) => console.error("Failed to patch profile updates", err));
+  }
+
   return updated;
+}
+
+/**
+ * Records a code submission to the database.
+ */
+export function recordSubmission(slug: string, code: string, passed: boolean) {
+  if (typeof window === "undefined" || !isSupabaseConfigured()) return;
+
+  if (isUserSignedIn) {
+    fetch("/api/submissions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ slug, code, passed }),
+    }).catch((err) => console.error("Failed to sync submission to API", err));
+  }
 }
 
 /**
@@ -182,7 +325,6 @@ export function useUserProfile() {
   const [profile, setProfile] = useState<UserProfile>(DEFAULT_PROFILE);
 
   useEffect(() => {
-    // Initial fetch on mount
     setTimeout(() => {
       setProfile(getUserProfile());
     }, 0);
