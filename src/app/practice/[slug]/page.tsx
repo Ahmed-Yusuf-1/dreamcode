@@ -98,7 +98,14 @@ export default function PracticePage({ params }: { params: Promise<{ slug: strin
         {step === 3 && <DoneStep slug={slug} />}
       </div>
 
-      <DreamGuide />
+      <DreamGuide
+        context={{
+          title: `Practice: ${slug.charAt(0).toUpperCase() + slug.slice(1)}`,
+          instructions: data.prompt,
+          language: getLesson(slug)?.language,
+          kind: "practice",
+        }}
+      />
     </div>
   );
 }

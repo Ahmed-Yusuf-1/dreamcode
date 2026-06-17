@@ -334,7 +334,15 @@ export default function LessonView({
         </div>
       </div>
 
-      <DreamGuide />
+      <DreamGuide
+        context={{
+          title: lesson.title,
+          instructions: lesson.intro,
+          language: lesson.language,
+          kind: "lesson",
+        }}
+        getCode={() => code}
+      />
     </div>
   );
 }

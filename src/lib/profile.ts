@@ -19,6 +19,7 @@ export interface UserProfile {
   remindersEnabled: boolean;
   completedStops: string[];
   activeTrack?: string;
+  tier: "free" | "pro";
 }
 
 const DEFAULT_PROFILE: UserProfile = {
@@ -36,27 +37,42 @@ const DEFAULT_PROFILE: UserProfile = {
   remindersEnabled: true,
   completedStops: ["variables", "strings", "js-variables"],
   activeTrack: "python",
+  tier: "free",
 };
 
 let isUserSignedIn = false;
 let supabase: ReturnType<typeof createClient> | null = null;
 
+/** Updates the cached sign-in flag and notifies listeners when it changes. */
+function setSignedIn(value: boolean) {
+  const changed = isUserSignedIn !== value;
+  isUserSignedIn = value;
+  if (changed && typeof window !== "undefined") {
+    window.dispatchEvent(new Event("dc_auth_change"));
+  }
+}
+
 if (typeof window !== "undefined" && isSupabaseConfigured()) {
   supabase = createClient();
   // Check active session on startup
   supabase.auth.getSession().then(({ data }) => {
-    isUserSignedIn = !!data.session;
+    setSignedIn(!!data.session);
     if (isUserSignedIn) {
       syncProfileFromApi();
     }
   });
   // Listen for auth state changes
   supabase.auth.onAuthStateChange((_event, session) => {
-    isUserSignedIn = !!session;
+    setSignedIn(!!session);
     if (isUserSignedIn) {
       syncProfileFromApi();
     }
   });
+}
+
+/** Whether a Supabase session is currently active. */
+export function getIsSignedIn(): boolean {
+  return isUserSignedIn;
 }
 
 /** Synchronizes the client profile cache with the database. */
@@ -85,6 +101,7 @@ async function syncProfileFromApi() {
           remindersEnabled: settings.remindersEnabled !== false,
           completedStops: serverProfile.completedStops || [],
           activeTrack: settings.activeTrack || "python",
+          tier: serverProfile.tier === "pro" ? "pro" : "free",
         };
         
         localStorage.setItem("dc_user_profile", JSON.stringify(merged));
@@ -187,6 +204,33 @@ export function addXP(amount: number): UserProfile {
         },
       }),
     }).catch((err) => console.error("Failed to patch profile XP", err));
+  }
+
+  return profile;
+}
+
+/**
+ * Spends XP (e.g. the cost of a Dream Guide hint). Clamped so total XP never
+ * goes below zero; level is re-derived from the remaining total.
+ */
+export function spendXP(amount: number): UserProfile {
+  const profile = getUserProfile();
+  const cost = Math.max(0, Math.floor(amount));
+
+  let totalXp = (profile.level - 1) * 800 + profile.xp;
+  totalXp = Math.max(0, totalXp - cost);
+
+  profile.level = Math.floor(totalXp / 800) + 1;
+  profile.xp = totalXp % 800;
+
+  saveUserProfile(profile);
+
+  if (isUserSignedIn && isSupabaseConfigured()) {
+    fetch("/api/profile", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ xp: totalXp }),
+    }).catch((err) => console.error("Failed to sync XP spend", err));
   }
 
   return profile;
@@ -361,4 +405,21 @@ export function useUserProfile() {
     updateProfile: triggerUpdateProfile,
     completeStop: triggerCompleteStop,
   };
+}
+
+/**
+ * React hook that tracks whether a Supabase session is active. Used to gate
+ * signed-in-only features (like the Dream Guide) in the UI.
+ */
+export function useIsSignedIn(): boolean {
+  const [signedIn, setSignedInState] = useState(false);
+
+  useEffect(() => {
+    const apply = () => setTimeout(() => setSignedInState(isUserSignedIn), 0);
+    apply();
+    window.addEventListener("dc_auth_change", apply);
+    return () => window.removeEventListener("dc_auth_change", apply);
+  }, []);
+
+  return signedIn;
 }

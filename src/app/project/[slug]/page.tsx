@@ -403,7 +403,16 @@ print("TEST_OUTPUTS:" + json.dumps(results))
         </div>
       )}
 
-      <DreamGuide />
+      <DreamGuide
+        context={{
+          title: project.title,
+          instructions: project.instructions,
+          functionName: project.functionName,
+          language: project.language,
+          kind: "project",
+        }}
+        getCode={() => code}
+      />
     </div>
   );
 }

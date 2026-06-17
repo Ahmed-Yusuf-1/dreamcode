@@ -410,7 +410,16 @@ print("TEST_OUTPUTS:" + json.dumps(results))
         </div>
       )}
 
-      <DreamGuide />
+      <DreamGuide
+        context={{
+          title: challenge.name,
+          instructions: challenge.instructions,
+          functionName: challenge.functionName,
+          language: challenge.language,
+          kind: "challenge",
+        }}
+        getCode={() => code}
+      />
     </div>
   );
 }

@@ -1,65 +1,110 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
+import Link from "next/link";
+import { spendXP, useIsSignedIn } from "@/lib/profile";
 
-interface GuideMsg {
-  from: "guide" | "you";
-  text: string;
-  phase?: string;
+/** What the learner is currently working on, passed in by each page. */
+export interface GuideContext {
+  title: string;
+  instructions?: string;
+  functionName?: string;
+  language?: string;
+  kind?: "lesson" | "practice" | "challenge" | "project";
 }
 
+interface ChatMessage {
+  role: "user" | "assistant";
+  content: string;
+}
+
+const HINT_COST = 5;
+
 /**
- * The opt-in Socratic AI mentor ("Dream Guide"). Frontend-only: the
- * conversation is scripted to demonstrate the 5-phase mentor flow -
- * it asks questions and never hands over code.
+ * The opt-in Socratic AI mentor ("Dream Guide"). It asks questions and gives
+ * graduated hints, never the answer. The model call lives server-side at
+ * /api/guide and is provider-agnostic (set the AI_* env vars to switch it on).
+ * Signed-in only; each delivered hint costs 5 XP.
  */
-const SCRIPT: GuideMsg[][] = [
-  [
-    {
-      from: "guide",
-      phase: "1 · Socratic debate",
-      text: "Before I peek anywhere - walk me through it. When your loop visits the list, what do you expect to happen on each turn?",
-    },
-  ],
-  [
-    { from: "you", text: "It should check each height and count the tall ones..." },
-    {
-      from: "guide",
-      phase: "2 · Plan crystallization",
-      text: "Good. Say your plan in three plain steps, no code. What happens first, then, and last?",
-    },
-  ],
-  [
-    { from: "you", text: "Start a count at 0 → check every cloud → return the count." },
-    {
-      from: "guide",
-      phase: "3 · Test-first anchoring",
-      text: "Solid plan. Now, which single input would prove your code wrong if the comparison were sloppy? Try writing a test with clouds exactly at height k.",
-    },
-  ],
-  [
-    { from: "you", text: "[5,5,5] with k=5 should give 0, because they're not above k!" },
-    {
-      from: "guide",
-      phase: "4 · Guided implementation",
-      text: "There's your edge. Look at the line that compares - does it say strictly above, or at-or-above? (Hint: > and >= mean different skies.)",
-    },
-  ],
-  [
-    { from: "you", text: "Fixed it - strictly greater. All tests pass!" },
-    {
-      from: "guide",
-      phase: "5 · Validation",
-      text: "One check before you fly on: why did [5,5,5], k=5 return 0? • A: 5 > 5 is false • B: the list is empty • C: range starts at 0. Pick one.",
-    },
-  ],
-];
-
-export default function DreamGuide() {
+export default function DreamGuide({
+  context,
+  getCode,
+}: {
+  context?: GuideContext;
+  getCode?: () => string;
+}) {
+  const signedIn = useIsSignedIn();
   const [open, setOpen] = useState(false);
-  const [step, setStep] = useState(0);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [input, setInput] = useState("");
+  const [loading, setLoading] = useState(false);
+  // Inline state after a failed/blocked send: a friendly note to show the user.
+  const [note, setNote] = useState<string | null>(null);
+  const [upgradeNeeded, setUpgradeNeeded] = useState(false);
 
-  const messages = SCRIPT.slice(0, step + 1).flat();
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
+  }, [messages, loading, note]);
+
+  const greeting = context?.title
+    ? `You are working on "${context.title}". Tell me what you expect to happen, step by step - I will ask questions to help you get there yourself.`
+    : "Tell me what you are trying to do and where it is getting stuck. I will ask questions to help you find it yourself, not hand over the answer.";
+
+  const send = async () => {
+    const text = input.trim();
+    if (!text || loading) return;
+
+    const next: ChatMessage[] = [...messages, { role: "user", content: text }];
+    setMessages(next);
+    setInput("");
+    setNote(null);
+    setLoading(true);
+
+    try {
+      const res = await fetch("/api/guide", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          problem: {
+            title: context?.title ?? "this exercise",
+            instructions: context?.instructions,
+            functionName: context?.functionName,
+            language: context?.language,
+            kind: context?.kind,
+          },
+          code: getCode?.() ?? "",
+          messages: next,
+        }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        const reply = typeof data.reply === "string" ? data.reply : "";
+        if (reply) {
+          setMessages([...next, { role: "assistant", content: reply }]);
+          spendXP(HINT_COST);
+        } else {
+          setNote("The guide did not have a reply that time. Try rephrasing your question.");
+        }
+      } else if (res.status === 401) {
+        setNote("Please sign in to ask the Dream Guide.");
+      } else if (res.status === 403) {
+        setUpgradeNeeded(true);
+      } else if (res.status === 503) {
+        setNote("The Dream Guide is not switched on yet. Once an AI provider is connected, this is where it answers.");
+      } else {
+        setNote("The guide could not answer just now. Give it another try in a moment.");
+      }
+    } catch {
+      setNote("Could not reach the guide. Check your connection and try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const showChat = signedIn && !upgradeNeeded;
 
   return (
     <>
@@ -117,7 +162,7 @@ export default function DreamGuide() {
                   Dream Guide
                 </div>
                 <div style={{ fontSize: 11, fontWeight: 800, color: "#bfa8f5" }}>
-                  asks, never answers · hints cost 5 XP
+                  asks, never answers {"·"} hints cost {HINT_COST} XP
                 </div>
               </div>
             </div>
@@ -134,84 +179,168 @@ export default function DreamGuide() {
                 borderRadius: "50%",
               }}
             >
-              ×
+              {"×"}
             </button>
           </div>
 
-          <div className="flex-1 overflow-y-auto" style={{ padding: "16px 16px 8px" }}>
-            {messages.map((m, i) => (
-              <div key={i} style={{ marginBottom: 12, textAlign: m.from === "you" ? "right" : "left" }}>
-                {m.phase && (
-                  <div
-                    style={{
-                      fontSize: 10,
-                      fontWeight: 900,
-                      letterSpacing: 1,
-                      color: "#bfa8f5",
-                      marginBottom: 4,
-                      textTransform: "uppercase",
-                    }}
-                  >
-                    {m.phase}
-                  </div>
-                )}
-                <div
-                  style={{
-                    display: "inline-block",
-                    maxWidth: "88%",
-                    textAlign: "left",
-                    background: m.from === "guide" ? "rgba(189,160,255,.16)" : "rgba(110,230,255,.14)",
-                    border: `1px solid ${m.from === "guide" ? "rgba(189,160,255,.35)" : "rgba(110,230,255,.3)"}`,
-                    color: "#e8eeff",
-                    fontSize: 13.5,
-                    fontWeight: 600,
-                    lineHeight: 1.6,
-                    padding: "10px 14px",
-                    borderRadius: 16,
-                  }}
-                >
-                  {m.text}
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div style={{ padding: "10px 16px 16px" }}>
-            {step < SCRIPT.length - 1 ? (
-              <button
-                onClick={() => setStep(step + 1)}
-                className="w-full cursor-pointer transition-transform hover:-translate-y-0.5"
+          {/* signed-out: locked panel */}
+          {!signedIn && (
+            <div style={{ padding: "26px 22px" }}>
+              <p style={{ fontSize: 14, fontWeight: 600, color: "#e8eeff", lineHeight: 1.7, margin: "0 0 18px" }}>
+                The Dream Guide is a signed-in feature. Sign in and it will sit beside you on every
+                problem, asking the questions that get you unstuck without spoiling the answer.
+              </p>
+              <Link
+                href="/login"
+                className="font-display inline-block cursor-pointer transition-transform hover:-translate-y-0.5"
                 style={{
                   border: "none",
                   background: "linear-gradient(135deg, #cdb9f7, #a78ae8)",
                   color: "#241a4a",
                   fontWeight: 900,
                   fontSize: 14,
-                  padding: "11px 0",
+                  padding: "11px 22px",
                   borderRadius: 999,
                 }}
               >
-                Keep thinking with me (-5 XP)
-              </button>
-            ) : (
-              <div
+                Sign in to continue
+              </Link>
+            </div>
+          )}
+
+          {/* signed-in but gated to Pro (only when the parked flag is on) */}
+          {signedIn && upgradeNeeded && (
+            <div style={{ padding: "26px 22px" }}>
+              <p style={{ fontSize: 14, fontWeight: 600, color: "#e8eeff", lineHeight: 1.7, margin: "0 0 18px" }}>
+                The Dream Guide is part of dreamcode Pro. Upgrade to unlock graduated, Socratic hints
+                on every challenge.
+              </p>
+              <Link
+                href="/profile"
+                className="font-display inline-block cursor-pointer transition-transform hover:-translate-y-0.5"
                 style={{
-                  textAlign: "center",
-                  fontSize: 12.5,
-                  fontWeight: 800,
-                  color: "#9fe8c0",
-                  background: "rgba(110,230,160,.12)",
-                  border: "1px solid rgba(110,230,160,.3)",
-                  borderRadius: 12,
-                  padding: "10px 12px",
+                  border: "none",
+                  background: "linear-gradient(135deg, #ffd66e, #ff9f43)",
+                  color: "#3a2606",
+                  fontWeight: 900,
+                  fontSize: 14,
+                  padding: "11px 22px",
+                  borderRadius: 999,
                 }}
               >
-                You solved it yourself - the Guide just asked questions. ✓
+                See Pro
+              </Link>
+            </div>
+          )}
+
+          {showChat && (
+            <>
+              <div ref={scrollRef} className="flex-1 overflow-y-auto" style={{ padding: "16px 16px 8px" }}>
+                {/* opening greeting (UI only, not sent to the model) */}
+                <Bubble from="guide" text={greeting} />
+
+                {messages.map((m, i) => (
+                  <Bubble key={i} from={m.role === "assistant" ? "guide" : "you"} text={m.content} />
+                ))}
+
+                {loading && <Bubble from="guide" text="Thinking with you..." muted />}
+                {note && (
+                  <div
+                    style={{
+                      fontSize: 12.5,
+                      fontWeight: 700,
+                      color: "#ffd9a8",
+                      background: "rgba(255,180,90,.12)",
+                      border: "1px solid rgba(255,180,90,.3)",
+                      borderRadius: 12,
+                      padding: "10px 12px",
+                      marginBottom: 12,
+                    }}
+                  >
+                    {note}
+                  </div>
+                )}
               </div>
-            )}
-          </div>
+
+              <div style={{ padding: "10px 14px 14px", borderTop: "1px solid rgba(255,255,255,.12)" }}>
+                <div className="flex items-end" style={{ gap: 8 }}>
+                  <textarea
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && !e.shiftKey) {
+                        e.preventDefault();
+                        send();
+                      }
+                    }}
+                    rows={1}
+                    placeholder="Describe where you are stuck..."
+                    className="font-body flex-1"
+                    style={{
+                      resize: "none",
+                      maxHeight: 96,
+                      background: "rgba(255,255,255,.08)",
+                      border: "1px solid rgba(189,160,255,.35)",
+                      borderRadius: 14,
+                      color: "#eef2ff",
+                      fontSize: 13.5,
+                      fontWeight: 600,
+                      lineHeight: 1.5,
+                      padding: "10px 12px",
+                      outline: "none",
+                    }}
+                  />
+                  <button
+                    onClick={send}
+                    disabled={loading || !input.trim()}
+                    className="cursor-pointer transition-transform hover:-translate-y-0.5"
+                    style={{
+                      border: "none",
+                      background: "linear-gradient(135deg, #cdb9f7, #a78ae8)",
+                      color: "#241a4a",
+                      fontWeight: 900,
+                      fontSize: 13,
+                      padding: "10px 16px",
+                      borderRadius: 999,
+                      opacity: loading || !input.trim() ? 0.55 : 1,
+                      cursor: loading || !input.trim() ? "default" : "pointer",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {loading ? "..." : `Ask (-${HINT_COST})`}
+                  </button>
+                </div>
+              </div>
+            </>
+          )}
         </div>
       )}
     </>
+  );
+}
+
+function Bubble({ from, text, muted }: { from: "guide" | "you"; text: string; muted?: boolean }) {
+  return (
+    <div style={{ marginBottom: 12, textAlign: from === "you" ? "right" : "left" }}>
+      <div
+        style={{
+          display: "inline-block",
+          maxWidth: "88%",
+          textAlign: "left",
+          whiteSpace: "pre-wrap",
+          background: from === "guide" ? "rgba(189,160,255,.16)" : "rgba(110,230,255,.14)",
+          border: `1px solid ${from === "guide" ? "rgba(189,160,255,.35)" : "rgba(110,230,255,.3)"}`,
+          color: muted ? "#bfa8f5" : "#e8eeff",
+          fontSize: 13.5,
+          fontWeight: 600,
+          lineHeight: 1.6,
+          padding: "10px 14px",
+          borderRadius: 16,
+          fontStyle: muted ? "italic" : "normal",
+        }}
+      >
+        {text}
+      </div>
+    </div>
   );
 }

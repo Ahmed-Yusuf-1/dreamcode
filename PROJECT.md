@@ -37,8 +37,14 @@ self-learners, students, beginners. Community-imported content is a later idea.
 - **Gamification:** XP, levels (800 XP/level), daily streak, badges, journey
   gating by `completedStops`, placement quiz, sound chimes.
 - **Spotify:** real Web Playback SDK + PKCE OAuth player in the nav.
-- **Not done:** graduated AI hints (DreamGuide is still a scripted demo, not wired
-  to a model); TypeScript track; deeper curriculum; telemetry; accessibility/i18n.
+- **AI guide (DreamGuide):** real Socratic hint chat, not a scripted demo. The
+  model call is server-side and **provider-agnostic** (`src/lib/ai/guide.ts` +
+  `/api/guide`): set `AI_PROVIDER` (gemini|openai|anthropic) + `AI_API_KEY` +
+  `AI_MODEL` to switch it on; until then it shows a "not on yet" state. Signed-in
+  only; 5 XP per hint. The Pro paywall is built but parked behind
+  `GUIDE_REQUIRE_PRO` (off until billing ships at the end).
+- **Not done:** billing/Stripe to sell Pro (and flip `GUIDE_REQUIRE_PRO`);
+  TypeScript track; deeper curriculum; telemetry; accessibility/i18n.
 
 ## Run it
 
@@ -74,13 +80,14 @@ Routes (`src/app/*/page.tsx` unless noted):
 - `/dashboard` hub, `/lessons` catalog (track filter + completion checks)
 - `/lesson/[slug]` (SSG), `/practice/[slug]`, `/challenge/[slug]`, `/project/[slug]` (dynamic, real grading)
 - `/peaks` challenge library (gated), `/projects` catalog, `/journey` map, `/badges`, `/review` (FSRS), `/profile` (settings, track pills, AI toggle), `/placement` quiz
-- API: `/api/{profile,progress,submissions,srs,badges}` (RLS-backed, Zod, 401 when signed out)
+- API: `/api/{profile,progress,submissions,srs,badges}` (RLS-backed, Zod, 401 when signed out); `/api/guide` (AI hint, signed-in gated, provider-agnostic)
 - Auth: `/auth/callback` (OAuth code exchange), `/auth/signout`
 
 Components (`src/components/`): `SiteChrome` (persistent global nav in root layout,
 so the Spotify player never remounts), `NavBar`, `SpotifyPlayer`, `LessonView`
 (runs Python/JS by `lesson.language`, awards XP + completes the stop),
-`CodeEditor`, `EditorFrame`, `DreamGuide` (scripted AI mentor), `FlowSteps`,
+`CodeEditor`, `EditorFrame`, `DreamGuide` (real Socratic AI hint chat -> `/api/guide`,
+signed-in gated, takes problem `context` + `getCode`), `FlowSteps`,
 `Cloud`/`Parallax`, `SceneTopBar`, `AuthScene` (Supabase auth, falls back to demo
 routing pre-config), `Wordmark`, `StreakFlame`.
 
@@ -89,7 +96,8 @@ Lib (`src/lib/`): `curriculum.ts` (typed `Lesson[]` + `getAdjacent` track-aware)
 (`useUserProfile`, XP/streak/badges, localStorage + `/api/*` sync), `srs.ts` (FSRS),
 `track.ts` (active track), `usePyodide.ts` (Pyodide worker hook), `sound.ts`
 (Web Audio chimes), `theme.ts` (per-page gradient/cloud opacity knobs),
-`supabase/{config,client,server,data}.ts` (clients + RLS data access).
+`supabase/{config,client,server,data}.ts` (clients + RLS data access),
+`ai/guide.ts` (server-only, provider-agnostic AI hint adapters + system prompt).
 
 Other: `src/proxy.ts` (Next 16 Proxy = renamed Middleware; refreshes the session),
 `public/pyodide-worker.js`, `supabase/migrations/0001_init.sql`,

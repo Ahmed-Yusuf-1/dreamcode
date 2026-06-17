@@ -19,10 +19,13 @@ DB access stays RLS-scoped (no ORM on a direct connection).
    should persist server-side. Fix any sync gaps in `profile.ts` / `srs.ts` /
    `track.ts`.
 
-2. **AI guide as the paid feature (the headline monetization).** Wire `DreamGuide`
-   to the Claude API: opt-in, hint-only, graduated hints (question -> nudge ->
-   worked analogy, never the full answer), XP-costed. Gate it behind
-   `profiles.tier = 'pro'`. This replaces the current scripted demo.
+2. **AI guide - DONE (built, awaiting a provider key).** `DreamGuide` is now a
+   real Socratic hint chat: server-side, provider-agnostic call in
+   `src/lib/ai/guide.ts` + `/api/guide` (gemini | openai | anthropic via env
+   vars), graduated hints, never the full answer, 5 XP per hint, signed-in only.
+   Remaining: (a) the owner sets `AI_PROVIDER`/`AI_API_KEY`/`AI_MODEL` to switch
+   it on; (b) the `tier='pro'` paywall is built but parked behind
+   `GUIDE_REQUIRE_PRO` (off) - flip it on when billing ships (see backlog).
 
 3. **Content depth.** More Python and JavaScript lessons/practice/challenges to
    fill out the chapters, using the existing `curriculum.ts` / `data.ts` schemas.
@@ -38,7 +41,8 @@ DB access stays RLS-scoped (no ORM on a direct connection).
 
 ## Later / backlog
 
-- **Billing** (e.g. Stripe) to actually sell the `pro` tier that gates the AI guide.
+- **Billing** (e.g. Stripe) to actually sell the `pro` tier, then set
+  `GUIDE_REQUIRE_PRO=true` to gate the AI guide behind it.
 - **Telemetry**: an events table + time-to-first-success / drop-off tracking, to
   drive curriculum improvements.
 - **Server-side sandbox** (Judge0-style) for multi-file or advanced challenges that
