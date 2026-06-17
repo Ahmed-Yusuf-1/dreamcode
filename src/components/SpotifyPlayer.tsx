@@ -279,6 +279,9 @@ export default function SpotifyPlayer() {
             exchangeCodeForToken(storedClientId, code).then((token) => {
               if (token) {
                 setConnected(true);
+                try {
+                  localStorage.setItem(STORAGE_KEY, "1");
+                } catch { }
                 setOpen(true); // Open settings to show they connected
               }
               cleanUrlParams();
@@ -292,6 +295,9 @@ export default function SpotifyPlayer() {
             exchangeCodeForToken(storedClientId, code).then((token) => {
               if (token) {
                 setConnected(true);
+                try {
+                  localStorage.setItem(STORAGE_KEY, "1");
+                } catch { }
                 setOpen(true);
               }
               cleanUrlParams();
@@ -346,6 +352,9 @@ export default function SpotifyPlayer() {
         const token = await getValidToken(clientId);
         if (!token) {
           setConnected(false);
+          try {
+            localStorage.removeItem(STORAGE_KEY);
+          } catch { }
           clearTokens();
           return;
         }
@@ -367,6 +376,9 @@ export default function SpotifyPlayer() {
         p.addListener("authentication_error", ({ message }: { message: string }) => {
           console.error("Spotify Authentication Error:", message);
           setConnected(false);
+          try {
+            localStorage.removeItem(STORAGE_KEY);
+          } catch { }
           clearTokens();
         });
         p.addListener("account_error", ({ message }: { message: string }) => {
