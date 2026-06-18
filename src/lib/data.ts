@@ -78,6 +78,8 @@ export const peaks: Peak[] = [
   { id: "fog-filter", name: "Fog Filter", blurb: "Keep only the clouds you can see through.", level: "Intermediate", language: "JavaScript", xp: 60, state: "locked" },
   { id: "wind-weaver", name: "Wind Weaver", blurb: "Merge two breezes into one sorted gust.", level: "Intermediate", language: "Python", xp: 70, state: "locked" },
   { id: "storm-chaser", name: "Storm Chaser", blurb: "Find the longest calm stretch between storms.", level: "Advanced", language: "JavaScript", xp: 90, state: "locked" },
+  { id: "js-sky-classifier", name: "JS Sky Classifier", blurb: "Classify sky safety based on visibility and weather.", level: "Beginner", language: "JavaScript", xp: 40, state: "locked" },
+  { id: "js-array-transformer", name: "JS Array Transformer", blurb: "Transform and filter an array of cloud objects.", level: "Intermediate", language: "JavaScript", xp: 50, state: "locked" },
 ];
 
 export interface ReviewCard {
@@ -453,6 +455,225 @@ export const practiceDatasets: Record<string, PracticeDataset> = {
       { id: "b", label: "undefined", correct: false, why: "level was successfully added and assigned to 5." },
       { id: "c", label: "Error", correct: false, why: "Adding properties to const-declared objects is fully valid." },
     ],
+  },
+  "js-comparisons": {
+    prompt: "Arrange the lines to check if altitude is strictly equal to 10000, storing the result in isCruising.",
+    parsonsFragments: [
+      { id: "jcp1", text: "const altitude = 10000;", indent: 0 },
+      { id: "jcp2", text: "const isCruising = altitude === 10000;", indent: 0 },
+      { id: "jcp3", text: "console.log(isCruising);", indent: 0 },
+    ],
+    fadedPrompt: "Fill in the blank to check if the temperature is NOT strictly equal to 0.",
+    fadedLines: [
+      { text: "const temp = -5;", blanks: [] },
+      { text: "const notFreezing = temp ___ 0;", blanks: ["!=="] },
+      { text: "console.log(notFreezing);", blanks: [] },
+    ],
+    fadedExplain: "Use !== for strict inequality checks in JavaScript.",
+    predictCode: "const a = 5;\nconst b = '5';\nconsole.log(a === b);",
+    predictQuestion: "What does this program print?",
+    predictOptions: [
+      { id: "a", label: "true", correct: false, why: "=== checks both value and type. a is a number, b is a string." },
+      { id: "b", label: "false", correct: true, why: "=== checks value and type strictly. They are of different types." },
+      { id: "c", label: "undefined", correct: false, why: "=== evaluates to a boolean value, not undefined." },
+    ],
+  },
+  "js-if-else": {
+    prompt: "Arrange the lines to log 'Fly' if clear is true, otherwise log 'Wait'.",
+    parsonsFragments: [
+      { id: "jie1", text: "const clear = true;", indent: 0 },
+      { id: "jie2", text: "if (clear) {", indent: 0 },
+      { id: "jie3", text: "  console.log('Fly');", indent: 1 },
+      { id: "jie4", text: "} else {", indent: 0 },
+      { id: "jie5", text: "  console.log('Wait');", indent: 1 },
+      { id: "jie6", text: "}", indent: 0 },
+    ],
+    fadedPrompt: "Fill in the blanks to complete the if-else structure.",
+    fadedLines: [
+      { text: "const cloud = 'stormy';", blanks: [] },
+      { text: "___ (cloud === 'stormy') {", blanks: ["if"] },
+      { text: "  console.log('Stay');", blanks: [] },
+      { text: "} ___ {", blanks: ["else"] },
+      { text: "  console.log('Go');", blanks: [] },
+      { text: "}", blanks: [] },
+    ],
+    fadedExplain: "An if statement checks a condition in parentheses, and an else block executes if the condition is false.",
+    predictCode: "const light = 'red';\nif (light === 'green') {\n  console.log('Go');\n} else {\n  console.log('Stop');\n}",
+    predictQuestion: "What does this program print?",
+    predictOptions: [
+      { id: "a", label: "Go", correct: false, why: "The condition light === 'green' evaluates to false." },
+      { id: "b", label: "Stop", correct: true, why: "Since the condition is false, the else block runs." },
+      { id: "c", label: "undefined", correct: false, why: "It logs 'Stop' to the console." },
+    ],
+  },
+  "js-else-if": {
+    prompt: "Arrange the lines to classify the visibility level based on distance in miles.",
+    parsonsFragments: [
+      { id: "jei1", text: "if (dist > 5) {", indent: 0 },
+      { id: "jei2", text: "  console.log('Clear');", indent: 1 },
+      { id: "jei3", text: "} else if (dist > 2) {", indent: 0 },
+      { id: "jei4", text: "  console.log('Hazy');", indent: 1 },
+      { id: "jei5", text: "} else {", indent: 0 },
+      { id: "jei6", text: "  console.log('Foggy');", indent: 1 },
+      { id: "jei7", text: "}", indent: 0 },
+    ],
+    fadedPrompt: "Fill in the blanks to test three options in order.",
+    fadedLines: [
+      { text: "const speed = 40;", blanks: [] },
+      { text: "if (speed > 50) {", blanks: [] },
+      { text: "  console.log('Fast');", blanks: [] },
+      { text: "} ___ if (speed > ___ ) {", blanks: ["else", "20"] },
+      { text: "  console.log('Moderate');", blanks: [] },
+      { text: "} else {", blanks: [] },
+      { text: "  console.log('Slow');", blanks: [] },
+      { text: "}", blanks: [] },
+    ],
+    fadedExplain: "else if checks another condition if the first one was false. 20 is a logical intermediate threshold.",
+    predictCode: "const depth = 15;\nif (depth > 20) {\n  console.log('Deep');\n} else if (depth > 10) {\n  console.log('Mid');\n} else {\n  console.log('Shallow');\n}",
+    predictQuestion: "What does this program print?",
+    predictOptions: [
+      { id: "a", label: "Deep", correct: false, why: "depth is 15, which is not > 20." },
+      { id: "b", label: "Mid", correct: true, why: "depth (15) is greater than 10, so the else if block executes." },
+      { id: "c", label: "Shallow", correct: false, why: "The else if condition was met, so the else block is skipped." },
+    ],
+  },
+  "js-logical-operators": {
+    prompt: "Arrange the lines to allow launch only if fuel is high AND weather is clear.",
+    parsonsFragments: [
+      { id: "jlo1", text: "const fuelHigh = true;", indent: 0 },
+      { id: "jlo2", text: "const clearWeather = true;", indent: 0 },
+      { id: "jlo3", text: "if (fuelHigh && clearWeather) {", indent: 0 },
+      { id: "jlo4", text: "  console.log('Launch!');", indent: 1 },
+      { id: "jlo5", text: "}", indent: 0 },
+    ],
+    fadedPrompt: "Fill in the blanks to log 'Stargaze' if it is dark AND NOT cloudy.",
+    fadedLines: [
+      { text: "const isDark = true;", blanks: [] },
+      { text: "const isCloudy = false;", blanks: [] },
+      { text: "if (isDark ___ ___isCloudy) {", blanks: ["&&", "!"] },
+      { text: "  console.log('Stargaze');", blanks: [] },
+      { text: "}", blanks: [] },
+    ],
+    fadedExplain: "Use && to require both conditions to be true, and ! to check if a condition is false.",
+    predictCode: "const rainy = true;\nconst windy = false;\nconsole.log(rainy || windy);",
+    predictQuestion: "What does this program print?",
+    predictOptions: [
+      { id: "a", label: "true", correct: true, why: "The || (OR) operator returns true if at least one operand is true." },
+      { id: "b", label: "false", correct: false, why: "rainy is true, which satisfies the || operator." },
+      { id: "c", label: "undefined", correct: false, why: "It returns a boolean value." },
+    ],
+  },
+  "js-ternary": {
+    prompt: "Arrange the lines to assign 'hot' or 'cold' to tempStatus using a ternary operator.",
+    parsonsFragments: [
+      { id: "jt1", text: "const temp = 35;", indent: 0 },
+      { id: "jt2", text: "const tempStatus = temp > 30 ? 'hot' : 'cold';", indent: 0 },
+      { id: "jt3", text: "console.log(tempStatus);", indent: 0 },
+    ],
+    fadedPrompt: "Fill in the blanks to assign 'wet' if raining is true, else 'dry'.",
+    fadedLines: [
+      { text: "const raining = false;", blanks: [] },
+      { text: "const state = raining ___ 'wet' ___ 'dry';", blanks: ["?", ":"] },
+      { text: "console.log(state);", blanks: [] },
+    ],
+    fadedExplain: "Ternary operator syntax is condition ? expressionIfTrue : expressionIfFalse.",
+    predictCode: "const altitude = 4000;\nconst level = altitude > 5000 ? 'high' : 'low';\nconsole.log(level);",
+    predictQuestion: "What does this program print?",
+    predictOptions: [
+      { id: "a", label: "high", correct: false, why: "altitude (4000) is not greater than 5000." },
+      { id: "b", label: "low", correct: true, why: "The condition is false, so the value after the colon is selected." },
+      { id: "c", label: "4000", correct: false, why: "The ternary returns one of the two string literals." },
+    ],
+  },
+  "js-array-methods": {
+    prompt: "Arrange the lines to double every number in the sequence using .map().",
+    parsonsFragments: [
+      { id: "jam1", text: "const nums = [1, 2, 3];", indent: 0 },
+      { id: "jam2", text: "const doubled = nums.map(n => n * 2);", indent: 0 },
+      { id: "jam3", text: "console.log(doubled);", indent: 0 },
+    ],
+    fadedPrompt: "Fill in the blanks to keep only values strictly greater than 5 using .filter().",
+    fadedLines: [
+      { text: "const values = [3, 8, 5, 12];", blanks: [] },
+      { text: "const high = values.___ (v ___ v > 5);", blanks: ["filter", "=>"] },
+      { text: "console.log(high);", blanks: [] },
+    ],
+    fadedExplain: ".filter() calls a callback function for each element, keeping elements that return true.",
+    predictCode: "const arr = [1, 2, 3];\nconst res = arr.map(x => x + 1).filter(x => x > 2);\nconsole.log(res);",
+    predictQuestion: "What does this program print?",
+    predictOptions: [
+      { id: "a", label: "[2, 3]", correct: false, why: "map makes [2, 3, 4], then filter(x > 2) leaves [3, 4]." },
+      { id: "b", label: "[3, 4]", correct: true, why: "First map adds 1 to get [2, 3, 4], then filter keeps values > 2." },
+      { id: "c", label: "[2, 3, 4]", correct: false, why: "The filter call removes the value 2." },
+    ],
+  },
+  "js-destructuring": {
+    prompt: "Arrange the lines to extract x and y from coordinates, then log them.",
+    parsonsFragments: [
+      { id: "jds1", text: "const coord = { x: 10, y: 20 };", indent: 0 },
+      { id: "jds2", text: "const { x, y } = coord;", indent: 0 },
+      { id: "jds3", text: "console.log(x, y);", indent: 0 },
+    ],
+    fadedPrompt: "Fill in the blanks to unpack first and second items from array, then combine with spread.",
+    fadedLines: [
+      { text: "const colors = ['red', 'green', 'blue'];", blanks: [] },
+      { text: "const [first, second] ___ colors;", blanks: ["="] },
+      { text: "const list = [___first, 'yellow'];", blanks: ["..."] },
+    ],
+    fadedExplain: "Destructuring arrays uses square brackets, and the spread operator ... expands elements into a new array.",
+    predictCode: "const user = { name: 'Nova', level: 5 };\nconst { level: userLevel } = user;\nconsole.log(userLevel);",
+    predictQuestion: "What does this program print?",
+    predictOptions: [
+      { id: "a", label: "5", correct: true, why: "Destructuring can rename properties. level is bound to userLevel, which is 5." },
+      { id: "b", label: "Nova", correct: false, why: "level refers to the numeric value 5, not the name." },
+      { id: "c", label: "undefined", correct: false, why: "userLevel receives the value of user.level." },
+    ],
+  },
+  "js-object-methods": {
+    prompt: "Arrange the lines to get the keys of an object and log them.",
+    parsonsFragments: [
+      { id: "jom1", text: "const cloud = { shape: 'wispy', color: 'pink' };", indent: 0 },
+      { id: "jom2", text: "const keys = Object.keys(cloud);", indent: 0 },
+      { id: "jom3", text: "console.log(keys);", indent: 0 },
+    ],
+    fadedPrompt: "Fill in the blank to extract all values from the configuration object.",
+    fadedLines: [
+      { text: "const config = { speed: 100, active: true };", blanks: [] },
+      { text: "const values = Object.___(config);", blanks: ["values"] },
+      { text: "console.log(values);", blanks: [] },
+    ],
+    fadedExplain: "Object.values(config) returns an array containing the property values of the object.",
+    predictCode: "const data = { x: 1, y: 2 };\nconsole.log(Object.keys(data).length);",
+    predictQuestion: "What does this program print?",
+    predictOptions: [
+      { id: "a", label: "2", correct: true, why: "Object.keys(data) returns ['x', 'y'], whose length is 2." },
+      { id: "b", label: "['x', 'y']", correct: false, why: "The length property counts the items in the key array." },
+      { id: "c", label: "undefined", correct: false, why: "An array's length property is always a number." },
+    ],
+  },
+  "js-loop-iterators": {
+    prompt: "Arrange the lines to loop over array items using for...of.",
+    parsonsFragments: [
+      { id: "jli1", text: "const skies = ['neon', 'pastel'];", indent: 0 },
+      { id: "jli2", text: "for (const sky of skies) {", indent: 0 },
+      { id: "jli3", text: "  console.log(sky);", indent: 1 },
+      { id: "jli4", text: "}", indent: 0 },
+    ],
+    fadedPrompt: "Fill in the blank to iterate over the keys of an object using for...in.",
+    fadedLines: [
+      { text: "const stats = { wind: 15, temp: 5 };", blanks: [] },
+      { text: "for (const key ___ stats) {", blanks: ["in"] },
+      { text: "  console.log(key);", blanks: [] },
+      { text: "}", blanks: [] },
+    ],
+    fadedExplain: "Use in to iterate over keys of an object, and of to iterate over elements of an array.",
+    predictCode: "const items = [10, 20];\nlet total = 0;\nfor (const x of items) {\n  total += x;\n}\nconsole.log(total);",
+    predictQuestion: "What does this program print?",
+    predictOptions: [
+      { id: "a", label: "30", correct: true, why: "for...of yields 10 and 20. 10 + 20 = 30." },
+      { id: "b", label: "3", correct: false, why: "It yields values, not indices. Summing indices would be 0 + 1 = 1." },
+      { id: "c", label: "Error", correct: false, why: "This is valid JavaScript array iteration." },
+    ],
   }
 };
 
@@ -642,6 +863,65 @@ export const challenges: Record<string, Challenge> = {
       { label: "key exists -> value", args: [{ name: "Nova", level: 4 }, "name"], expected: "Nova" },
       { label: "key missing -> not found", args: [{ name: "Nova" }, "xp"], expected: "Property not found" },
       { label: "empty obj -> not found", args: [{}], expected: "Property not found" }
+    ]
+  },
+  "js-sky-classifier": {
+    slug: "js-sky-classifier",
+    name: "JS Sky Classifier",
+    level: "Beginner",
+    language: "JavaScript",
+    xp: 40,
+    blurb: "Classify sky safety based on visibility and weather.",
+    instructions: "Write a function `classifySky(visibility, isStormy, isNight)` that takes visibility (number in miles), isStormy (boolean), and isNight (boolean). It should return the sky status as a string:\n- If it is stormy, return 'unsafe'.\n- Otherwise, if visibility is strictly less than 3 miles, or if it is night and visibility is strictly less than 5 miles, return 'restricted'.\n- In all other cases, return 'clear'.",
+    starter: `function classifySky(visibility, isStormy, isNight) {
+  // Write your code here
+  return "";
+}`,
+    functionName: "classifySky",
+    testCases: [
+      { label: "stormy check: (10, true, false) → unsafe", args: [10, true, false], expected: "unsafe" },
+      { label: "low visibility: (2, false, false) → restricted", args: [2, false, false], expected: "restricted" },
+      { label: "night visibility check: (4, false, true) → restricted", args: [4, false, true], expected: "restricted" },
+      { label: "night visibility ok: (6, false, true) → clear", args: [6, false, true], expected: "clear" },
+      { label: "day visibility ok: (4, false, false) → clear", args: [4, false, false], expected: "clear" },
+    ]
+  },
+  "js-array-transformer": {
+    slug: "js-array-transformer",
+    name: "JS Array Transformer",
+    level: "Intermediate",
+    language: "JavaScript",
+    xp: 50,
+    blurb: "Transform and filter an array of cloud objects.",
+    instructions: "Write a function `transformClouds(clouds, minHeight)` that takes an array of cloud objects `{ name: string, height: number }` and a number `minHeight`. It should:\n1. Filter out clouds with heights strictly less than `minHeight`.\n2. Map the remaining clouds to return an array of their name strings in uppercase.\n3. Return this array.\nIf no clouds match, return an empty array.",
+    starter: `function transformClouds(clouds, minHeight) {
+  // Write your code here
+  return [];
+}`,
+    functionName: "transformClouds",
+    testCases: [
+      {
+        label: "filter and uppercase",
+        args: [
+          [
+            { name: "cumulus", height: 3000 },
+            { name: "cirrus", height: 6000 },
+            { name: "stratus", height: 1500 }
+          ],
+          3000
+        ],
+        expected: ["CUMULUS", "CIRRUS"]
+      },
+      {
+        label: "all filtered out",
+        args: [[{ name: "fog", height: 200 }], 1000],
+        expected: []
+      },
+      {
+        label: "empty array input",
+        args: [[], 500],
+        expected: []
+      }
     ]
   }
 };

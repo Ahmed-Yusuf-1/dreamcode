@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, Fragment } from "react";
 import Link from "next/link";
 import Cloud from "@/components/Cloud";
 import StreakFlame from "@/components/StreakFlame";
@@ -26,6 +26,13 @@ const BOSS_Y = 150;
 const X_LEFT = 190;
 const X_RIGHT = 530;
 const X_CENTER = 360;
+
+const TIER_COLORS = {
+  beginner: { text: "#a9ecc9", bg: "rgba(169, 236, 201, 0.15)" },
+  intermediate: { text: "#ffe49a", bg: "rgba(255, 228, 154, 0.15)" },
+  advanced: { text: "#ffb6d9", bg: "rgba(255, 182, 217, 0.15)" },
+  expert: { text: "#cdb9f7", bg: "rgba(205, 185, 247, 0.15)" },
+};
 
 function getStopState(
   slug: string,
@@ -284,17 +291,59 @@ export default function JourneyPage() {
               : state === "current"
                 ? `Lesson ${j} of ${n} · ${j === 1 ? "Start" : "Continue"} →`
                 : "Locked";
+
+          const isFirstOfModule = i === 0 || stops[i - 1].module !== stop.module;
+          const moduleName = stop.module || stop.chapter || "Basics";
+          const moduleTier = stop.tier || "beginner";
+          const colors = TIER_COLORS[moduleTier as keyof typeof TIER_COLORS] || TIER_COLORS.beginner;
+
           return (
-            <MapNode
-              key={stop.slug}
-              left={nodeX(j)}
-              top={nodeY(j)}
-              state={state}
-              title={`${stop.order} · ${stop.catalogTitle}`}
-              sub={sub}
-              href={`/lesson/${stop.slug}`}
-              cloud={NODE_CLOUDS[i % NODE_CLOUDS.length]}
-            />
+            <Fragment key={stop.slug}>
+              {isFirstOfModule && (
+                <div
+                  className="absolute z-10 flex flex-col items-center gap-1 backdrop-blur-md"
+                  style={{
+                    left: X_CENTER,
+                    top: nodeY(j) + GAP / 2,
+                    transform: "translate(-50%, -50%)",
+                    background: "linear-gradient(135deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.04) 100%)",
+                    border: "1px solid rgba(255, 255, 255, 0.18)",
+                    padding: "10px 24px",
+                    borderRadius: 20,
+                    boxShadow: "0 8px 32px 0 rgba(20, 16, 50, 0.3)",
+                  }}
+                >
+                  <span
+                    className="font-display text-[10px] font-black tracking-widest"
+                    style={{
+                      color: colors.text,
+                      background: colors.bg,
+                      padding: "2px 8px",
+                      borderRadius: 99,
+                      border: `1px solid ${colors.text}33`,
+                      textShadow: `0 0 8px ${colors.text}66`,
+                    }}
+                  >
+                    {moduleTier.toUpperCase()}
+                  </span>
+                  <h3
+                    className="font-display font-extrabold text-white"
+                    style={{ fontSize: 14, margin: 0, textShadow: "0 2px 10px rgba(0,0,0,0.5)" }}
+                  >
+                    {moduleName}
+                  </h3>
+                </div>
+              )}
+              <MapNode
+                left={nodeX(j)}
+                top={nodeY(j)}
+                state={state}
+                title={`${stop.order} · ${stop.catalogTitle}`}
+                sub={sub}
+                href={`/lesson/${stop.slug}`}
+                cloud={NODE_CLOUDS[i % NODE_CLOUDS.length]}
+              />
+            </Fragment>
           );
         })}
 

@@ -292,3 +292,33 @@ button {
 .dc-editor .cm-editor ::selection {
   background: rgba(110, 160, 240, 0.35) !important;
 }
+
+/* Accessibility: honor a reduced-motion preference. Neutralizes the floaty
+   cloud bobbing, pulse rings, pop-ins, neon flicker, and CSS transitions.
+   The scroll parallax is also disabled in Parallax.tsx via matchMedia. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Accessibility: a clear, on-theme focus ring for keyboard users. White core
+   with a blue halo so it reads on both the dusk and the light glass surfaces.
+   Mouse clicks do not trigger :focus-visible, so this only shows on keyboard. */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible,
+summary:focus-visible,
+[role="button"]:focus-visible {
+  outline: 3px solid #ffffff;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 6px rgba(47, 111, 221, 0.6);
+  border-radius: 8px;
+}

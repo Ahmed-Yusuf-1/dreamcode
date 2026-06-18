@@ -46,6 +46,8 @@ export default function Parallax({
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
+    // Honor a reduced-motion preference: skip scroll-driven parallax entirely.
+    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
     const layer: Layer = { el, speed };
     layers.add(layer);
     ensureListening();

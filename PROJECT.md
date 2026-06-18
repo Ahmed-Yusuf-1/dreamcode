@@ -25,8 +25,17 @@ self-learners, students, beginners. Community-imported content is a later idea.
   via **Pyodide** in a Web Worker; JavaScript runs in-browser via `new Function`.
   Challenges/projects grade against real test cases.
 - **Content-driven:** lessons/practice/challenges/projects are dynamic routes
-  reading typed data. Today: 6 Python + 5 JS lessons, 10 practice sets, 8
-  challenges, 5 gradeable projects. Two tracks, switchable via `useActiveTrack`.
+  reading typed data. Today: 21 Python + 14 JS lessons (C# track not started yet),
+  34 practice sets, 13 challenges, 5 gradeable projects. Two tracks, switchable via
+  `useActiveTrack`. `curriculum.ts` lessons carry optional `module`/`tier` fields
+  with a `getModules(track)` helper (modular + tiered model). Python has 5 modules
+  (Python Basics, Conditionals and logic, Loops and iteration, Functions,
+  Collections); JavaScript has 4 (JS Basics, JS Conditionals & Logic, JS
+  Collections & Loops, JS Collections Depth). **C# has no lessons yet** and needs
+  track + read/quiz infrastructure before content can land (PLAN.md Step 2g).
+  `/lessons` groups lessons into per-module sections with tier badges and
+  `/journey` shows a module-header divider at each module boundary (via
+  `getModules()`).
 - **Backend: live** (Supabase, once `.env.local` + the SQL are in place; see Setup).
   Auth (email/password + Google/GitHub OAuth), Postgres with Row-Level Security,
   and `/api/*` endpoints. When signed in, the client gamification layer
@@ -43,8 +52,18 @@ self-learners, students, beginners. Community-imported content is a later idea.
   `AI_MODEL` to switch it on; until then it shows a "not on yet" state. Signed-in
   only; 5 XP per hint. The Pro paywall is built but parked behind
   `GUIDE_REQUIRE_PRO` (off until billing ships at the end).
-- **Not done:** billing/Stripe to sell Pro (and flip `GUIDE_REQUIRE_PRO`);
-  TypeScript track; deeper curriculum; telemetry; accessibility/i18n.
+- **Accessibility/SEO:** reduced-motion is honored (CSS media query neutralizes
+  the float/pulse/pop animations; `Parallax.tsx` skips scroll parallax via
+  `matchMedia`), keyboard `:focus-visible` rings are in `globals.css`, lessons set
+  per-page `generateMetadata`, and the root layout has domain-aware Open Graph /
+  canonical (`NEXT_PUBLIC_SITE_URL`).
+- **Industry section:** `/industry` covers Python, JavaScript, and C#/.NET
+  (domains, tools, roles), data in `src/lib/industry.ts`.
+- **Not done:** deeper curriculum (the big effort: beginner -> expert per
+  language, each concept multi-lesson + practice + challenge, a **C#/.NET** lesson
+  track); a **server-side sandbox** so C# can run (Python/JS run client-side, C#
+  cannot); billing/Stripe to sell Pro (and flip `GUIDE_REQUIRE_PRO`); telemetry;
+  i18n; broader keyboard-nav/alt-text audit.
 
 ## Run it
 
@@ -79,7 +98,7 @@ Routes (`src/app/*/page.tsx` unless noted):
 - `/` home, `/start` onboarding, `/login` `/signup` (real Supabase auth)
 - `/dashboard` hub, `/lessons` catalog (track filter + completion checks)
 - `/lesson/[slug]` (SSG), `/practice/[slug]`, `/challenge/[slug]`, `/project/[slug]` (dynamic, real grading)
-- `/peaks` challenge library (gated), `/projects` catalog, `/journey` (map generated dynamically from `curriculum.ts`, per active track), `/badges`, `/review` (FSRS), `/profile` (settings, track pills, AI toggle), `/placement` quiz
+- `/peaks` challenge library (gated), `/projects` catalog, `/journey` (map generated dynamically from `curriculum.ts`, per active track), `/industry` (where Python/JS/C#-.NET are used in the tech industry; data in `src/lib/industry.ts`), `/badges`, `/review` (FSRS), `/profile` (settings, track pills, AI toggle), `/placement` quiz
 - API: `/api/{profile,progress,submissions,srs,badges}` (RLS-backed, Zod, 401 when signed out); `/api/guide` (AI hint, signed-in gated, provider-agnostic)
 - Auth: `/auth/callback` (OAuth code exchange), `/auth/signout`
 
