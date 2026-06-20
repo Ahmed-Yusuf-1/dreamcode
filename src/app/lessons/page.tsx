@@ -79,7 +79,7 @@ export default function LessonsPage() {
             textWrap: "pretty",
           }}
         >
-          A guided road through Python and JavaScript - one small, glowing stop at a time.
+          A guided road through Python, JavaScript, and C# - one small, glowing stop at a time.
         </p>
 
         {/* Tab Selector */}
@@ -129,6 +129,23 @@ export default function LessonsPage() {
             }}
           >
             JavaScript (Climbs)
+          </button>
+          <button
+            onClick={() => setTrack("csharp")}
+            style={{
+              background: track === "csharp" ? "#ffffff" : "transparent",
+              color: track === "csharp" ? "#13335f" : "rgba(255,255,255,.85)",
+              fontWeight: 900,
+              fontSize: 14,
+              padding: "10px 24px",
+              borderRadius: 999,
+              cursor: "pointer",
+              transition: "all .25s ease",
+              border: "none",
+              boxShadow: track === "csharp" ? "0 4px 15px rgba(255,255,255,.2)" : "none",
+            }}
+          >
+            C# (.NET)
           </button>
         </div>
 

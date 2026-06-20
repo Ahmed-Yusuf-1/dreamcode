@@ -85,9 +85,12 @@ export async function completeStop(slug: string): Promise<boolean> {
   const user = await getUser();
   if (!user) return false;
   const supabase = await createClient();
+  // ignoreDuplicates -> ON CONFLICT DO NOTHING: a re-completion is a no-op that
+  // needs only INSERT permission. completed_stops has no UPDATE policy, so the
+  // default DO UPDATE branch would be denied by RLS on a redundant call.
   const { error } = await supabase
     .from("completed_stops")
-    .upsert({ user_id: user.id, slug }, { onConflict: "user_id,slug" });
+    .upsert({ user_id: user.id, slug }, { onConflict: "user_id,slug", ignoreDuplicates: true });
   return !error;
 }
 
@@ -111,9 +114,11 @@ export async function unlockBadge(badgeId: string): Promise<boolean> {
   const user = await getUser();
   if (!user) return false;
   const supabase = await createClient();
+  // ignoreDuplicates -> ON CONFLICT DO NOTHING: unlocked_badges has no UPDATE
+  // policy, and a re-unlock should be a no-op insert, not an RLS-denied update.
   const { error } = await supabase
     .from("unlocked_badges")
-    .upsert({ user_id: user.id, badge_id: badgeId }, { onConflict: "user_id,badge_id" });
+    .upsert({ user_id: user.id, badge_id: badgeId }, { onConflict: "user_id,badge_id", ignoreDuplicates: true });
   return !error;
 }
 

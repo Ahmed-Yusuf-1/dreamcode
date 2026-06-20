@@ -7,7 +7,8 @@ import StreakFlame from "@/components/StreakFlame";
 import { useUserProfile } from "@/lib/profile";
 import { cloudOpacity } from "@/lib/theme";
 import { useActiveTrack } from "@/lib/track";
-import { lessons } from "@/lib/curriculum";
+import { lessons, type Lesson } from "@/lib/curriculum";
+import { getModuleChallenge, type Challenge } from "@/lib/data";
 
 const cs = cloudOpacity.journey;
 
@@ -61,18 +62,55 @@ export default function JourneyPage() {
     .filter((l) => (l.language || "python") === track)
     .sort((a, b) => a.order - b.order);
   const orderedSlugs = stops.map((s) => s.slug);
-  const n = stops.length;
+  const nLessons = stops.length;
 
-  // Vertical layout: START at the bottom, boss at the top, lessons evenly between.
+  // Interleave a "section challenge" node after the last lesson of every module
+  // that has a difficulty-matched challenge mapped (getModuleChallenge). Read +
+  // quiz modules (C#, Python read + quiz) have no mapping, so they get no node.
+  type RoadItem =
+    | { kind: "lesson"; lesson: Lesson; isFirstOfModule: boolean }
+    | {
+        kind: "challenge";
+        challenge: Challenge;
+        moduleName: string;
+        moduleTier: keyof typeof TIER_COLORS;
+        moduleSlugs: string[];
+      };
+  const roadItems: RoadItem[] = [];
+  for (let i = 0; i < stops.length; i++) {
+    const stop = stops[i];
+    const moduleName = stop.module || stop.chapter || "Basics";
+    const isFirstOfModule = i === 0 || stops[i - 1].module !== stop.module;
+    roadItems.push({ kind: "lesson", lesson: stop, isFirstOfModule });
+
+    const isLastOfModule = i === stops.length - 1 || stops[i + 1].module !== stop.module;
+    if (isLastOfModule) {
+      const challenge = getModuleChallenge(moduleName);
+      if (challenge) {
+        roadItems.push({
+          kind: "challenge",
+          challenge,
+          moduleName,
+          moduleTier: (stop.tier || "beginner") as keyof typeof TIER_COLORS,
+          moduleSlugs: stops
+            .filter((s) => (s.module || s.chapter || "Basics") === moduleName)
+            .map((s) => s.slug),
+        });
+      }
+    }
+  }
+  const n = roadItems.length;
+
+  // Vertical layout: START at the bottom, boss at the top, nodes evenly between.
   const startY = BOSS_Y + (n + 1) * GAP;
   const mapHeight = startY + 120;
   const nodeX = (j: number) => (j % 2 === 1 ? X_LEFT : X_RIGHT); // j is 1-based
   const nodeY = (j: number) => startY - j * GAP;
 
-  // The dashed road: a smooth serpentine through START -> lessons -> boss.
+  // The dashed road: a smooth serpentine through START -> nodes -> boss.
   const points = [
     { x: X_CENTER, y: startY },
-    ...stops.map((_, i) => ({ x: nodeX(i + 1), y: nodeY(i + 1) })),
+    ...roadItems.map((_, i) => ({ x: nodeX(i + 1), y: nodeY(i + 1) })),
     { x: X_CENTER, y: BOSS_Y },
   ];
   let pathD = `M ${points[0].x} ${points[0].y}`;
@@ -87,7 +125,11 @@ export default function JourneyPage() {
     stops[0]?.chapter ||
     (track === "javascript" ? "JavaScript Climbs - Chapter 1" : "Python Basics - Chapter 1");
   const projectLabel =
-    track === "javascript" ? "Chapter Project · Star Map" : "Chapter Project · Sky House";
+    track === "javascript"
+      ? "Chapter Project · Star Map"
+      : track === "csharp"
+        ? "Chapter Project · Console App"
+        : "Chapter Project · Sky House";
 
   return (
     <div
@@ -281,25 +323,57 @@ export default function JourneyPage() {
           />
         </div>
 
-        {/* lesson nodes, generated from the curriculum */}
-        {stops.map((stop, i) => {
+        {/* nodes, generated from the curriculum: lessons plus a section challenge
+            at the end of each module that has a difficulty-matched challenge */}
+        {roadItems.map((item, i) => {
           const j = i + 1;
+
+          if (item.kind === "challenge") {
+            const { challenge, moduleSlugs } = item;
+            const moduleComplete = moduleSlugs.every((s) => completed.includes(s));
+            const cleared = completed.includes(challenge.slug);
+            const state: "done" | "current" | "locked" = cleared
+              ? "done"
+              : moduleComplete
+                ? "current"
+                : "locked";
+            const sub = cleared
+              ? "Section challenge cleared"
+              : moduleComplete
+                ? `Section challenge · ${challenge.level}`
+                : "Finish the module to unlock";
+            return (
+              <MapNode
+                key={`challenge-${challenge.slug}`}
+                left={nodeX(j)}
+                top={nodeY(j)}
+                state={state}
+                title={challenge.name}
+                sub={sub}
+                href={`/challenge/${challenge.slug}`}
+                cloud={NODE_CLOUDS[i % NODE_CLOUDS.length]}
+                variant="challenge"
+              />
+            );
+          }
+
+          const stop = item.lesson;
+          const lessonNumber = orderedSlugs.indexOf(stop.slug) + 1;
           const state = getStopState(stop.slug, orderedSlugs, completed);
           const sub =
             state === "done"
               ? "Complete"
               : state === "current"
-                ? `Lesson ${j} of ${n} · ${j === 1 ? "Start" : "Continue"} →`
+                ? `Lesson ${lessonNumber} of ${nLessons} · ${lessonNumber === 1 ? "Start" : "Continue"} →`
                 : "Locked";
 
-          const isFirstOfModule = i === 0 || stops[i - 1].module !== stop.module;
           const moduleName = stop.module || stop.chapter || "Basics";
           const moduleTier = stop.tier || "beginner";
           const colors = TIER_COLORS[moduleTier as keyof typeof TIER_COLORS] || TIER_COLORS.beginner;
 
           return (
             <Fragment key={stop.slug}>
-              {isFirstOfModule && (
+              {item.isFirstOfModule && (
                 <div
                   className="absolute z-10 flex flex-col items-center gap-1 backdrop-blur-md"
                   style={{
@@ -435,6 +509,7 @@ function MapNode({
   sub,
   href,
   cloud,
+  variant = "lesson",
 }: {
   left: number;
   top: number;
@@ -443,7 +518,9 @@ function MapNode({
   sub: string;
   href?: string;
   cloud: string;
+  variant?: "lesson" | "challenge";
 }) {
+  const isChallenge = variant === "challenge";
   const inner = (
     <>
       {/* marker */}
@@ -454,16 +531,18 @@ function MapNode({
             width: 50,
             height: 50,
             borderRadius: "50%",
-            background: "#a9ecc9",
+            background: isChallenge ? "#ffe49a" : "#a9ecc9",
             border: "4px solid #ffffff",
-            boxShadow: "0 0 20px rgba(169,236,201,.55), 0 10px 26px rgba(20,12,50,.4)",
+            boxShadow: isChallenge
+              ? "0 0 20px rgba(255,228,154,.6), 0 10px 26px rgba(20,12,50,.4)"
+              : "0 0 20px rgba(169,236,201,.55), 0 10px 26px rgba(20,12,50,.4)",
             fontWeight: 900,
             fontSize: 20,
-            color: "#0f5c38",
+            color: isChallenge ? "#7a5200" : "#0f5c38",
             marginBottom: -22,
           }}
         >
-          ✓
+          {isChallenge ? "★" : "✓"}
         </div>
       )}
       {state === "current" && (
@@ -473,16 +552,20 @@ function MapNode({
             width: 64,
             height: 64,
             borderRadius: "50%",
-            background: "linear-gradient(135deg, #ff7ad9, #ff4fb0)",
+            background: isChallenge
+              ? "linear-gradient(135deg, #ffd86b, #ff9e3d)"
+              : "linear-gradient(135deg, #ff7ad9, #ff4fb0)",
             border: "4px solid #ffffff",
-            boxShadow: "0 0 28px rgba(255,100,200,.75), 0 12px 30px rgba(20,12,50,.45)",
+            boxShadow: isChallenge
+              ? "0 0 28px rgba(255,180,80,.75), 0 12px 30px rgba(20,12,50,.45)"
+              : "0 0 28px rgba(255,100,200,.75), 0 12px 30px rgba(20,12,50,.45)",
             fontWeight: 800,
-            fontSize: 15,
+            fontSize: isChallenge ? 24 : 15,
             color: "#ffffff",
             marginBottom: -26,
           }}
         >
-          GO
+          {isChallenge ? "★" : "GO"}
         </div>
       )}
       {state === "locked" && (
@@ -568,9 +651,18 @@ function MapNode({
               state === "locked"
                 ? "rgba(255,255,255,.55)"
                 : state === "current"
-                  ? "#ffd9ef"
-                  : "#b9f5d2",
-            textShadow: state === "current" ? "0 0 10px rgba(255,138,222,.6)" : undefined,
+                  ? isChallenge
+                    ? "#ffe9b0"
+                    : "#ffd9ef"
+                  : isChallenge
+                    ? "#ffe49a"
+                    : "#b9f5d2",
+            textShadow:
+              state === "current"
+                ? isChallenge
+                  ? "0 0 10px rgba(255,180,80,.6)"
+                  : "0 0 10px rgba(255,138,222,.6)"
+                : undefined,
           }}
         >
           {sub}

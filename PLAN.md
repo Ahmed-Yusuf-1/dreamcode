@@ -37,50 +37,87 @@ Goal: every language is a vast beginner -> expert path where each concept gets
 MULTIPLE lessons + practice + a challenge, so the learner becomes genuinely
 proficient, not one shallow lesson per topic.
 
-Shipped so far (current state in PROJECT.md, not repeated here): the `/industry`
-section, the modular + tiered model + `getModules()`, module grouping in the
-journey and catalog UI, and deep content for two languages - **Python: 21 lessons
-across 5 modules** (Python Basics, Conditionals and logic, Loops and iteration,
-Functions, Collections) and **JavaScript: 14 lessons across 4 modules** (JS Basics,
-JS Conditionals & Logic, JS Collections & Loops, JS Collections Depth). **C#: still
-0 lessons** - the remaining gap.
+Shipped so far (current state in PROJECT.md): the `/industry` section, the modular
++ tiered model + `getModules()`, module grouping in the journey/catalog, the C#
+read+quiz mode, and **beginner -> expert content for all three languages** - Python
+44 lessons / 11 modules, JavaScript 25 / 7, C# 21 / 6 (read+quiz). The journey
+module-ordering and C# kicker issues from the prior audit are fixed and verified.
 
-**Step 2g - bring up the C# track (read + quiz, since execution is deferred).**
-C# is NOT just content: the app has no C# track and no non-runnable lesson mode,
-so raw C# data alone would be unreachable and would render a broken Run editor.
-Split into infra (Claude) then content (Gemini):
+Also shipped + verified since: **2k-A** - every runnable lesson's practice dataset
+(58 `practiceDatasets` in `data.ts`, all predict answers executed and confirmed
+correct, indentation normalized, scratch files removed); **2k-C** - the async JS
+runner fix in `LessonView`; and the **2k-B INFRASTRUCTURE** - `moduleChallenges` +
+`getModuleChallenge()` in `data.ts`, gold "Section challenge" nodes on `/journey`
+(locked until the whole module is complete, then a clickable gold star, "cleared"
+once passed), and a last-lesson "Section challenge" CTA in `LessonView`. Verified
+in the browser across locked / unlocked / CTA / C#-has-no-node states.
 
-**2g-infra (Owner: CLAUDE - architecturally-subtle exception).** Add C# as a real
-track plus a read+quiz lesson mode:
-- `src/lib/track.ts`: extend `Track` to include `"csharp"`; handle it in the toggle
-  and persistence.
-- `src/app/lessons/page.tsx`: add a C# tab. `src/app/journey/page.tsx`: handle the
-  csharp track (chapter title, project label).
-- Non-runnable lesson mode: add `runnable?: boolean` (default true) and a `quiz`
-  field to `Lesson`; in `LessonView`, when `runnable === false`, hide the
-  editor/Run/console and show the read-only example plus a multiple-choice quiz
-  that awards XP and completes the stop. Python and JS lessons are unaffected.
-- Add 1-2 sample C# lessons to prove the mode end to end.
-- Acceptance (Claude self-verifies): tsc/eslint/build green; C# tab appears; a C#
-  lesson renders read + quiz (no Run button) and the quiz completes the stop;
-  Python and JS lessons still run real code unchanged.
+**2k-B content** then shipped (Gemini, Claude-verified): every remaining runnable
+module now has its own real, graded section challenge - 21 challenges total, so
+each runnable Python and JavaScript module ends with a difficulty-matched capstone
+(C# and the Python read+quiz modules keep their quizzes, no code challenge). All
+challenge test cases were verified by running reference solutions; the in-app
+grader was confirmed (js-expert-proxy passes 3/3 in the browser); a third test
+case was added to the two challenges that had only two. tsc/eslint/build green.
 
-**2g-content (Owner: GEMINI; Claude verifies; BLOCKED until 2g-infra lands).**
-Author the C# beginner modules as read + quiz lessons in `curriculum.ts`
-(`language: "csharp"`, `runnable: false`, a `quiz` per lesson) following the depth
-pattern: C# basics -> types and variables -> control flow -> methods -> intro OOP,
-each module ~5 lessons. Claude specs the exact lesson list once the infra is in.
+Step 2 (content depth) is now essentially complete: three tracks beginner ->
+expert, practice for every runnable lesson, and a difficulty-matched section
+challenge at the end of every runnable module. Deeper expansion (more lessons per
+concept, a 4th language) lives in "Later / backlog". The next active chunk is set
+below once the owner picks a direction.
 
 ### 3. Accessibility + SEO - core shipped (Owner: Gemini for the remainder)
 Reduced-motion (CSS + Parallax `matchMedia` guard), keyboard `:focus-visible`
 rings, per-lesson `generateMetadata`, and domain-aware Open Graph / canonical are
 in. Remaining: a broader keyboard-nav + alt-text audit and i18n groundwork.
 
-### 4. Confirm the backend end to end (Owner: Gemini; Claude verifies)
-After the Supabase setup in PROJECT.md: sign up, earn XP / complete a stop / pass a
-challenge while logged in, then reload and on a second device - progress, streak,
-badges, and FSRS due dates should persist server-side. Fix any sync gaps in
-`profile.ts` / `srs.ts` / `track.ts`.
+### 4. Confirm the backend end to end (Owner: OWNER live test; Claude audited the code)
+
+**Code audit (Claude) - DONE.** Full review of the sync path: `profile.ts`, `srs.ts`,
+`track.ts`, the `/api/{profile,progress,badges,srs,submissions}` routes, the
+RLS-scoped data layer (`src/lib/supabase/data.ts`), the auth plumbing
+(`supabase/server.ts`, `proxy.ts`), and the schema (`0001_init.sql`). Findings:
+- The architecture is correct. Auth uses `supabase.auth.getUser()` (verifies the
+  JWT, not just the cookie); every data function is RLS-scoped; routes are
+  auth-gated + Zod-validated; the server DERIVES `level` from `xp` so the client
+  never desyncs level; `srs_cards` has the UPDATE policy FSRS needs every review;
+  the signup trigger seeds a `profiles` row.
+- **Fixed:** `completeStop` / `unlockBadge` used the default upsert (ON CONFLICT DO
+  UPDATE), but `completed_stops` / `unlocked_badges` have no UPDATE RLS policy, so a
+  redundant call (e.g. a stale second device re-posting) was RLS-denied. Switched
+  both to `ignoreDuplicates: true` (ON CONFLICT DO NOTHING, insert-only) - now
+  genuinely idempotent. tsc/eslint/build green.
+
+**Known edges (owner to decide; not blocking the happy path):**
+1. **Demo seed can corrupt the server (recommend fixing).** `DEFAULT_PROFILE` in
+   `profile.ts` ships FAKE progress (level 4, 540 XP, 7-day streak, 5 badges, 3
+   completed stops). On a fresh signed-in device, if an XP action fires in the
+   sub-second window before the first `syncProfileFromApi()` returns, `addXP` reads
+   that fake local profile and PATCHes an inflated `totalXp` to the server. Also,
+   new anonymous visitors see fake progress they did not earn. Recommend zeroing
+   `DEFAULT_PROFILE` to a true empty state (level 1, xp 0, streak 0, no badges, no
+   completedStops, flat weekActivity). This is a product/demo call, so left to the
+   owner.
+2. **No offline retry / no anonymous-merge.** A failed PATCH/POST (network blip) is
+   not retried, and a reload pulls server truth over local, so that one action is
+   lost; and signing in overwrites local with server (pre-login anonymous progress
+   is not merged up). Both are acceptable for an online-first MVP - flag only.
+3. **Pre-trigger users:** `updateProfile` silently no-ops if no `profiles` row
+   exists, so the `0001_init.sql` trigger MUST be installed before first signups.
+
+**Live end-to-end test (OWNER - needs the provisioned Supabase + `.env.local`; cannot
+be run from this repo without secrets):**
+1. Apply `supabase/migrations/0001_init.sql` and set `.env.local` (see PROJECT.md).
+2. Sign up (email/password, and once each via Google + GitHub OAuth).
+3. While signed in: complete a lesson (XP + stop), pass a section challenge (XP +
+   stop + maybe badge), and rate a `/review` card.
+4. Reload: dashboard XP/level, streak, badges, completed journey stops, and the
+   `/review` due count should match (pulled from the server, not the demo seed).
+5. On a SECOND device/browser, sign in as the same user: the same progress, streak,
+   badges, and FSRS due dates should appear.
+6. In Supabase, confirm rows in `profiles`, `completed_stops`, `unlocked_badges`,
+   `srs_cards`, `submissions`, and that RLS blocks reading another user's rows.
+Report any mismatch back; Claude will fix the specific sync path.
 
 ---
 

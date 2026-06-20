@@ -23,28 +23,52 @@ self-learners, students, beginners. Community-imported content is a later idea.
   responsive, and navigable.
 - **Real code execution:** Python (lessons, challenges, projects) runs real CPython
   via **Pyodide** in a Web Worker; JavaScript runs in-browser via `new Function`.
+  The lesson runner wraps Run code in an async IIFE, awaits it, and flushes
+  microtasks + 0ms timers before reading console output, so async/await and
+  event-loop lessons (js-async-await, js-concurrency) show the correct order.
   Challenges/projects grade against real test cases.
 - **Content-driven:** lessons/practice/challenges/projects are dynamic routes
-  reading typed data. Today: 21 Python + 14 JS lessons (C# track not started yet),
-  34 practice sets, 13 challenges, 5 gradeable projects. Two tracks, switchable via
+  reading typed data. Today: 44 Python + 25 JS + 21 C# lessons (90 total),
+  58 practice sets, 21 challenges, 5 gradeable projects, spanning beginner ->
+  expert. **Three tracks** (python | javascript | csharp), switchable via
   `useActiveTrack`. `curriculum.ts` lessons carry optional `module`/`tier` fields
-  with a `getModules(track)` helper (modular + tiered model). Python has 5 modules
-  (Python Basics, Conditionals and logic, Loops and iteration, Functions,
-  Collections); JavaScript has 4 (JS Basics, JS Conditionals & Logic, JS
-  Collections & Loops, JS Collections Depth). **C# has no lessons yet** and needs
-  track + read/quiz infrastructure before content can land (PLAN.md Step 2g).
-  `/lessons` groups lessons into per-module sections with tier badges and
-  `/journey` shows a module-header divider at each module boundary (via
-  `getModules()`).
+  with a `getModules(track)` helper (modular + tiered model). Python has 11
+  modules; JavaScript has 7; C# has 6. `/lessons` groups lessons into per-module
+  sections with tier badges and `/journey` shows a module-header divider at each
+  module boundary (via `getModules()`).
+  **Practice datasets (complete + verified):** all 58 runnable lessons have a
+  matching `PracticeDataset` (Parsons + faded + predict) in `data.ts`; every
+  predict answer was executed and confirmed correct (Python via CPython, JS via
+  node), and one option is marked correct per set.
+- **Read + quiz lesson mode:** lessons with `runnable: false` (C#, which has no
+  client-side runtime) render a read-only example plus a multiple-choice `quiz` in
+  `LessonView` instead of the code editor; passing the quiz awards XP and completes
+  the stop. Python/JS lessons keep the real-code editor. C# execution stays
+  deferred to the server-side sandbox (PLAN.md Final).
 - **Backend: live** (Supabase, once `.env.local` + the SQL are in place; see Setup).
   Auth (email/password + Google/GitHub OAuth), Postgres with Row-Level Security,
   and `/api/*` endpoints. When signed in, the client gamification layer
   (`profile.ts`/`srs.ts`/`track.ts`) syncs to Supabase; `localStorage` is the
-  optimistic cache. Signed-out users keep working fully on localStorage.
+  optimistic cache. Signed-out users keep working fully on localStorage. The full
+  sync path was code-audited end to end (auth verifies the JWT via `getUser()`,
+  level is derived server-side from XP, FSRS upserts have the right RLS update
+  policy); `completeStop`/`unlockBadge` use idempotent (DO NOTHING) upserts. The
+  live cross-device persistence test needs the owner's provisioned Supabase
+  (PLAN.md item 4). Known edge: the `DEFAULT_PROFILE` demo seed in `profile.ts`
+  ships fake progress; zero it before launch to avoid seeding new accounts.
 - **Spaced repetition:** real **FSRS** scheduling (stability/difficulty/
   retrievability) in `srs.ts`, synced to the `srs_cards` table.
 - **Gamification:** XP, levels (800 XP/level), daily streak, badges, journey
   gating by `completedStops`, placement quiz, sound chimes.
+- **Section challenges:** each runnable module ends with a difficulty-matched,
+  real-graded capstone. `moduleChallenges` (module name -> challenge slug) +
+  `getModuleChallenge()` in `data.ts` drive a gold "Section challenge" node on
+  `/journey` (locked until every lesson in the module is complete, then a
+  clickable gold star, "cleared" once passed) and a CTA on the module's last
+  lesson in `LessonView`. The challenge level matches the module tier. Every
+  runnable Python and JavaScript module is now mapped to its own graded challenge
+  (16 entries in `moduleChallenges`). C# and the Python read+quiz modules keep
+  their quizzes (no code challenge).
 - **Spotify:** real Web Playback SDK + PKCE OAuth player in the nav.
 - **AI guide (DreamGuide):** real Socratic hint chat, not a scripted demo. The
   model call is server-side and **provider-agnostic** (`src/lib/ai/guide.ts` +

@@ -8,8 +8,10 @@ import EditorFrame, { ConsolePanel } from "@/components/EditorFrame";
 import DreamGuide from "@/components/DreamGuide";
 import { usePyodide } from "@/lib/usePyodide";
 import { cloudOpacity } from "@/lib/theme";
-import type { Lesson, LessonLink } from "@/lib/curriculum";
+import { lessons, type Lesson, type LessonLink, type QuizQuestion } from "@/lib/curriculum";
+import { practiceDatasets, getModuleChallenge } from "@/lib/data";
 import { addXP, completeStop } from "@/lib/profile";
+import { playChime } from "@/lib/sound";
 
 const cs = cloudOpacity.lesson;
 
@@ -46,6 +48,32 @@ export default function LessonView({
   const [running, setRunning] = useState(false);
   const py = usePyodide();
 
+  // Read + quiz lessons (e.g. C#) have no client-side runtime: no editor/Run.
+  const runnable = lesson.runnable !== false;
+
+  // Section challenge: a difficulty-matched capstone surfaced as a CTA on a
+  // module's last lesson (mirrors the /journey "Section challenge" node). Only
+  // runnable modules with a mapped challenge get one.
+  const moduleName = lesson.module || lesson.chapter || "Basics";
+  const moduleLessons = lessons
+    .filter(
+      (l) =>
+        (l.language || "python") === (lesson.language || "python") &&
+        (l.module || l.chapter || "Basics") === moduleName,
+    )
+    .sort((a, b) => a.order - b.order);
+  const isLastOfModule = moduleLessons[moduleLessons.length - 1]?.slug === lesson.slug;
+  const sectionChallenge = runnable && isLastOfModule ? getModuleChallenge(moduleName) : null;
+
+  const [quizDone, setQuizDone] = useState(false);
+  const completeFromQuiz = () => {
+    if (quizDone) return;
+    setQuizDone(true);
+    addXP(15);
+    completeStop(lesson.slug);
+    playChime("success");
+  };
+
   const run = async () => {
     if (running) return;
     setRunning(true);
@@ -59,13 +87,25 @@ export default function LessonView({
         logs.push(args.map(arg => typeof arg === 'object' ? JSON.stringify(arg) : String(arg)).join(" "));
       };
 
+      // Drain the microtask queue and any pending 0ms timers so async/await and
+      // event-loop lessons (js-async-await, js-concurrency) capture the output
+      // their callbacks log after the synchronous pass finishes.
+      const flushAsync = async () => {
+        for (let i = 0; i < 3; i++) {
+          await new Promise<void>((resolve) => setTimeout(resolve, 0));
+        }
+      };
+
       try {
-        const fn = new Function(code);
-        fn();
-        setOutput(logs);
+        // Wrap in an async IIFE so top-level await works and we can await the
+        // returned promise, then flush deferred callbacks before reading logs.
+        const fn = new Function("return (async () => {\n" + code + "\n})();");
+        await fn();
+        await flushAsync();
+        setOutput([...logs]);
         setNote({ text: logs.length ? "Done." : "Finished, with no output to show.", ok: true });
       } catch (err) {
-        setOutput(logs);
+        setOutput([...logs]);
         const msg = err instanceof Error ? err.message : String(err);
         setNote({ text: msg, ok: false });
       } finally {
@@ -211,7 +251,16 @@ export default function LessonView({
           <div
             style={{ background: "#0e2247", borderRadius: 16, padding: "10px 8px", marginBottom: 22 }}
           >
-            <CodeEditor value={lesson.example} language={lesson.language === "javascript" ? "javascript" : "python"} readOnly lineNumbers={false} minHeight="0px" />
+            {lesson.language === "csharp" ? (
+              <pre
+                className="font-mono"
+                style={{ color: "#dbe9ff", fontSize: 13.5, lineHeight: 1.9, margin: 0, padding: "6px 10px", whiteSpace: "pre-wrap" }}
+              >
+                {lesson.example}
+              </pre>
+            ) : (
+              <CodeEditor value={lesson.example} language={lesson.language === "javascript" ? "javascript" : "python"} readOnly lineNumbers={false} minHeight="0px" />
+            )}
           </div>
 
           <div className="font-display" style={{ fontWeight: 700, fontSize: 18, color: "#13335f", marginBottom: 12 }}>
@@ -246,6 +295,8 @@ export default function LessonView({
 
         {/* right: editor */}
         <div className="flex flex-col lg:sticky" style={{ gap: 18, top: "calc(var(--nav-h) + 64px)" }}>
+          {runnable ? (
+          <>
           <EditorFrame
             filename={lesson.language === "javascript" ? "index.js" : "main.py"}
             language={lesson.language === "javascript" ? "JAVASCRIPT" : "PYTHON"}
@@ -290,9 +341,13 @@ export default function LessonView({
           </EditorFrame>
 
           <ConsolePanel lines={output} note={note} />
+          </>
+          ) : (
+            <QuizPanel quiz={lesson.quiz ?? []} onPass={completeFromQuiz} done={quizDone} />
+          )}
 
           <div className="flex flex-wrap justify-end" style={{ gap: 12 }}>
-            {lesson.practiceSlug && (
+            {lesson.practiceSlug && practiceDatasets[lesson.practiceSlug] && (
               <Link
                 href={`/practice/${lesson.practiceSlug}`}
                 className="font-display cursor-pointer backdrop-blur-sm transition-colors hover:bg-[rgba(110,230,255,.22)]"
@@ -310,11 +365,31 @@ export default function LessonView({
                 Practice this {"\u2192"}
               </Link>
             )}
+            {sectionChallenge && (
+              <Link
+                href={`/challenge/${sectionChallenge.slug}`}
+                className="font-display cursor-pointer backdrop-blur-sm transition-colors hover:bg-[rgba(255,200,90,.22)]"
+                style={{
+                  background: "rgba(60,44,20,.4)",
+                  border: "2px solid rgba(255,216,120,.9)",
+                  color: "#fff6df",
+                  fontWeight: 700,
+                  fontSize: 16,
+                  padding: "12px 24px",
+                  borderRadius: 999,
+                  boxShadow: "0 0 16px rgba(255,200,90,.35)",
+                }}
+              >
+                {"\u2605"} Section challenge {"\u2192"}
+              </Link>
+            )}
             <Link
               href={next ? `/lesson/${next.slug}` : "/journey"}
               onClick={() => {
-                addXP(15);
-                completeStop(lesson.slug);
+                if (runnable) {
+                  addXP(15);
+                  completeStop(lesson.slug);
+                }
               }}
               className="font-display cursor-pointer transition-transform hover:-translate-y-0.5"
               style={{
@@ -343,6 +418,133 @@ export default function LessonView({
         }}
         getCode={() => code}
       />
+    </div>
+  );
+}
+
+/**
+ * Read + quiz assessment for lessons without a client-side runtime (e.g. C#).
+ * Replaces the editor: the learner answers multiple-choice questions, and when
+ * all are correct the lesson is completed (XP awarded once via `onPass`).
+ */
+function QuizPanel({
+  quiz,
+  onPass,
+  done,
+}: {
+  quiz: QuizQuestion[];
+  onPass: () => void;
+  done: boolean;
+}) {
+  const [picked, setPicked] = useState<(number | null)[]>(() => quiz.map(() => null));
+
+  if (quiz.length === 0) {
+    return (
+      <div className="glass-strong" style={{ borderRadius: 20, padding: "24px 26px", color: "#41608f", fontWeight: 600 }}>
+        This lesson is a read-through. Review the example, then continue.
+      </div>
+    );
+  }
+
+  const allCorrect = quiz.every((q, i) => picked[i] === q.answer);
+
+  const choose = (qi: number, oi: number) => {
+    const next = picked.map((p, i) => (i === qi ? oi : p));
+    setPicked(next);
+    if (quiz.every((q, i) => next[i] === q.answer)) onPass();
+  };
+
+  return (
+    <div
+      className="glass-strong"
+      style={{ borderRadius: 20, boxShadow: "0 20px 44px rgba(60,80,150,.22)", padding: "24px 26px" }}
+    >
+      <div className="font-display" style={{ fontWeight: 800, fontSize: 18, color: "#13335f", marginBottom: 4 }}>
+        Check your understanding
+      </div>
+      <div style={{ fontSize: 13, fontWeight: 700, color: "#7b93b8", marginBottom: 18 }}>
+        Answer all {quiz.length} to complete this lesson {"·"} +15 XP
+      </div>
+
+      <div className="flex flex-col" style={{ gap: 22 }}>
+        {quiz.map((q, qi) => {
+          const sel = picked[qi];
+          const answered = sel !== null;
+          const correct = answered && sel === q.answer;
+          return (
+            <div key={qi}>
+              <div style={{ fontSize: 15, fontWeight: 700, color: "#13335f", marginBottom: 10, lineHeight: 1.5 }}>
+                {qi + 1}. {q.prompt}
+              </div>
+              <div className="flex flex-col" style={{ gap: 8 }}>
+                {q.options.map((opt, oi) => {
+                  const isSel = sel === oi;
+                  const isAnswer = oi === q.answer;
+                  let bg = "#f3f7fc";
+                  let border = "#e2ecf7";
+                  let color = "#2c4a7c";
+                  if (isSel && isAnswer) {
+                    bg = "#effaf3";
+                    border = "#7fd6a4";
+                    color = "#0f5c38";
+                  } else if (isSel && !isAnswer) {
+                    bg = "#fdeff3";
+                    border = "#ffa8c2";
+                    color = "#a13163";
+                  } else if (answered && isAnswer) {
+                    bg = "#f0faf4";
+                    border = "#bfe6cf";
+                  }
+                  return (
+                    <button
+                      key={oi}
+                      onClick={() => choose(qi, oi)}
+                      disabled={correct}
+                      className="text-left transition-colors"
+                      style={{
+                        background: bg,
+                        border: `2px solid ${border}`,
+                        borderRadius: 12,
+                        padding: "11px 14px",
+                        fontSize: 14,
+                        fontWeight: 700,
+                        color,
+                        cursor: correct ? "default" : "pointer",
+                      }}
+                    >
+                      {opt}
+                    </button>
+                  );
+                })}
+              </div>
+              {answered && q.explain && (
+                <div style={{ fontSize: 13, fontWeight: 600, color: correct ? "#0f8a52" : "#a13163", marginTop: 8, lineHeight: 1.5 }}>
+                  {correct ? "✓ " : "✗ "}
+                  {q.explain}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {(allCorrect || done) && (
+        <div
+          style={{
+            marginTop: 20,
+            textAlign: "center",
+            fontSize: 13.5,
+            fontWeight: 800,
+            color: "#0f5c38",
+            background: "rgba(169,236,201,.25)",
+            border: "1px solid rgba(127,214,164,.5)",
+            borderRadius: 12,
+            padding: "12px 14px",
+          }}
+        >
+          Lesson complete - you can move on. {"✓"}
+        </div>
+      )}
     </div>
   );
 }
