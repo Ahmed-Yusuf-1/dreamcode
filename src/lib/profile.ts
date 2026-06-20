@@ -108,7 +108,11 @@ async function syncProfileFromApi() {
         window.dispatchEvent(new Event("dc_profile_change"));
 
         // Sync track setting if saved on server
-        if (settings.activeTrack === "python" || settings.activeTrack === "javascript") {
+        if (
+          settings.activeTrack === "python" ||
+          settings.activeTrack === "javascript" ||
+          settings.activeTrack === "csharp"
+        ) {
           localStorage.setItem("dc_active_track", settings.activeTrack);
           window.dispatchEvent(new Event("dc_track_change"));
         }

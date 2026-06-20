@@ -10,7 +10,7 @@
  * Each page reads its own value, so you can tune them independently.
  */
 export const gradientOpacity = {
-  home: 0.9, //       / - Neon Dusk hero (photo: bg-dusk-neon-clouds-1)
+  home: 0.90, //       / - Neon Dusk hero (photo: bg-dusk-neon-clouds-1)
   lessons: 0.9, //    /lessons - Sunset Stops (photo: bg-hero-cloudsea-sunset)
   badges: 0.95, //    /badges - Neon Collection (photo: bg-rainbow-cloud-2)
   challenge: 0.75, // /challenge/* - Rainbow Peak (photo: bg-rainbow-cloud-1)
@@ -37,9 +37,9 @@ export const cloudOpacity = {
   home: 0.1,
   lessons: 1,
   badges: 1,
-  journey: 0.1,
+  journey: 0.3,
   dashboard: 0.1,
-  peaks: 0.3,
+  peaks: 0.5,
   projects: 0.8,
   lesson: 0.15,
   practice: 0.6,

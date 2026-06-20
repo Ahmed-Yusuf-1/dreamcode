@@ -3,7 +3,10 @@
 import { useState, useEffect } from "react";
 import { updateProfile } from "@/lib/profile";
 
-export type Track = "python" | "javascript";
+export type Track = "python" | "javascript" | "csharp";
+
+const TRACKS: Track[] = ["python", "javascript", "csharp"];
+const isTrack = (v: unknown): v is Track => TRACKS.includes(v as Track);
 
 /**
  * Persists and synchronizes the active curriculum track (Python vs JavaScript)
@@ -14,8 +17,8 @@ export function useActiveTrack() {
   const [track, setTrack] = useState<Track>("python");
 
   useEffect(() => {
-    const saved = localStorage.getItem("dc_active_track") as Track;
-    if (saved === "python" || saved === "javascript") {
+    const saved = localStorage.getItem("dc_active_track");
+    if (isTrack(saved)) {
       setTimeout(() => {
         setTrack(saved);
       }, 0);
@@ -40,8 +43,8 @@ export function useActiveTrack() {
 
   useEffect(() => {
     const handleEvent = () => {
-      const saved = localStorage.getItem("dc_active_track") as Track;
-      if (saved === "python" || saved === "javascript") {
+      const saved = localStorage.getItem("dc_active_track");
+      if (isTrack(saved)) {
         setTrack(saved);
       }
     };
