@@ -46,7 +46,10 @@ export default function AuthScene({ mode }: { mode: "login" | "signup" }) {
           password,
           options: {
             data: { full_name: name || undefined },
-            emailRedirectTo: `${window.location.origin}/auth/callback?next=${dest}`,
+            // Bare callback URL (no query string) so it matches the exact Redirect
+            // URL allowlisted in Supabase Auth. A `?next=` query here makes GoTrue
+            // reject it ("requested path is invalid") unless a wildcard is allowed.
+            emailRedirectTo: `${window.location.origin}/auth/callback`,
           },
         });
         if (error) {
@@ -82,7 +85,9 @@ export default function AuthScene({ mode }: { mode: "login" | "signup" }) {
     const supabase = createClient();
     const { error } = await supabase.auth.signInWithOAuth({
       provider,
-      options: { redirectTo: `${window.location.origin}/auth/callback?next=${dest}` },
+      // Bare callback URL (no query string) so it matches the exact Redirect URL
+      // allowlisted in Supabase Auth; the callback then sends the user to the hub.
+      options: { redirectTo: `${window.location.origin}/auth/callback` },
     });
     if (error) setError(error.message);
   };
