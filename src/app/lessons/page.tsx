@@ -61,12 +61,12 @@ export default function LessonsPage() {
       />
 
       <div className="relative z-5 mx-auto text-center" style={{ maxWidth: 1080, padding: "5vh 32px 90px" }}>
-        <h2
+        <h1
           className="font-display glow-heading"
           style={{ fontWeight: 800, fontSize: 48, color: "#ffffff", margin: "0 0 10px" }}
         >
           Lessons above the clouds
-        </h2>
+        </h1>
         <p
           style={{
             fontSize: 17,
@@ -147,6 +147,23 @@ export default function LessonsPage() {
           >
             C# (.NET)
           </button>
+          <button
+            onClick={() => setTrack("typescript")}
+            style={{
+              background: track === "typescript" ? "#ffffff" : "transparent",
+              color: track === "typescript" ? "#13335f" : "rgba(255,255,255,.85)",
+              fontWeight: 900,
+              fontSize: 14,
+              padding: "10px 24px",
+              borderRadius: 999,
+              cursor: "pointer",
+              transition: "all .25s ease",
+              border: "none",
+              boxShadow: track === "typescript" ? "0 4px 15px rgba(255,255,255,.2)" : "none",
+            }}
+          >
+            TypeScript (Types)
+          </button>
         </div>
 
         <div className="flex flex-col text-left" style={{ gap: 48 }}>
@@ -158,12 +175,12 @@ export default function LessonsPage() {
                   className="flex items-center gap-3 border-b pb-3"
                   style={{ borderBottom: "1px solid rgba(255, 255, 255, 0.15)" }}
                 >
-                  <h3
+                  <h2
                     className="font-display text-2xl font-black text-white"
                     style={{ textShadow: "0 2px 10px rgba(60,60,130,.5)" }}
                   >
                     {mod.name}
-                  </h3>
+                  </h2>
                   <span
                     className="font-display text-[10px] font-black tracking-widest"
                     style={{

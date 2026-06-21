@@ -50,12 +50,12 @@ export default function Home() {
         {/* hero */}
         <div className="relative z-5 text-center" style={{ padding: "16vh 24px 0" }}>
           <div className="anim-neon-flicker">
-            <div
+            <h1
               className="font-display neon-title"
               style={{ fontWeight: 800, fontSize: "min(100px, 11vw)", lineHeight: 1, color: "#fff6fb" }}
             >
               dreamcode
-            </div>
+            </h1>
           </div>
           <div
             className="neon-outline inline-block backdrop-blur-xs"
@@ -271,7 +271,7 @@ export default function Home() {
                   style={{ borderRadius: 22, padding: "26px 26px", boxShadow: "0 18px 44px rgba(10,8,40,.35)" }}
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={c.img} alt="" className={c.glow} style={{ width: 92, height: "auto", animation: "floatySm 7s ease-in-out infinite" }} />
+                  <img src={c.img} alt={c.title} className={c.glow} style={{ width: 92, height: "auto", animation: "floatySm 7s ease-in-out infinite" }} />
                   <div
                     className="font-display"
                     style={{ fontWeight: 800, fontSize: 21, color: "#ffffff", margin: "12px 0 8px", textShadow: `0 0 14px ${c.accent}` }}
@@ -527,7 +527,7 @@ export default function Home() {
                 Everywhere you can go now lives in the{" "}
                 <span style={{ color: "#ffd9ef", fontWeight: 800 }}>Explore</span> menu, up top.
               </div>
-              <div style={{ fontSize: 12.5, fontWeight: 700, color: "rgba(255,255,255,.55)" }}>
+              <div style={{ fontSize: 12.5, fontWeight: 700, color: "rgba(255,255,255,.8)" }}>
                 © 2026 dreamcode · made above the clouds
               </div>
             </div>

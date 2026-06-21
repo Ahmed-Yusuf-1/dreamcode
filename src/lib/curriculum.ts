@@ -49,7 +49,7 @@ export interface Lesson {
   starter: string;
   /** slug of a matching practice flow, if one exists */
   practiceSlug?: string;
-  language?: "python" | "javascript" | "csharp";
+  language?: "python" | "javascript" | "csharp" | "typescript";
   module?: string;
   tier?: "beginner" | "intermediate" | "advanced" | "expert";
   /** false for read + quiz lessons without a client-side runner (e.g. C#) */
@@ -3848,7 +3848,489 @@ print("Prediction:", model.predict(new_cloud))`,
         explain: "accuracy_score computes the ratio of correct predictions to total predictions on the test set.",
       },
     ],
+  },
+  // ---- TypeScript track ----------------------------------------------------
+  // Full beginner -> expert curriculum. TS lessons run via /api/transpile (type-strip) then the JS engine.
+  {
+    slug: "ts-types",
+    order: 1,
+    chapter: "TypeScript Basics - Chapter 1",
+    kicker: "TYPESCRIPT",
+    title: "Typing your variables",
+    catalogTitle: "Types",
+    blurb: "Add type annotations so the compiler catches mistakes early.",
+    catalogCode: "let n: number = 5;",
+    intro:
+      "**TypeScript** is JavaScript with **types**. You annotate a variable with `: type` to specify the data it should hold. These annotations are checked during compilation and stripped in the running JavaScript.",
+    example: `let mood: string = "dreamy";
+let altitude: number = 5000;
+const isNight: boolean = true;
+console.log(mood, altitude, isNight);`,
+    reads: [
+      { dot: DOT_PINK, text: "**: string / : number / : boolean** specify variable types" },
+      { dot: DOT_MINT, text: "Types are strictly checked by the compiler before running" },
+    ],
+    tip: "Let inference do the work: if you assign a value immediately, TypeScript can infer the type automatically.",
+    starter: `// give each variable the right type annotation
+let constellation: string = "Orion";
+let starCount: number = 1200;
+console.log(constellation, "has", starCount, "stars");`,
+    language: "typescript",
+    module: "TS Basics",
+    tier: "beginner",
+    practiceSlug: "ts-types",
+  },
+  {
+    slug: "ts-functions",
+    order: 2,
+    chapter: "TypeScript Basics - Chapter 1",
+    kicker: "TYPESCRIPT",
+    title: "Function parameter and return types",
+    catalogTitle: "Functions",
+    blurb: "Declare parameter and return types to ensure clean interfaces.",
+    catalogCode: "function fn(x: number): string",
+    intro:
+      "In TypeScript, you must annotate function **parameters** and their **return types**. This ensures callers pass the correct arguments and receive the expected outputs.",
+    example: `function formatAltitude(meters: number): string {
+  return meters + "m above the clouds";
+}
+const status = formatAltitude(8500);
+console.log(status);`,
+    reads: [
+      { dot: DOT_PINK, text: "**(meters: number)** restricts parameter inputs to numbers only" },
+      { dot: DOT_MINT, text: "**: string** asserts that the function must return a string" },
+    ],
+    tip: "Functions that do not return any value should be annotated with a return type of **void**.",
+    starter: `function doubleCount(stars: number): number {
+  return stars * 2;
+}
+console.log(doubleCount(150));`,
+    language: "typescript",
+    module: "TS Basics",
+    tier: "beginner",
+    practiceSlug: "ts-functions",
+  },
+  {
+    slug: "ts-arrays-tuples",
+    order: 3,
+    chapter: "TypeScript Basics - Chapter 1",
+    kicker: "TYPESCRIPT",
+    title: "Typed Arrays and Tuples",
+    catalogTitle: "Arrays",
+    blurb: "Lock down array elements or define strict, fixed-length tuples.",
+    catalogCode: "let arr: number[] = [1, 2];",
+    intro:
+      "Define arrays using `type[]`. For fixed-length arrays with specific types at exact index positions, use **Tuples** (e.g. `[string, number]`).",
+    example: `let altitudes: number[] = [1000, 2000, 3000];
+let coordinates: [number, number] = [45.1, -122.3];
+console.log(altitudes.length, coordinates[0]);`,
+    reads: [
+      { dot: DOT_PINK, text: "**number[]** declares an array containing only numbers" },
+      { dot: DOT_MINT, text: "**[number, number]** restricts coordinates to a fixed length of 2 numbers" },
+    ],
+    tip: "Tuples are highly useful for return values like coordinates or key-value pairs.",
+    starter: `let starNames: string[] = ["Vega", "Sirius", "Altair"];
+let location: [string, number] = ["Orion", 450];
+console.log(starNames, location);`,
+    language: "typescript",
+    module: "TS Basics",
+    tier: "beginner",
+    practiceSlug: "ts-arrays-tuples",
+  },
+  {
+    slug: "ts-interfaces",
+    order: 4,
+    chapter: "TypeScript Basics - Chapter 1",
+    kicker: "TYPESCRIPT",
+    title: "Describing objects with interfaces",
+    catalogTitle: "Interfaces",
+    blurb: "Define the shape of an object once and reuse it everywhere.",
+    catalogCode: "interface Cloud { name: string }",
+    intro:
+      "An **interface** names the shape of an object: which properties it has and their types. Annotate a value with the interface and the compiler enforces the shape.",
+    example: `interface Cloud {
+  name: string;
+  altitude: number;
+  isFluffy?: boolean;
+}
+const c: Cloud = { name: "cirrus", altitude: 8000 };
+console.log(c.name, "floats at", c.altitude);`,
+    reads: [
+      { dot: DOT_PINK, text: "**interface Cloud { ... }** names a reusable object shape" },
+      { dot: DOT_MINT, text: "**isFluffy?** marks the altitude-related field as optional" },
+    ],
+    tip: "Use optional properties with a question mark to allow fields to be omitted safely.",
+    starter: `interface Star {
+  name: string;
+  magnitude: number;
+}
+const vega: Star = { name: "Vega", magnitude: 0.03 };
+console.log(vega.name, "magnitude", vega.magnitude);`,
+    language: "typescript",
+    module: "TS Basics",
+    tier: "beginner",
+    practiceSlug: "ts-interfaces",
+  },
+  {
+    slug: "ts-unions-narrowing",
+    order: 5,
+    chapter: "TypeScript Basics - Chapter 2",
+    kicker: "TYPESCRIPT",
+    title: "Unions and Type Narrowing",
+    catalogTitle: "Unions",
+    blurb: "Allow multiple types and narrow them using typeof.",
+    catalogCode: "let val: string | number;",
+    intro:
+      "A **Union Type** (`A | B`) allows a variable to hold values of multiple types. To safely interact with the value, you use **Type Narrowing** via conditionals to isolate the active type.",
+    example: `function printId(id: string | number) {
+  if (typeof id === "string") {
+    console.log("String ID:", id.toUpperCase());
+  } else {
+    console.log("Numeric ID:", id * 10);
   }
+}
+printId("nebula");
+printId(101);`,
+    reads: [
+      { dot: DOT_PINK, text: "**string | number** allows id to be either a string or a number" },
+      { dot: DOT_MINT, text: "**typeof id === 'string'** acts as a type guard to narrow the type" },
+    ],
+    tip: "Type guards like typeof or instanceof allow safe, type-specific code execution.",
+    starter: `function processSignal(sig: string | number) {
+  if (typeof sig === "string") {
+    console.log(sig.trim());
+  } else {
+    console.log(sig.toFixed(2));
+  }
+}
+processSignal("  pulse  ");
+processSignal(45.678);`,
+    language: "typescript",
+    module: "TS Unions & Enums",
+    tier: "intermediate",
+    practiceSlug: "ts-unions-narrowing",
+  },
+  {
+    slug: "ts-aliases-vs-interfaces",
+    order: 6,
+    chapter: "TypeScript Basics - Chapter 2",
+    kicker: "TYPESCRIPT",
+    title: "Type Aliases vs Interfaces",
+    catalogTitle: "Aliases",
+    blurb: "Choose when to use type aliases or object interfaces.",
+    catalogCode: "type Signal = string | number;",
+    intro:
+      "**Type Aliases** (`type`) name any type, including primitives, unions, and tuples. **Interfaces** (`interface`) describe object structures and support declaration merging. Use interfaces for objects and type aliases for unions/primitives.",
+    example: `type ID = string | number;
+interface Coordinate {
+  lat: number;
+  lng: number;
+}
+const mainId: ID = "star-01";
+const pos: Coordinate = { lat: 34, lng: -118 };
+console.log(mainId, pos.lat);`,
+    reads: [
+      { dot: DOT_PINK, text: "**type ID** defines a name for a union or generic type" },
+      { dot: DOT_MINT, text: "**interface Coordinate** is strictly for object shapes" },
+    ],
+    tip: "Interfaces can be extended using the extends keyword, making them great for class descriptions.",
+    starter: `type Status = "active" | "dormant";
+interface Starship {
+  name: string;
+  status: Status;
+}
+const voyager: Starship = { name: "Voyager", status: "active" };
+console.log(voyager.name, voyager.status);`,
+    language: "typescript",
+    module: "TS Unions & Enums",
+    tier: "intermediate",
+    practiceSlug: "ts-aliases-vs-interfaces",
+  },
+  {
+    slug: "ts-literals-enums",
+    order: 7,
+    chapter: "TypeScript Basics - Chapter 2",
+    kicker: "TYPESCRIPT",
+    title: "Literal Types and Enums",
+    catalogTitle: "Enums",
+    blurb: "Restrict values to exact options or use numeric/string Enums.",
+    catalogCode: "type Mode = 'dusk' | 'dawn';",
+    intro:
+      "**Literal Types** restrict values to specific strings or numbers. **Enums** group related constants, providing a named list of numeric or string options.",
+    example: `type ColorTheme = "dusk" | "neon" | "cloud";
+enum Direction {
+  North = "NORTH",
+  South = "SOUTH"
+}
+let currentTheme: ColorTheme = "dusk";
+let heading: Direction = Direction.North;
+console.log(currentTheme, heading);`,
+    reads: [
+      { dot: DOT_PINK, text: "**'dusk' | 'neon'** forces the theme to match only those literals" },
+      { dot: DOT_MINT, text: "**enum Direction** creates lookup constants available at runtime" },
+    ],
+    tip: "Default to union literal types for simplicity unless you need lookup constants.",
+    starter: `type CloudTier = "low" | "mid" | "high";
+enum FlightState {
+  Ground = 0,
+  Flight = 1
+}
+let ct: CloudTier = "high";
+let fs: FlightState = FlightState.Flight;
+console.log(ct, fs);`,
+    language: "typescript",
+    module: "TS Unions & Enums",
+    tier: "intermediate",
+    practiceSlug: "ts-literals-enums",
+  },
+  {
+    slug: "ts-classes",
+    order: 8,
+    chapter: "TypeScript Basics - Chapter 2",
+    kicker: "TYPESCRIPT",
+    title: "Classes and visibility modifiers",
+    catalogTitle: "Classes",
+    blurb: "Use public, private, and protected to enforce access limits.",
+    catalogCode: "class Star { private size: number }",
+    intro:
+      "TypeScript classes extend JavaScript classes by adding **types** and **visibility modifiers**: `public` (accessible anywhere), `private` (accessible only inside the class), and `protected` (accessible inside the class and its subclasses).",
+    example: `class Cloud {
+  public name: string;
+  private altitude: number;
+  constructor(name: string, altitude: number) {
+    this.name = name;
+    this.altitude = altitude;
+  }
+  public getAlt() { return this.altitude; }
+}
+const c = new Cloud("cumulus", 3000);
+console.log(c.name, c.getAlt());`,
+    reads: [
+      { dot: DOT_PINK, text: "**private altitude** prevents external access to this property" },
+      { dot: DOT_MINT, text: "**public name** allows normal reading and writing from outside" },
+    ],
+    tip: "You can declare class properties directly in the constructor parameters as public/private as a shorthand.",
+    starter: `class Spaceship {
+  private crew: number;
+  constructor(public name: string, crew: number) {
+    this.crew = crew;
+  }
+  public getCrew() { return this.crew; }
+}
+const ship = new Spaceship("Apollo", 3);
+console.log(ship.name, ship.getCrew());`,
+    language: "typescript",
+    module: "TS Unions & Enums",
+    tier: "intermediate",
+    practiceSlug: "ts-classes",
+  },
+  {
+    slug: "ts-generics",
+    order: 9,
+    chapter: "TypeScript Basics - Chapter 3",
+    kicker: "TYPESCRIPT",
+    title: "Reusable code with generics",
+    catalogTitle: "Generics",
+    blurb: "Write one function that keeps its types for any input.",
+    catalogCode: "function first<T>(a: T[]): T",
+    intro:
+      "**Generics** let a function work over many types while keeping the link between input and output. `<T>` is a type variable filled in when the function is called.",
+    example: `function first<T>(items: T[]): T {
+  return items[0];
+}
+console.log(first<string>(["pink", "blue"]));
+console.log(first<number>([10, 20]));`,
+    reads: [
+      { dot: DOT_PINK, text: "**<T>** is a type placeholder bound when the function is called" },
+      { dot: DOT_MINT, text: "first(items: T[]): T returns the same type the array holds" },
+    ],
+    tip: "You rarely need to pass <string> explicitly; TypeScript infers T from the argument you give.",
+    starter: `function last<T>(items: T[]): T {
+  return items[items.length - 1];
+}
+console.log(last(["dawn", "dusk", "night"]));`,
+    language: "typescript",
+    module: "TS Advanced",
+    tier: "advanced",
+    practiceSlug: "ts-generics",
+  },
+  {
+    slug: "ts-intersections-assertions",
+    order: 10,
+    chapter: "TypeScript Basics - Chapter 3",
+    kicker: "TYPESCRIPT",
+    title: "Intersections and Assertions",
+    catalogTitle: "Assertions",
+    blurb: "Combine shapes with intersections and override types with assertions.",
+    catalogCode: "const val = data as string;",
+    intro:
+      "**Intersection Types** (`A & B`) combine multiple types into one. **Type Assertions** (`as Type`) tell the compiler that a value has a specific type, bypassing regular type inference.",
+    example: `interface Named { name: string; }
+interface Aged { age: number; }
+type Person = Named & Aged;
+const p: Person = { name: "Alice", age: 30 };
+
+let rawData: unknown = "hello cloud";
+let len = (rawData as string).length;
+console.log(p.name, len);`,
+    reads: [
+      { dot: DOT_PINK, text: "**Named & Aged** combines properties of both interfaces" },
+      { dot: DOT_MINT, text: "**as string** forces the compiler to treat rawData as a string" },
+    ],
+    tip: "Use assertions sparingly: they tell the compiler 'trust me, I know what I am doing' and can hide real runtime errors if you are wrong.",
+    starter: `interface Logged { timestamp: number; }
+interface ErrorMsg { error: string; }
+type CrashLog = Logged & ErrorMsg;
+const crash: CrashLog = { timestamp: Date.now(), error: "Engine Failure" };
+
+let response: unknown = "Success status code";
+let msg = response as string;
+console.log(crash.error, msg.length);`,
+    language: "typescript",
+    module: "TS Advanced",
+    tier: "advanced",
+    practiceSlug: "ts-intersections-assertions",
+  },
+  {
+    slug: "ts-utility-types",
+    order: 11,
+    chapter: "TypeScript Basics - Chapter 3",
+    kicker: "TYPESCRIPT",
+    title: "Readonly and Utility Types",
+    catalogTitle: "Utilities",
+    blurb: "Quickly transform shapes using Partial, Pick, Omit, and Readonly.",
+    catalogCode: "type Info = Pick<User, 'id'>;",
+    intro:
+      "TypeScript provides built-in **Utility Types** to transform shapes: `Partial<T>` makes all fields optional, `Readonly<T>` makes all fields immutable, `Pick<T, Keys>` selects specific fields, and `Omit<T, Keys>` removes specific fields.",
+    example: `interface Flight {
+  id: string;
+  altitude: number;
+  pilot: string;
+}
+const f: Readonly<Flight> = { id: "FL-12", altitude: 8000, pilot: "Leo" };
+type Summary = Pick<Flight, "id" | "pilot">;
+const s: Summary = { id: "FL-12", pilot: "Leo" };
+console.log(f.id, s.pilot);`,
+    reads: [
+      { dot: DOT_PINK, text: "**Readonly<Flight>** prevents writing to any property after creation" },
+      { dot: DOT_MINT, text: "**Pick<Flight, 'id' | 'pilot'>** creates a type containing only those fields" },
+    ],
+    tip: "Utility types save you from duplicating similar object shapes across your code.",
+    starter: `interface Star {
+  name: string;
+  constellation: string;
+  brightness: number;
+}
+type PartialStar = Partial<Star>;
+type DimStar = Omit<Star, "brightness">;
+const p: PartialStar = { name: "Vega" };
+const d: DimStar = { name: "Altair", constellation: "Aquila" };
+console.log(p.name, d.constellation);`,
+    language: "typescript",
+    module: "TS Advanced",
+    tier: "advanced",
+    practiceSlug: "ts-utility-types",
+  },
+  {
+    slug: "ts-conditional-types",
+    order: 12,
+    chapter: "TypeScript Basics - Chapter 4",
+    kicker: "TYPESCRIPT",
+    title: "Conditional Types",
+    catalogTitle: "Conditional",
+    blurb: "Select types dynamically based on generic checks.",
+    catalogCode: "type IsString<T> = T extends string ? true : false;",
+    intro:
+      "**Conditional Types** let you select types dynamically by checking if type `T` extends type `U`. They work like ternary conditional operators (`T extends U ? X : Y`).",
+    example: `type IsString<T> = T extends string ? "yes" : "no";
+type A = IsString<string>; // "yes"
+type B = IsString<number>; // "no"
+const answerA: A = "yes";
+const answerB: B = "no";
+console.log(answerA, answerB);`,
+    reads: [
+      { dot: DOT_PINK, text: "**T extends string** tests if the generic type extends a string" },
+      { dot: DOT_MINT, text: "**? 'yes' : 'no'** resolves to different types depending on the check" },
+    ],
+    tip: "Conditional types are the core of advanced type manipulation and libraries.",
+    starter: `type NonNull<T> = T extends null | undefined ? never : T;
+type Cleaned = NonNull<string | null>; // resolves to string
+const val: Cleaned = "clean signal";
+console.log(val);`,
+    language: "typescript",
+    module: "TS Expert",
+    tier: "expert",
+    practiceSlug: "ts-conditional-types",
+  },
+  {
+    slug: "ts-mapped-types",
+    order: 13,
+    chapter: "TypeScript Basics - Chapter 4",
+    kicker: "TYPESCRIPT",
+    title: "Mapped Types",
+    catalogTitle: "Mapped",
+    blurb: "Iterate over object property keys to transform entire types.",
+    catalogCode: "type ReadOnly<T> = { readonly [P in keyof T]: T[P] };",
+    intro:
+      "**Mapped Types** build new types by iterating over the keys of an existing type. They map every property of a type to a new type structure, similar to `Array.prototype.map()` but for type properties.",
+    example: `interface Config {
+  port: number;
+  host: string;
+}
+type Stringify<T> = {
+  [K in keyof T]: string;
+};
+const strConf: Stringify<Config> = { port: "8080", host: "localhost" };
+console.log(strConf.port, strConf.host);`,
+    reads: [
+      { dot: DOT_PINK, text: "**[K in keyof T]** iterates over all keys K inside type T" },
+      { dot: DOT_MINT, text: "**T[K]** accesses the type of property K in type T" },
+    ],
+    tip: "Mapped types are useful for converting API responses or validation payloads dynamically.",
+    starter: `interface Pilot {
+  name: string;
+  xp: number;
+}
+type Optional<T> = {
+  [K in keyof T]?: T[K];
+};
+const copilot: Optional<Pilot> = { name: "Ava" };
+console.log(copilot.name);`,
+    language: "typescript",
+    module: "TS Expert",
+    tier: "expert",
+    practiceSlug: "ts-mapped-types",
+  },
+  {
+    slug: "ts-template-literals",
+    order: 14,
+    chapter: "TypeScript Basics - Chapter 4",
+    kicker: "TYPESCRIPT",
+    title: "Template Literal Types",
+    catalogTitle: "Template",
+    blurb: "Construct type combinations using string template literals.",
+    catalogCode: "type Event = `on${Action}`;",
+    intro:
+      "**Template Literal Types** construct types by manipulating strings inside template literal types. They build unions of string literals by combining strings dynamically.",
+    example: `type Status = "success" | "error";
+type ResponseEvent = \`on_\${Status}\`;
+const successEvent: ResponseEvent = "on_success";
+const errorEvent: ResponseEvent = "on_error";
+console.log(successEvent, errorEvent);`,
+    reads: [
+      { dot: DOT_PINK, text: "**\`on_\${Status}\`** generates on_success | on_error dynamically" },
+      { dot: DOT_MINT, text: "They combine literal strings into type definitions directly" },
+    ],
+    tip: "Template literal types make it easy to type CSS class names, event names, or database queries.",
+    starter: `type Direction = "Left" | "Right" | "Up";
+type MoveCommand = \`move\${Direction}\`;
+const action: MoveCommand = "moveRight";
+console.log(action);`,
+    language: "typescript",
+    module: "TS Expert",
+    tier: "expert",
+    practiceSlug: "ts-template-literals",
+  },
 ];
 
 export const lessonCount = lessons.length;
@@ -3888,7 +4370,7 @@ export interface Module {
   lessons: Lesson[];
 }
 
-export function getModules(track: "python" | "javascript" | "csharp"): Module[] {
+export function getModules(track: "python" | "javascript" | "csharp" | "typescript"): Module[] {
   const trackLessons = lessons
     .filter((l) => (l.language || "python") === track)
     .sort((a, b) => a.order - b.order);

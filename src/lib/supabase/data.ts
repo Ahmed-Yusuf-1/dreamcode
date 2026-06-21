@@ -169,3 +169,47 @@ export async function upsertSrsCard(card: SrsCard): Promise<boolean> {
   );
   return !error;
 }
+
+export interface TelemetryEvent {
+  name: string;
+  props?: Record<string, unknown>;
+}
+
+/** Appends one or more telemetry events for the current user. No-op if signed out. */
+export async function recordEvents(events: TelemetryEvent[]): Promise<boolean> {
+  const user = await getUser();
+  if (!user) return false;
+  if (events.length === 0) return true;
+  const supabase = await createClient();
+  const rows = events.map((e) => ({
+    user_id: user.id,
+    name: e.name,
+    props: e.props ?? {},
+  }));
+  const { error } = await supabase.from("events").insert(rows);
+  return !error;
+}
+
+export interface StoredEvent {
+  name: string;
+  props: Record<string, unknown>;
+  createdAt: string;
+}
+
+/** Returns the current user's most recent events (newest first). */
+export async function getEvents(limit = 200): Promise<StoredEvent[]> {
+  const user = await getUser();
+  if (!user) return [];
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("events")
+    .select("name, props, created_at")
+    .eq("user_id", user.id)
+    .order("created_at", { ascending: false })
+    .limit(Math.min(Math.max(limit, 1), 500));
+  return (data ?? []).map((e) => ({
+    name: e.name,
+    props: (e.props ?? {}) as Record<string, unknown>,
+    createdAt: e.created_at,
+  }));
+}

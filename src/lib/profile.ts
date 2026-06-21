@@ -22,20 +22,24 @@ export interface UserProfile {
   tier: "free" | "pro";
 }
 
+// A brand-new learner starts empty. This MUST mirror the server's fresh-signup
+// row (xp 0, level 1, streak 0, no stops/badges) so that if a signed-in action
+// ever fires before the first server sync, the optimistic write is the true
+// zero-state, never inflated demo data.
 const DEFAULT_PROFILE: UserProfile = {
   name: "Dreamer",
   initial: "D",
-  level: 4,
-  xp: 540,
+  level: 1,
+  xp: 0,
   xpNext: 800,
-  streak: 7,
+  streak: 0,
   lastActiveDate: null,
-  unlockedBadges: ["first-loop", "bug-catcher", "cloud-hopper", "streak-keeper", "sky-builder"],
-  weekActivity: [20, 45, 15, 60, 30, 75, 40],
+  unlockedBadges: [],
+  weekActivity: [0, 0, 0, 0, 0, 0, 0],
   soundsEnabled: true,
   guideEnabled: true,
   remindersEnabled: true,
-  completedStops: ["variables", "strings", "js-variables"],
+  completedStops: [],
   activeTrack: "python",
   tier: "free",
 };
@@ -111,7 +115,8 @@ async function syncProfileFromApi() {
         if (
           settings.activeTrack === "python" ||
           settings.activeTrack === "javascript" ||
-          settings.activeTrack === "csharp"
+          settings.activeTrack === "csharp" ||
+          settings.activeTrack === "typescript"
         ) {
           localStorage.setItem("dc_active_track", settings.activeTrack);
           window.dispatchEvent(new Event("dc_track_change"));
@@ -143,10 +148,9 @@ export function getUserProfile(): UserProfile {
     console.error("Failed to parse user profile", e);
   }
 
-  const initialProfile = {
-    ...DEFAULT_PROFILE,
-    lastActiveDate: getTodayString(),
-  };
+  // Leave lastActiveDate null so the learner's FIRST XP earn sets the streak to 1
+  // (updateStreakInPlace treats a null last-active as the first active day).
+  const initialProfile: UserProfile = { ...DEFAULT_PROFILE };
   saveUserProfile(initialProfile);
   return initialProfile;
 }

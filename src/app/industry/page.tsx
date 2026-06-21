@@ -56,12 +56,12 @@ export default function IndustryPage() {
 
       <div className="relative z-5 mx-auto" style={{ maxWidth: 1080, padding: "4vh 32px 90px" }}>
         <div className="text-center">
-          <h2
+          <h1
             className="font-display glow-heading"
             style={{ fontWeight: 800, fontSize: 46, color: "#ffffff", margin: "0 0 10px" }}
           >
             Where these languages take you
-          </h2>
+          </h1>
           <p
             style={{
               fontSize: 17,

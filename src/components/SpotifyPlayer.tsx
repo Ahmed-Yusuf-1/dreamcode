@@ -853,7 +853,7 @@ export default function SpotifyPlayer() {
           shadow: "0 0 35px rgba(0, 243, 255, 0.25), 0 28px 60px rgba(0, 0, 0, 0.8)",
           accentClass: "text-[#00f3ff] drop-shadow-[0_0_8px_rgba(0,243,255,0.7)]",
           textColor: "text-white",
-          mutedTextColor: "text-white/60",
+          mutedTextColor: "text-white/70",
           itemBg: "rgba(255, 255, 255, 0.05)",
           itemBorder: "rgba(255, 255, 255, 0.1)",
           accentBorder: "rgba(0, 243, 255, 0.5)",
@@ -870,7 +870,7 @@ export default function SpotifyPlayer() {
           shadow: "0 0 35px rgba(255, 182, 217, 0.15), 0 28px 60px rgba(15, 5, 25, 0.7)",
           accentClass: "text-[#ffb6d9] drop-shadow-[0_0_6px_rgba(255,182,217,0.5)]",
           textColor: "text-white",
-          mutedTextColor: "text-white/60",
+          mutedTextColor: "text-white/70",
           itemBg: "rgba(255, 255, 255, 0.05)",
           itemBorder: "rgba(255, 255, 255, 0.1)",
           accentBorder: "rgba(255, 182, 217, 0.5)",
@@ -904,7 +904,7 @@ export default function SpotifyPlayer() {
           shadow: "0 0 35px rgba(150, 245, 255, 0.15), 0 28px 60px rgba(8, 6, 30, 0.6)",
           accentClass: "text-[#96f5ff] drop-shadow-[0_0_6px_rgba(150,245,255,0.4)]",
           textColor: "text-white",
-          mutedTextColor: "text-white/60",
+          mutedTextColor: "text-white/70",
           itemBg: "rgba(255, 255, 255, 0.05)",
           itemBorder: "rgba(255, 255, 255, 0.1)",
           accentBorder: "rgba(150, 245, 255, 0.4)",
@@ -1010,6 +1010,7 @@ export default function SpotifyPlayer() {
               }}
               className="cursor-pointer p-2 rounded-full hover:bg-white/10 text-lavender/65 hover:text-white transition-colors"
               title="Spotify Settings"
+              aria-label="Spotify Settings"
             >
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="12" cy="12" r="3"></circle>
@@ -1244,7 +1245,7 @@ export default function SpotifyPlayer() {
                 >
                   {currentTrack?.image ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={currentTrack.image} alt="Cover art" className="w-full h-full object-cover absolute inset-0 z-0" />
+                    <img src={currentTrack.image} alt={`Cover art for ${currentTrack.name} by ${currentTrack.artists}`} className="w-full h-full object-cover absolute inset-0 z-0" />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center bg-black/40 absolute inset-0 z-0">
                       {/* Elegant vector vinyl record placeholder */}
@@ -1294,6 +1295,7 @@ export default function SpotifyPlayer() {
                         backgroundColor: shuffle && styleIndex === 0 ? "rgba(255, 210, 117, 0.15)" : undefined,
                       }}
                       title="Shuffle"
+                      aria-label="Shuffle"
                     >
                       {shuffleIcon}
                     </button>
@@ -1304,6 +1306,7 @@ export default function SpotifyPlayer() {
                       onClick={prevTrack}
                       className="cursor-pointer p-2 rounded-full hover:bg-white/20 active:scale-90 transition-all text-white/90 hover:text-white"
                       title="Previous Track"
+                      aria-label="Previous Track"
                     >
                       <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
                         <path d="M6 6h2v12H6zm3.5 6l8.5 6V6z" />
@@ -1326,6 +1329,7 @@ export default function SpotifyPlayer() {
                         border: styleIndex === 0 ? "1px solid #784c18" : "none",
                       }}
                       title={isPlaying ? "Pause" : "Play"}
+                      aria-label={isPlaying ? "Pause" : "Play"}
                     >
                       {isPlaying ? (
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
@@ -1344,6 +1348,7 @@ export default function SpotifyPlayer() {
                       onClick={nextTrack}
                       className="cursor-pointer p-2 rounded-full hover:bg-white/20 active:scale-90 transition-all text-white/90 hover:text-white"
                       title="Next Track"
+                      aria-label="Next Track"
                     >
                       <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
                         <path d="M6 18l8.5-6L6 6zm9-12h2v12h-2z" />
@@ -1362,6 +1367,7 @@ export default function SpotifyPlayer() {
                         backgroundColor: repeatMode !== "off" && styleIndex === 0 ? "rgba(255, 210, 117, 0.15)" : undefined,
                       }}
                       title={`Repeat: ${repeatMode}`}
+                      aria-label={`Repeat: ${repeatMode}`}
                     >
                       {repeatIcon}
                       {repeatMode === "track" && (
@@ -1529,7 +1535,7 @@ export default function SpotifyPlayer() {
                               <div className="flex items-center gap-2.5 min-w-0">
                                 {coverImg ? (
                                   // eslint-disable-next-line @next/next/no-img-element
-                                  <img src={coverImg} alt="" className="w-6 h-6 rounded object-cover border border-white/10" />
+                                  <img src={coverImg} alt={`Playlist cover for ${pl.name}`} className="w-6 h-6 rounded object-cover border border-white/10" />
                                 ) : (
                                   <div className="w-6 h-6 rounded bg-white/10 flex items-center justify-center text-[10px]">
                                     🎵

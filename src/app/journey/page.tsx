@@ -129,7 +129,9 @@ export default function JourneyPage() {
       ? "Chapter Project · Star Map"
       : track === "csharp"
         ? "Chapter Project · Console App"
-        : "Chapter Project · Sky House";
+        : track === "typescript"
+          ? "Chapter Project · Typed Sky"
+          : "Chapter Project · Sky House";
 
   return (
     <div
@@ -259,12 +261,12 @@ export default function JourneyPage() {
       </div>
 
       <div className="relative z-5 text-center" style={{ padding: "44px 20px 6px" }}>
-        <h2
+        <h1
           className="font-display glow-heading"
           style={{ fontWeight: 800, fontSize: 42, color: "#ffffff", margin: 0 }}
         >
           {chapterTitle}
-        </h2>
+        </h1>
         <p
           style={{
             color: "rgba(255,255,255,.9)",
@@ -400,12 +402,12 @@ export default function JourneyPage() {
                   >
                     {moduleTier.toUpperCase()}
                   </span>
-                  <h3
+                  <h2
                     className="font-display font-extrabold text-white"
                     style={{ fontSize: 14, margin: 0, textShadow: "0 2px 10px rgba(0,0,0,0.5)" }}
                   >
                     {moduleName}
-                  </h3>
+                  </h2>
                 </div>
               )}
               <MapNode
@@ -637,7 +639,7 @@ function MapNode({
           style={{
             fontWeight: state === "current" ? 800 : 700,
             fontSize: state === "current" ? 16 : 15,
-            color: state === "locked" ? "rgba(255,255,255,.75)" : "#ffffff",
+            color: state === "locked" ? "rgba(255,255,255,.9)" : "#ffffff",
             textShadow: "0 2px 10px rgba(20,12,50,.6)",
           }}
         >
@@ -649,7 +651,7 @@ function MapNode({
             fontWeight: 900,
             color:
               state === "locked"
-                ? "rgba(255,255,255,.55)"
+                ? "rgba(255,255,255,.8)"
                 : state === "current"
                   ? isChallenge
                     ? "#ffe9b0"

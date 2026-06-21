@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, use } from "react";
+import { useState, use, useRef, useEffect } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import Cloud from "@/components/Cloud";
@@ -12,6 +12,7 @@ import { addXP, completeStop, recordSubmission } from "@/lib/profile";
 import { playChime } from "@/lib/sound";
 import { projects } from "@/lib/data";
 import { usePyodide } from "@/lib/usePyodide";
+import { track } from "@/lib/telemetry";
 
 type TestState = "idle" | "pass" | "fail";
 
@@ -32,6 +33,55 @@ export default function DynamicProjectPage({ params }: { params: Promise<{ slug:
   const [won, setWon] = useState(false);
   const [running, setRunning] = useState(false);
   const py = usePyodide();
+
+  const modalRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!won) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setWon(false);
+        e.preventDefault();
+        return;
+      }
+      if (e.key === "Tab") {
+        if (!modalRef.current) return;
+        const focusable = modalRef.current.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), [tabindex="0"]'
+        );
+        if (focusable.length === 0) return;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+
+        if (e.shiftKey) {
+          if (document.activeElement === first) {
+            last.focus();
+            e.preventDefault();
+          }
+        } else {
+          if (document.activeElement === last) {
+            first.focus();
+            e.preventDefault();
+          }
+        }
+      }
+    };
+
+    // Auto-focus first element
+    setTimeout(() => {
+      if (modalRef.current) {
+        const focusable = modalRef.current.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled])'
+        );
+        if (focusable.length > 0) {
+          focusable[0].focus();
+        }
+      }
+    }, 50);
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [won]);
 
   const runTests = async () => {
     setError(null);
@@ -55,6 +105,7 @@ export default function DynamicProjectPage({ params }: { params: Promise<{ slug:
         const allPassed = next.every((r) => r === "pass");
         recordSubmission(project.id, code, allPassed);
         if (allPassed) {
+          track("project_completed", { slug: project.id });
           setWon(true);
           addXP(project.xp);
           completeStop(project.id);
@@ -97,6 +148,7 @@ print("TEST_OUTPUTS:" + json.dumps(results))
             const allPassed = next.every((r) => r === "pass");
             recordSubmission(project.id, code, allPassed);
             if (allPassed) {
+              track("project_completed", { slug: project.id });
               setWon(true);
               addXP(project.xp);
               completeStop(project.id);
@@ -188,9 +240,9 @@ print("TEST_OUTPUTS:" + json.dumps(results))
           className="glass-strong text-white"
           style={{ borderRadius: 20, boxShadow: "0 20px 44px rgba(0,0,0,.4)", padding: "26px 26px", border: "1px solid rgba(255,255,255,.1)" }}
         >
-          <h3 className="font-display" style={{ fontWeight: 800, fontSize: 24, color: "#ffffff", margin: "0 0 12px" }}>
+          <h1 className="font-display font-bold" style={{ fontSize: 24, color: "#ffffff", margin: "0 0 12px" }}>
             {project.title}
-          </h3>
+          </h1>
           <p style={{ fontSize: 14.5, lineHeight: 1.7, color: "rgba(255,255,255,.85)", fontWeight: 600, margin: "0 0 20px", textWrap: "pretty" }}>
             {project.instructions}
           </p>
@@ -216,7 +268,7 @@ print("TEST_OUTPUTS:" + json.dumps(results))
           glassy
           footer={
             <div className="flex items-center justify-between" style={{ padding: "0 18px 16px" }}>
-              <span className="font-mono" style={{ fontSize: 12, color: "rgba(255,255,255,.5)" }}>
+              <span className="font-mono" style={{ fontSize: 12, color: error ? "#ff8ba8" : "rgba(255,255,255,.8)" }}>
                 {error ? `✗ ${error}` : running ? "Running test harness..." : "Local compilation ready"}
               </span>
               <button
@@ -314,7 +366,7 @@ print("TEST_OUTPUTS:" + json.dumps(results))
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src="/assets/clouds-sunset/cutout-cloud-sunset-1-04.webp"
-              alt=""
+              alt={project.title}
               className="cloud-glow"
               style={{ display: "block", width: 130, height: "auto", margin: "0 auto", animation: "floatySm 5s ease-in-out infinite" }}
             />
@@ -334,10 +386,10 @@ print("TEST_OUTPUTS:" + json.dumps(results))
         </div>
       </div>
 
-      {/* victory modal */}
       {won && (
         <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: "rgba(20,16,50,.75)", backdropFilter: "blur(6px)" }}>
           <div
+            ref={modalRef}
             className="anim-pop-in text-center text-white"
             style={{
               background: "linear-gradient(180deg, #1b2045, #3a2254)",
@@ -351,7 +403,7 @@ print("TEST_OUTPUTS:" + json.dumps(results))
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src="/assets/clouds-sunset/cutout-cloud-sunset-1-04.webp"
-              alt=""
+              alt="Celebration cloud"
               className="cloud-glow"
               style={{ display: "block", width: 160, height: "auto", margin: "0 auto", animation: "floatySm 4s ease-in-out infinite" }}
             />

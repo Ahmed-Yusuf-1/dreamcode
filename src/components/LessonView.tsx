@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import Cloud from "@/components/Cloud";
 import CodeEditor from "@/components/CodeEditor";
@@ -12,6 +12,7 @@ import { lessons, type Lesson, type LessonLink, type QuizQuestion } from "@/lib/
 import { practiceDatasets, getModuleChallenge } from "@/lib/data";
 import { addXP, completeStop } from "@/lib/profile";
 import { playChime } from "@/lib/sound";
+import { track } from "@/lib/telemetry";
 
 const cs = cloudOpacity.lesson;
 
@@ -48,6 +49,15 @@ export default function LessonView({
   const [running, setRunning] = useState(false);
   const py = usePyodide();
 
+  useEffect(() => {
+    track("lesson_started", {
+      slug: lesson.slug,
+      language: lesson.language || "python",
+      module: lesson.module || lesson.chapter || "Basics",
+      tier: lesson.tier || "beginner",
+    });
+  }, [lesson.slug, lesson.language, lesson.module, lesson.chapter, lesson.tier]);
+
   // Read + quiz lessons (e.g. C#) have no client-side runtime: no editor/Run.
   const runnable = lesson.runnable !== false;
 
@@ -71,7 +81,50 @@ export default function LessonView({
     setQuizDone(true);
     addXP(15);
     completeStop(lesson.slug);
+    track("lesson_completed", {
+      slug: lesson.slug,
+      language: lesson.language || "python",
+      module: lesson.module || lesson.chapter || "Basics",
+    });
     playChime("success");
+  };
+
+  // Runs a string of JavaScript in-browser, capturing console.log. Used directly
+  // for the JS track and for the transpiled output of the TypeScript track.
+  const executeJs = async (jsCode: string, lang: string) => {
+    const logs: string[] = [];
+    const originalLog = console.log;
+    console.log = (...args) => {
+      logs.push(args.map(arg => typeof arg === 'object' ? JSON.stringify(arg) : String(arg)).join(" "));
+    };
+
+    // Drain the microtask queue and any pending 0ms timers so async/await and
+    // event-loop lessons capture the output their callbacks log after the
+    // synchronous pass finishes.
+    const flushAsync = async () => {
+      for (let i = 0; i < 3; i++) {
+        await new Promise<void>((resolve) => setTimeout(resolve, 0));
+      }
+    };
+
+    try {
+      // Wrap in an async IIFE so top-level await works and we can await the
+      // returned promise, then flush deferred callbacks before reading logs.
+      const fn = new Function("return (async () => {\n" + jsCode + "\n})();");
+      await fn();
+      await flushAsync();
+      setOutput([...logs]);
+      setNote({ text: logs.length ? "Done." : "Finished, with no output to show.", ok: true });
+      track("code_run", { slug: lesson.slug, language: lang, ok: true });
+    } catch (err) {
+      setOutput([...logs]);
+      const msg = err instanceof Error ? err.message : String(err);
+      setNote({ text: msg, ok: false });
+      track("code_run", { slug: lesson.slug, language: lang, ok: false });
+    } finally {
+      console.log = originalLog;
+      setRunning(false);
+    }
   };
 
   const run = async () => {
@@ -81,37 +134,37 @@ export default function LessonView({
 
     if (lesson.language === "javascript") {
       setNote({ text: "Running...", ok: true });
-      const logs: string[] = [];
-      const originalLog = console.log;
-      console.log = (...args) => {
-        logs.push(args.map(arg => typeof arg === 'object' ? JSON.stringify(arg) : String(arg)).join(" "));
-      };
+      await executeJs(code, "javascript");
+      return;
+    }
 
-      // Drain the microtask queue and any pending 0ms timers so async/await and
-      // event-loop lessons (js-async-await, js-concurrency) capture the output
-      // their callbacks log after the synchronous pass finishes.
-      const flushAsync = async () => {
-        for (let i = 0; i < 3; i++) {
-          await new Promise<void>((resolve) => setTimeout(resolve, 0));
-        }
-      };
-
+    if (lesson.language === "typescript") {
+      setNote({ text: "Compiling TypeScript...", ok: true });
+      let js: string;
       try {
-        // Wrap in an async IIFE so top-level await works and we can await the
-        // returned promise, then flush deferred callbacks before reading logs.
-        const fn = new Function("return (async () => {\n" + code + "\n})();");
-        await fn();
-        await flushAsync();
-        setOutput([...logs]);
-        setNote({ text: logs.length ? "Done." : "Finished, with no output to show.", ok: true });
+        const res = await fetch("/api/transpile", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ code }),
+        });
+        if (!res.ok) throw new Error("Could not reach the TypeScript compiler.");
+        const data = await res.json();
+        if (Array.isArray(data.diagnostics) && data.diagnostics.length > 0) {
+          setOutput([]);
+          setNote({ text: data.diagnostics[0], ok: false });
+          track("code_run", { slug: lesson.slug, language: "typescript", ok: false });
+          setRunning(false);
+          return;
+        }
+        js = data.js || "";
       } catch (err) {
-        setOutput([...logs]);
         const msg = err instanceof Error ? err.message : String(err);
         setNote({ text: msg, ok: false });
-      } finally {
-        console.log = originalLog;
         setRunning(false);
+        return;
       }
+      setNote({ text: "Running...", ok: true });
+      await executeJs(js, "typescript");
       return;
     }
 
@@ -125,16 +178,18 @@ export default function LessonView({
     setOutput(res.stdout);
     if (res.ok) {
       setNote({ text: res.stdout.length ? "Done." : "Finished, with no output to show.", ok: true });
+      track("code_run", { slug: lesson.slug, language: lesson.language || "python", ok: true });
     } else {
       const summary =
         (res.error || "").trim().split("\n").filter(Boolean).pop() || "Something went wrong.";
       setNote({ text: summary, ok: false });
+      track("code_run", { slug: lesson.slug, language: lesson.language || "python", ok: false });
     }
     setRunning(false);
   };
 
   const runLabel = running
-    ? lesson.language === "javascript"
+    ? lesson.language === "javascript" || lesson.language === "typescript"
       ? "Running..."
       : py.status === "ready"
         ? "Running..."
@@ -240,9 +295,9 @@ export default function LessonView({
           >
             {lesson.kicker}
           </span>
-          <h2 className="font-display" style={{ fontWeight: 800, fontSize: 36, color: "#13335f", margin: "18px 0 12px" }}>
+          <h1 className="font-display" style={{ fontWeight: 800, fontSize: 36, color: "#13335f", margin: "18px 0 12px" }}>
             {lesson.title}
-          </h2>
+          </h1>
           <p style={{ fontSize: 16, lineHeight: 1.7, color: "#41608f", fontWeight: 600, margin: "0 0 22px", textWrap: "pretty" }}>
             <Emphasis text={lesson.intro} />
           </p>
@@ -259,7 +314,7 @@ export default function LessonView({
                 {lesson.example}
               </pre>
             ) : (
-              <CodeEditor value={lesson.example} language={lesson.language === "javascript" ? "javascript" : "python"} readOnly lineNumbers={false} minHeight="0px" />
+              <CodeEditor value={lesson.example} language={lesson.language === "python" ? "python" : lesson.language === "typescript" ? "typescript" : "javascript"} readOnly lineNumbers={false} minHeight="0px" />
             )}
           </div>
 
@@ -298,8 +353,8 @@ export default function LessonView({
           {runnable ? (
           <>
           <EditorFrame
-            filename={lesson.language === "javascript" ? "index.js" : "main.py"}
-            language={lesson.language === "javascript" ? "JAVASCRIPT" : "PYTHON"}
+            filename={lesson.language === "python" ? "main.py" : lesson.language === "typescript" ? "index.ts" : "index.js"}
+            language={lesson.language === "python" ? "PYTHON" : lesson.language === "typescript" ? "TYPESCRIPT" : "JAVASCRIPT"}
             footer={
               <div className="flex items-center justify-between" style={{ padding: "0 18px 16px", gap: 12 }}>
                 <span
@@ -308,9 +363,11 @@ export default function LessonView({
                 >
                   {lesson.language === "javascript"
                     ? "real JavaScript, runs in your browser"
-                    : py.status === "error"
-                      ? "could not load Python"
-                      : "real Python, runs in your browser"}
+                    : lesson.language === "typescript"
+                      ? "real TypeScript, compiled then run in your browser"
+                      : py.status === "error"
+                        ? "could not load Python"
+                        : "real Python, runs in your browser"}
                 </span>
                 <button
                   onClick={run}
@@ -336,7 +393,7 @@ export default function LessonView({
             }
           >
             <div style={{ padding: "10px 8px 6px" }}>
-              <CodeEditor value={code} onChange={setCode} language={lesson.language === "javascript" ? "javascript" : "python"} minHeight="180px" />
+              <CodeEditor value={code} onChange={setCode} language={lesson.language === "python" ? "python" : lesson.language === "typescript" ? "typescript" : "javascript"} minHeight="180px" />
             </div>
           </EditorFrame>
 
@@ -389,6 +446,11 @@ export default function LessonView({
                 if (runnable) {
                   addXP(15);
                   completeStop(lesson.slug);
+                  track("lesson_completed", {
+                    slug: lesson.slug,
+                    language: lesson.language || "python",
+                    module: lesson.module || lesson.chapter || "Basics",
+                  });
                 }
               }}
               className="font-display cursor-pointer transition-transform hover:-translate-y-0.5"

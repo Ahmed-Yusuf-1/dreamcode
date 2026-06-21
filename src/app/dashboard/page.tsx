@@ -31,7 +31,8 @@ const JS_STOPS = [
 export default function DashboardPage() {
   const { profile } = useUserProfile();
   const found = badges.filter((b) => profile.unlockedBadges.includes(b.id)).slice(0, 4);
-  const maxXp = Math.max(...profile.weekActivity);
+  // Guard against a zero-activity week (new learner): avoid dividing by 0 -> NaN.
+  const maxXp = Math.max(1, ...profile.weekActivity);
   const { track } = useActiveTrack();
 
   const stops = track === "javascript" ? JS_STOPS : PYTHON_STOPS;

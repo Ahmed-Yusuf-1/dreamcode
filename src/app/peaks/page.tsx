@@ -112,12 +112,12 @@ export default function PeaksPage() {
 
       <div className="relative z-5 mx-auto" style={{ maxWidth: 980, padding: "44px 28px 90px" }}>
         <div className="text-center" style={{ marginBottom: 40 }}>
-          <h2
+          <h1
             className="font-display glow-heading"
             style={{ fontWeight: 800, fontSize: 44, color: "#ffffff", margin: "0 0 10px" }}
           >
             Problem Peaks
-          </h2>
+          </h1>
           <p
             style={{
               fontSize: 16,

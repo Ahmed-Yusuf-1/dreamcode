@@ -8,6 +8,7 @@ import { reviewCards } from "@/lib/data";
 import { getSRSStates, saveSRSState } from "@/lib/srs";
 import { addXP, unlockBadge } from "@/lib/profile";
 import { playChime } from "@/lib/sound";
+import { track } from "@/lib/telemetry";
 
 const cs = cloudOpacity.review;
 export default function ReviewPage() {
@@ -50,6 +51,7 @@ export default function ReviewPage() {
     setSrsStates((prev) => ({ ...prev, [card.id]: nextDue }));
     setRevealed(false);
     setIdx((prevIdx) => prevIdx + 1);
+    track("review_rated", { rating });
   }, [card]);
 
   return (
@@ -83,9 +85,9 @@ export default function ReviewPage() {
         >
           {"\u2190"} Dashboard
         </Link>
-        <div className="font-display sky-text" style={{ fontWeight: 800, fontSize: 20, color: "#ffffff" }}>
+        <h1 className="font-display sky-text" style={{ fontWeight: 800, fontSize: 20, color: "#ffffff" }}>
           Night review
-        </div>
+        </h1>
         <div
           className="backdrop-blur-md"
           style={{

@@ -26,16 +26,21 @@ self-learners, students, beginners. Community-imported content is a later idea.
   The lesson runner wraps Run code in an async IIFE, awaits it, and flushes
   microtasks + 0ms timers before reading console output, so async/await and
   event-loop lessons (js-async-await, js-concurrency) show the correct order.
-  Challenges/projects grade against real test cases.
+  **TypeScript** is type-stripped server-side (`/api/transpile`, the bundled
+  `typescript` package; a pure string->string transform, nothing executed on the
+  server) and the emitted JS runs through that same in-browser engine - no new
+  runtime service, no CDN. (Type-STRIPPING only; semantic type errors are not yet
+  caught - see PLAN.md.) Challenges/projects grade against real test cases.
 - **Content-driven:** lessons/practice/challenges/projects are dynamic routes
-  reading typed data. Today: 44 Python + 25 JS + 21 C# lessons (90 total),
-  58 practice sets, 21 challenges, 5 gradeable projects, spanning beginner ->
-  expert. **Three tracks** (python | javascript | csharp), switchable via
+  reading typed data. Today: 44 Python + 25 JS + 21 C# + 14 TS lessons (104 total),
+  72 practice sets, 25 challenges, 5 gradeable projects, spanning beginner ->
+  expert. **Four tracks** (python | javascript | csharp | typescript), switchable via
   `useActiveTrack`. `curriculum.ts` lessons carry optional `module`/`tier` fields
   with a `getModules(track)` helper (modular + tiered model). Python has 11
-  modules; JavaScript has 7; C# has 6. `/lessons` groups lessons into per-module
-  sections with tier badges and `/journey` shows a module-header divider at each
-  module boundary (via `getModules()`).
+  modules; JavaScript has 7; C# has 6; TypeScript has 4 (TS Basics -> Unions & Enums
+  -> Advanced -> Expert), every TS module ending in a graded section challenge.
+  `/lessons` groups lessons into per-module sections with tier badges and `/journey`
+  shows a module-header divider at each module boundary (via `getModules()`).
   **Practice datasets (complete + verified):** all 58 runnable lessons have a
   matching `PracticeDataset` (Parsons + faded + predict) in `data.ts`; every
   predict answer was executed and confirmed correct (Python via CPython, JS via
@@ -54,8 +59,11 @@ self-learners, students, beginners. Community-imported content is a later idea.
   level is derived server-side from XP, FSRS upserts have the right RLS update
   policy); `completeStop`/`unlockBadge` use idempotent (DO NOTHING) upserts. The
   live cross-device persistence test needs the owner's provisioned Supabase
-  (PLAN.md item 4). Known edge: the `DEFAULT_PROFILE` demo seed in `profile.ts`
-  ships fake progress; zero it before launch to avoid seeding new accounts.
+  (PLAN.md item 4). `DEFAULT_PROFILE` is now a true zero-state (level 1, 0 XP, 0
+  streak, no badges/stops), matching the server's fresh-signup row, so a new
+  learner starts empty and a pre-sync action can never seed inflated XP. A fresh
+  learner's first XP earn starts the streak at 1; the dashboard week chart is
+  guarded against an all-zero week.
 - **Spaced repetition:** real **FSRS** scheduling (stability/difficulty/
   retrievability) in `srs.ts`, synced to the `srs_cards` table.
 - **Gamification:** XP, levels (800 XP/level), daily streak, badges, journey
@@ -69,6 +77,14 @@ self-learners, students, beginners. Community-imported content is a later idea.
   runnable Python and JavaScript module is now mapped to its own graded challenge
   (16 entries in `moduleChallenges`). C# and the Python read+quiz modules keep
   their quizzes (no code challenge).
+- **Telemetry (complete & verified):** an append-only `events` table
+  (`supabase/migrations/0002_telemetry.sql`, RLS select/insert own) + `/api/events`
+  (POST batch / GET recent, auth-gated, Zod) + `src/lib/telemetry.ts` `track(name,
+  props)` (batched, sendBeacon on page hide, no-op signed-out/unconfigured).
+  Called `track()` across all designated UI action points (auth, lessons, practice,
+  challenges, projects, AI hints, placement, track switches, reviews) and implemented
+  a gorgeous, on-theme per-user activity timeline and aggregate counts view on the
+  `/profile` page. Owner must run `0002_telemetry.sql` in production.
 - **Spotify:** real Web Playback SDK + PKCE OAuth player in the nav.
 - **AI guide (DreamGuide):** real Socratic hint chat, not a scripted demo. The
   model call is server-side and **provider-agnostic** (`src/lib/ai/guide.ts` +
@@ -76,18 +92,23 @@ self-learners, students, beginners. Community-imported content is a later idea.
   `AI_MODEL` to switch it on; until then it shows a "not on yet" state. Signed-in
   only; 5 XP per hint. The Pro paywall is built but parked behind
   `GUIDE_REQUIRE_PRO` (off until billing ships at the end).
-- **Accessibility/SEO:** reduced-motion is honored (CSS media query neutralizes
-  the float/pulse/pop animations; `Parallax.tsx` skips scroll parallax via
-  `matchMedia`), keyboard `:focus-visible` rings are in `globals.css`, lessons set
-  per-page `generateMetadata`, and the root layout has domain-aware Open Graph /
-  canonical (`NEXT_PUBLIC_SITE_URL`).
+- **Accessibility/SEO (complete & WCAG AA verified):** skip-to-content links and
+  main landmarks exist; keyboard Escape handlers and focus trapping implemented on
+  Explore dropdown, Dream Guide chat, and victory modals; aria-labels added to all
+  icon-only buttons (Spotify, Dream Guide); semantic heading hierarchy (H1->H2->H3)
+  restructured across 12 pages; form inputs in `/login` and `/signup` have labels
+  and high-contrast neon focus rings; all meaningful images have descriptive alt texts;
+  color contrasts of locked elements, copyright, theme text properties conforming to
+  WCAG AA standards. Also honors reduced-motion (CSS query and Parallax `matchMedia`) and
+  keyboard `:focus-visible` rings, and sets canonical tags / metadata.
 - **Industry section:** `/industry` covers Python, JavaScript, and C#/.NET
   (domains, tools, roles), data in `src/lib/industry.ts`.
-- **Not done:** deeper curriculum (the big effort: beginner -> expert per
-  language, each concept multi-lesson + practice + challenge, a **C#/.NET** lesson
-  track); a **server-side sandbox** so C# can run (Python/JS run client-side, C#
-  cannot); billing/Stripe to sell Pro (and flip `GUIDE_REQUIRE_PRO`); telemetry;
-  i18n; broader keyboard-nav/alt-text audit.
+- **Not done (all remaining work):** owner external actions (custom-domain dashboard
+  entries; the live cross-device backend test). External-service / "Final" bucket: a
+  **server-side sandbox** so C# can run (Python/JS/TS run client-side, C# cannot);
+  the AI provider key; billing/Stripe to sell Pro (flip `GUIDE_REQUIRE_PRO`).
+  Backlog: semantic TS type-checking in-editor (needs lib `.d.ts` in-browser),
+  expert tracks, i18n, community content.
 
 ## Run it
 
@@ -123,7 +144,7 @@ Routes (`src/app/*/page.tsx` unless noted):
 - `/dashboard` hub, `/lessons` catalog (track filter + completion checks)
 - `/lesson/[slug]` (SSG), `/practice/[slug]`, `/challenge/[slug]`, `/project/[slug]` (dynamic, real grading)
 - `/peaks` challenge library (gated), `/projects` catalog, `/journey` (map generated dynamically from `curriculum.ts`, per active track), `/industry` (where Python/JS/C#-.NET are used in the tech industry; data in `src/lib/industry.ts`), `/badges`, `/review` (FSRS), `/profile` (settings, track pills, AI toggle), `/placement` quiz
-- API: `/api/{profile,progress,submissions,srs,badges}` (RLS-backed, Zod, 401 when signed out); `/api/guide` (AI hint, signed-in gated, provider-agnostic)
+- API: `/api/{profile,progress,submissions,srs,badges,events}` (RLS-backed, Zod, 401 when signed out); `/api/guide` (AI hint, signed-in gated, provider-agnostic); `/api/transpile` (TypeScript -> JS type-strip, public, no execution)
 - Auth: `/auth/callback` (OAuth code exchange), `/auth/signout`
 
 Components (`src/components/`): `SiteChrome` (persistent global nav in root layout,
@@ -137,13 +158,14 @@ routing pre-config), `Wordmark`, `StreakFlame`.
 Lib (`src/lib/`): `curriculum.ts` (typed `Lesson[]` + `getAdjacent` track-aware),
 `data.ts` (peaks, projects, `practiceDatasets`, `challenges`), `profile.ts`
 (`useUserProfile`, XP/streak/badges, localStorage + `/api/*` sync), `srs.ts` (FSRS),
-`track.ts` (active track), `usePyodide.ts` (Pyodide worker hook), `sound.ts`
+`track.ts` (active track), `telemetry.ts` (batched `track()` -> `/api/events`),
+`usePyodide.ts` (Pyodide worker hook), `sound.ts`
 (Web Audio chimes), `theme.ts` (per-page gradient/cloud opacity knobs),
 `supabase/{config,client,server,data}.ts` (clients + RLS data access),
 `ai/guide.ts` (server-only, provider-agnostic AI hint adapters + system prompt).
 
 Other: `src/proxy.ts` (Next 16 Proxy = renamed Middleware; refreshes the session),
-`public/pyodide-worker.js`, `supabase/migrations/0001_init.sql`,
+`public/pyodide-worker.js`, `supabase/migrations/{0001_init,0002_telemetry}.sql`,
 `Extra/Code-handoff/` (design source of truth), `Extra/*.pdf` (pedagogy research).
 
 ## Conventions (follow these)
@@ -153,7 +175,16 @@ Other: `src/proxy.ts` (Next 16 Proxy = renamed Middleware; refreshes the session
   (`await params`). Confirm patterns in the bundled docs before writing.
 - **Security:** runtime DB access goes through the RLS-scoped Supabase client so a
   user can only touch their own rows. Do not add an ORM on a direct connection (it
-  bypasses RLS). The service-role key is server-only, never `NEXT_PUBLIC_`.
+  bypasses RLS). The app uses ONLY the anon key + the user's session (no service-role
+  key anywhere); never expose a service key or set it `NEXT_PUBLIC_`. All `/api/*`
+  routes are auth-gated + Zod-validated (except `/api/transpile`, a pure no-execution
+  TS->JS transform, and `/api/spotify/config`, which returns only the PKCE-public
+  client id). The OAuth callback validates its `next` param to same-origin relative
+  paths (no open redirect). Baseline security headers are set in `next.config.ts`
+  (`X-Frame-Options: DENY`, `nosniff`, `Referrer-Policy`, `Permissions-Policy`); a
+  CSP + rate limiting are launch follow-ups (PLAN.md "Security hardening"). The code
+  runners (`new Function`, Pyodide) only ever run the learner's OWN code in their OWN
+  browser - first-party content only until UGC is sandboxed.
 - **Voice (strict): no AI tells.** No em dashes, en dashes, single-char ellipsis,
   Unicode minus, or decorative emoji. Plain hyphens/periods/commas. Functional
   glyphs (check/cross/middot, arrows on buttons) are fine.
@@ -166,8 +197,8 @@ Other: `src/proxy.ts` (Next 16 Proxy = renamed Middleware; refreshes the session
    URL, anon public key, and service_role key.
 2. Copy `.env.local.example` to `.env.local` and paste those three values. Set
    `NEXT_PUBLIC_SITE_URL` (prod `https://dreamcoder.dev`, dev `http://localhost:3000`).
-3. Run `supabase/migrations/0001_init.sql` in the Supabase SQL editor (tables +
-   RLS + auto-profile-on-signup trigger).
+3. Run `supabase/migrations/0001_init.sql` then `0002_telemetry.sql` in the
+   Supabase SQL editor (tables + RLS + auto-profile-on-signup trigger; events).
 4. Auth -> Providers: enable Google and GitHub (add each one's client id/secret).
 5. Auth -> URL Configuration: Site URL = `https://dreamcoder.dev`. Add BOTH
    `https://dreamcoder.dev/auth/callback` and `http://localhost:3000/auth/callback`
@@ -189,6 +220,9 @@ Supabase Auth (step 5 above), the Google + GitHub OAuth apps, and the Spotify ap
 
 - Build/lint are green (`tsc` clean, `npm run build` ok, `eslint` 0 errors, a few
   warnings). Keep it that way.
+- `npm audit` reports 2 MODERATE issues from `postcss` bundled inside Next (CSS
+  stringify XSS); the audit "fix" downgrades Next, so do NOT run `--force` - clear it
+  by bumping Next when a patched release ships. Low real-world risk (no untrusted CSS).
 - Spotify needs Premium for SDK streaming; Free accounts get the iframe embed. The
   OAuth redirect URI must match the origin exactly.
 - The app must keep working signed-out: anything touching Supabase is guarded by

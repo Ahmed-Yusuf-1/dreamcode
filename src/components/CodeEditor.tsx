@@ -42,11 +42,15 @@ export default function CodeEditor({
 }: {
   value: string;
   onChange?: (v: string) => void;
-  language: "python" | "javascript";
+  language: "python" | "javascript" | "typescript";
   minHeight?: string;
   readOnly?: boolean;
   lineNumbers?: boolean;
 }) {
+  const langExtension =
+    language === "python"
+      ? python()
+      : javascript({ typescript: language === "typescript" });
   return (
     <div className="dc-editor">
       <CodeMirror
@@ -55,10 +59,7 @@ export default function CodeEditor({
         readOnly={readOnly}
         editable={!readOnly}
         theme={dreamTheme}
-        extensions={[
-          language === "python" ? python() : javascript(),
-          EditorView.lineWrapping,
-        ]}
+        extensions={[langExtension, EditorView.lineWrapping]}
         basicSetup={{
           foldGutter: false,
           searchKeymap: false,

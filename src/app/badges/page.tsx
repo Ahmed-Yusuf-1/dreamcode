@@ -51,7 +51,7 @@ export default function BadgesPage() {
       />
 
       <div className="relative z-5 mx-auto text-center" style={{ maxWidth: 1060, padding: "4vh 32px 90px" }}>
-        <h2
+        <h1
           className="font-display"
           style={{
             fontWeight: 800,
@@ -63,7 +63,7 @@ export default function BadgesPage() {
           }}
         >
           Collect the sky
-        </h2>
+        </h1>
         <p
           style={{
             fontSize: 17,
@@ -96,7 +96,7 @@ export default function BadgesPage() {
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={badge.img}
-                alt=""
+                alt={badge.name}
                 className={badge.found ? "cloud-glow" : undefined}
                 style={{
                   display: "block",
@@ -115,7 +115,7 @@ export default function BadgesPage() {
                 style={{
                   fontWeight: 800,
                   fontSize: 17,
-                  color: badge.found ? "#ffffff" : "rgba(255,255,255,.55)",
+                  color: badge.found ? "#ffffff" : "rgba(255,255,255,.75)",
                   marginTop: 12,
                   textShadow: "0 2px 10px rgba(30,16,60,.6)",
                 }}
@@ -126,7 +126,7 @@ export default function BadgesPage() {
                 style={{
                   fontSize: 12,
                   fontWeight: 700,
-                  color: badge.found ? "rgba(255,250,255,.88)" : "rgba(255,250,255,.5)",
+                  color: badge.found ? "rgba(255,250,255,.88)" : "rgba(255,250,255,.7)",
                   marginTop: 3,
                 }}
               >

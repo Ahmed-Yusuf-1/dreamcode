@@ -20,7 +20,7 @@ export interface IndustryDomain {
 }
 
 export interface IndustryProfile {
-  id: "python" | "javascript" | "csharp";
+  id: "python" | "javascript" | "csharp" | "typescript";
   name: string;
   /** short label under the name */
   tagline: string;
@@ -159,6 +159,36 @@ export const industryProfiles: IndustryProfile[] = [
           "Shared codebases that target Windows, macOS, Android, and iOS from one C# project, common in companies already invested in .NET.",
         tools: [".NET MAUI", "Xamarin", "Uno Platform"],
         roles: ["Mobile Engineer", "Cross-Platform Engineer"],
+      },
+    ],
+  },
+  {
+    id: "typescript",
+    name: "TypeScript",
+    tagline: "JavaScript with type safety",
+    summary:
+      "TypeScript is a strongly typed programming language that builds on JavaScript, giving you better tooling at any scale. Developed by Microsoft, it has become the standard for professional web development. By adding type safety, it catches bugs early, documents code automatically, and enables confident refactoring.",
+    domains: [
+      {
+        title: "Large-scale web apps",
+        blurb:
+          "Structuring complex web platforms with strict type interfaces to coordinate work across large engineering teams.",
+        tools: ["Next.js", "React", "Angular", "ts-node"],
+        roles: ["Software Engineer", "Frontend Architect"],
+      },
+      {
+        title: "API and server development",
+        blurb:
+          "Writing backend services and database access layers where type accuracy ensures database and request payloads are correct.",
+        tools: ["NestJS", "Prisma", "Zod", "tRPC"],
+        roles: ["Backend Engineer", "Full-Stack Engineer"],
+      },
+      {
+        title: "Library and SDK design",
+        blurb:
+          "Creating open source packages and software development kits where type definitions guide the developer's imports.",
+        tools: ["tsup", "dts-cli", "Rollup"],
+        roles: ["Library Author", "Developer Relations Engineer"],
       },
     ],
   },

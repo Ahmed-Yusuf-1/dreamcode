@@ -7,7 +7,6 @@ import { cloudOpacity } from "@/lib/theme";
 import SceneTopBar, { GlassPill } from "@/components/SceneTopBar";
 import StreakFlame from "@/components/StreakFlame";
 import { useUserProfile } from "@/lib/profile";
-import { badges } from "@/lib/data";
 import { useActiveTrack } from "@/lib/track";
 
 function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void }) {
@@ -47,10 +46,31 @@ const cs = cloudOpacity.profile;
 export default function ProfilePage() {
   const { profile, updateProfile } = useUserProfile();
   const { track, setTrack } = useActiveTrack();
+  const [events, setEvents] = useState<TelemetryEvent[]>([]);
+  const [loadingEvents, setLoadingEvents] = useState(true);
 
   useEffect(() => {
     document.title = "Profile - dreamcode";
   }, []);
+
+  useEffect(() => {
+    fetch("/api/events")
+      .then((res) => {
+        if (!res.ok) throw new Error();
+        return res.json();
+      })
+      .then((data) => {
+        setEvents(data.events || []);
+        setLoadingEvents(false);
+      })
+      .catch(() => {
+        setLoadingEvents(false);
+      });
+  }, []);
+
+  const lessonsCompletedCount = events.filter((e) => e.name === "lesson_completed").length;
+  const challengesPassedCount = events.filter((e) => e.name === "challenge_passed").length;
+  const codeRunsCount = events.filter((e) => e.name === "code_run").length;
 
   return (
     <div
@@ -85,9 +105,9 @@ export default function ProfilePage() {
           >
             {profile.initial}
           </div>
-          <div className="font-display" style={{ fontWeight: 800, fontSize: 28, color: "#ffffff", marginTop: 14, textShadow: "0 2px 12px rgba(20,16,50,.6)" }}>
+          <h1 className="font-display" style={{ fontWeight: 800, fontSize: 28, color: "#ffffff", margin: "14px 0 0", textShadow: "0 2px 12px rgba(20,16,50,.6)" }}>
             {profile.name}
-          </div>
+          </h1>
           <div style={{ fontSize: 14, fontWeight: 700, color: "rgba(255,255,255,.85)", marginTop: 2 }}>
             Level {profile.level} {"\u00b7"} night driver since June 2026
           </div>
@@ -100,7 +120,7 @@ export default function ProfilePage() {
               {profile.unlockedBadges.length} badges
             </div>
             <div style={{ background: "rgba(255,255,255,.92)", padding: "7px 14px", borderRadius: 999, fontWeight: 900, fontSize: 13, color: "#13335f" }}>
-              {(profile.level - 4) * 800 + profile.xp + 540} XP
+              {(profile.level - 1) * 800 + profile.xp} XP
             </div>
           </div>
         </div>
@@ -148,7 +168,7 @@ export default function ProfilePage() {
           <div className="font-display" style={{ fontWeight: 800, fontSize: 19, color: "#ffffff", marginBottom: 14, textShadow: "0 2px 10px rgba(20,16,50,.6)" }}>
             Your track
           </div>
-          <div className="flex" style={{ gap: 10 }}>
+          <div className="flex flex-wrap" style={{ gap: 10 }}>
             <button
               onClick={() => setTrack("python")}
               style={{
@@ -181,6 +201,38 @@ export default function ProfilePage() {
             >
               JavaScript (Climbs)
             </button>
+            <button
+              onClick={() => setTrack("csharp")}
+              style={{
+                background: track === "csharp" ? "#ffffff" : "rgba(255,255,255,.12)",
+                border: track === "csharp" ? "2px solid #ffffff" : "2px solid rgba(255,255,255,.3)",
+                color: track === "csharp" ? "#13335f" : "rgba(255,255,255,.85)",
+                fontWeight: 900,
+                fontSize: 13,
+                padding: "9px 18px",
+                borderRadius: 999,
+                cursor: "pointer",
+                transition: "all .2s ease",
+              }}
+            >
+              C# (.NET)
+            </button>
+            <button
+              onClick={() => setTrack("typescript")}
+              style={{
+                background: track === "typescript" ? "#ffffff" : "rgba(255,255,255,.12)",
+                border: track === "typescript" ? "2px solid #ffffff" : "2px solid rgba(255,255,255,.3)",
+                color: track === "typescript" ? "#13335f" : "rgba(255,255,255,.85)",
+                fontWeight: 900,
+                fontSize: 13,
+                padding: "9px 18px",
+                borderRadius: 999,
+                cursor: "pointer",
+                transition: "all .2s ease",
+              }}
+            >
+              TypeScript (Types)
+            </button>
           </div>
           <div style={{ marginTop: 14, fontSize: 13, fontWeight: 600, color: "rgba(255,255,255,.8)", lineHeight: 1.6 }}>
             Not sure where you belong?{" "}
@@ -190,7 +242,178 @@ export default function ProfilePage() {
             and we&apos;ll drop you at the right stop.
           </div>
         </div>
+
+        {/* Recent Activity */}
+        <div className="glass" style={{ borderRadius: 26, padding: "26px 28px", marginTop: 18, boxShadow: "0 20px 50px rgba(15,12,50,.4)" }}>
+          <div className="font-display" style={{ fontWeight: 800, fontSize: 19, color: "#ffffff", marginBottom: 18, textShadow: "0 2px 10px rgba(20,16,50,.6)" }}>
+            Recent Activity
+          </div>
+
+          {loadingEvents ? (
+            <div style={{ fontSize: 14.5, fontWeight: 600, color: "rgba(255,255,255,.7)", padding: "10px 0" }}>
+              Loading flight logs...
+            </div>
+          ) : (
+            <>
+              {/* Counts section */}
+              <div className="grid grid-cols-3 text-center" style={{ gap: 10, marginBottom: 22 }}>
+                <div style={{ background: "rgba(255,255,255,.08)", padding: "12px 8px", borderRadius: 16, border: "1px solid rgba(255,255,255,.1)" }}>
+                  <div style={{ fontSize: 20, fontWeight: 900, color: "#ff7ad9", textShadow: "0 0 10px rgba(255,122,217,.4)" }}>
+                    {lessonsCompletedCount}
+                  </div>
+                  <div style={{ fontSize: 11, fontWeight: 800, color: "rgba(255,255,255,.8)", marginTop: 2 }}>
+                    Lessons Done
+                  </div>
+                </div>
+                <div style={{ background: "rgba(255,255,255,.08)", padding: "12px 8px", borderRadius: 16, border: "1px solid rgba(255,255,255,.1)" }}>
+                  <div style={{ fontSize: 20, fontWeight: 900, color: "#ffd275", textShadow: "0 0 10px rgba(255,210,117,.4)" }}>
+                    {challengesPassedCount}
+                  </div>
+                  <div style={{ fontSize: 11, fontWeight: 800, color: "rgba(255,255,255,.8)", marginTop: 2 }}>
+                    Challenges
+                  </div>
+                </div>
+                <div style={{ background: "rgba(255,255,255,.08)", padding: "12px 8px", borderRadius: 16, border: "1px solid rgba(255,255,255,.1)" }}>
+                  <div style={{ fontSize: 20, fontWeight: 900, color: "#a9ecc9", textShadow: "0 0 10px rgba(169,236,201,.4)" }}>
+                    {codeRunsCount}
+                  </div>
+                  <div style={{ fontSize: 11, fontWeight: 800, color: "rgba(255,255,255,.8)", marginTop: 2 }}>
+                    Code Runs
+                  </div>
+                </div>
+              </div>
+
+              {/* Timeline list */}
+              {events.length === 0 ? (
+                <div style={{ fontSize: 14.5, fontWeight: 600, color: "rgba(255,255,255,.65)", padding: "10px 0" }}>
+                  No recent flight entries recorded. Keep exploring to fill the logs.
+                </div>
+              ) : (
+                <div className="flex flex-col" style={{ gap: 14 }}>
+                  {events.slice(0, 30).map((e, index) => (
+                    <div
+                      key={index}
+                      className="flex items-start justify-between"
+                      style={{
+                        paddingBottom: index === Math.min(events.length, 30) - 1 ? 0 : 12,
+                        borderBottom: index === Math.min(events.length, 30) - 1 ? "none" : "1px solid rgba(255,255,255,.1)",
+                        gap: 12,
+                      }}
+                    >
+                      <div className="flex items-start" style={{ gap: 10 }}>
+                        {/* Event icon dot */}
+                        <span
+                          style={{
+                            flexShrink: 0,
+                            width: 8,
+                            height: 8,
+                            borderRadius: "50%",
+                            background: getEventColor(e.name),
+                            marginTop: 7,
+                            boxShadow: `0 0 8px ${getEventColor(e.name)}`,
+                          }}
+                        />
+                        <div style={{ fontSize: 13.5, fontWeight: 700, color: "#ffffff", lineHeight: 1.4 }}>
+                          {formatEvent(e)}
+                        </div>
+                      </div>
+                      <div
+                        style={{
+                          fontSize: 11.5,
+                          fontWeight: 800,
+                          color: "rgba(255,255,255,.6)",
+                          whiteSpace: "nowrap",
+                          flexShrink: 0,
+                        }}
+                      >
+                        {formatTime(e.createdAt)}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+        </div>
       </div>
     </div>
   );
+}
+
+interface TelemetryEvent {
+  name: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  props?: Record<string, any>;
+  createdAt: string;
+}
+
+function getEventColor(name: string) {
+  switch (name) {
+    case "signup":
+    case "login":
+      return "#ff7ad9"; // Pink
+    case "lesson_started":
+    case "challenge_started":
+      return "#cdb9f7"; // Purple
+    case "lesson_completed":
+    case "practice_completed":
+    case "project_completed":
+      return "#a9ecc9"; // Green
+    case "challenge_passed":
+      return "#ffd275"; // Gold
+    case "code_run":
+      return "#ffd275"; // Yellow
+    case "hint_requested":
+      return "#ff8ba8"; // Red/Coral
+    case "track_switched":
+    case "placement_completed":
+    default:
+      return "#e2ecf7"; // Light white/blue
+  }
+}
+
+function formatEvent(e: TelemetryEvent) {
+  const p = e.props || {};
+  switch (e.name) {
+    case "signup":
+      return "Joined the night drive";
+    case "login":
+      return "Signed in";
+    case "lesson_started":
+      return `Started lesson: ${p.slug || "Unknown"}`;
+    case "lesson_completed":
+      return `Completed lesson: ${p.slug || "Unknown"}`;
+    case "code_run":
+      return `Ran code in ${p.slug || "Unknown"} (${p.ok ? "success" : "error"})`;
+    case "practice_completed":
+      return `Completed practice: ${p.slug || "Unknown"}`;
+    case "challenge_started":
+      return `Started challenge: ${p.slug || "Unknown"}`;
+    case "challenge_passed":
+      return `Passed challenge: ${p.slug || "Unknown"}`;
+    case "project_completed":
+      return `Completed project: ${p.slug || "Unknown"}`;
+    case "hint_requested":
+      return `Requested hint on ${p.context || "general"}`;
+    case "placement_completed":
+      return `Completed placement quiz (${p.track || "unknown"} track)`;
+    case "track_switched":
+      return `Switched track to ${p.track || "unknown"}`;
+    case "review_rated":
+      return `Reviewed card: grade ${p.rating || "unknown"}`;
+    default:
+      return `${e.name} event`;
+  }
+}
+
+function formatTime(isoString: string) {
+  try {
+    const d = new Date(isoString);
+    const month = d.toLocaleDateString("en-US", { month: "short" });
+    const day = d.getDate();
+    const time = d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
+    return `${month} ${day}, ${time}`;
+  } catch {
+    return "";
+  }
 }

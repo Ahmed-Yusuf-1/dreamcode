@@ -113,6 +113,42 @@ export default function NavBar({ isHome = false }: { isHome?: boolean }) {
             className="relative"
             onMouseEnter={() => setExploreOpen(true)}
             onMouseLeave={() => setExploreOpen(false)}
+            onKeyDown={(e) => {
+              if (e.key === "Escape") {
+                setExploreOpen(false);
+                document.getElementById("nav-btn-explore")?.focus();
+                e.preventDefault();
+              } else if (e.key === "ArrowDown") {
+                if (!exploreOpen) {
+                  setExploreOpen(true);
+                  e.preventDefault();
+                  return;
+                }
+                const links = exploreRef.current?.querySelectorAll<HTMLAnchorElement>("a");
+                if (links && links.length > 0) {
+                  const active = document.activeElement;
+                  const index = Array.from(links).indexOf(active as HTMLAnchorElement);
+                  const nextIndex = (index + 1) % links.length;
+                  links[nextIndex].focus();
+                  e.preventDefault();
+                }
+              } else if (e.key === "ArrowUp") {
+                if (!exploreOpen) return;
+                const links = exploreRef.current?.querySelectorAll<HTMLAnchorElement>("a");
+                if (links && links.length > 0) {
+                  const active = document.activeElement;
+                  const index = Array.from(links).indexOf(active as HTMLAnchorElement);
+                  const prevIndex = index <= 0 ? links.length - 1 : index - 1;
+                  links[prevIndex].focus();
+                  e.preventDefault();
+                }
+              }
+            }}
+            onBlur={(e) => {
+              if (exploreRef.current && !exploreRef.current.contains(e.relatedTarget as Node)) {
+                setExploreOpen(false);
+              }
+            }}
           >
             <button
               type="button"
@@ -120,6 +156,9 @@ export default function NavBar({ isHome = false }: { isHome?: boolean }) {
               onClick={() => setExploreOpen((o) => !o)}
               className="flex cursor-pointer items-center transition-colors hover:text-[#ffb3e2]"
               style={{ ...linkStyle, gap: 5, background: "none", border: "none" }}
+              aria-haspopup="true"
+              aria-expanded={exploreOpen}
+              aria-controls="explore-menu"
             >
               Explore
               <span
@@ -131,6 +170,8 @@ export default function NavBar({ isHome = false }: { isHome?: boolean }) {
             </button>
 
             <div
+              id="explore-menu"
+              role="menu"
               className="absolute"
               style={{
                 top: "calc(100% + 12px)",
@@ -170,6 +211,7 @@ export default function NavBar({ isHome = false }: { isHome?: boolean }) {
                           key={href}
                           href={href}
                           onClick={() => setExploreOpen(false)}
+                          role="menuitem"
                           className="cursor-pointer transition-colors hover:text-[#ffd9ef]"
                           style={{ color: "rgba(255,255,255,.9)", fontWeight: 700, fontSize: 14, whiteSpace: "nowrap" }}
                         >

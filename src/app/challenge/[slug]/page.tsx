@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, use } from "react";
+import { useState, use, useRef, useEffect } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import Cloud from "@/components/Cloud";
@@ -12,6 +12,7 @@ import { addXP, unlockBadge, completeStop, recordSubmission } from "@/lib/profil
 import { playChime } from "@/lib/sound";
 import { challenges } from "@/lib/data";
 import { usePyodide } from "@/lib/usePyodide";
+import { track } from "@/lib/telemetry";
 
 type TestState = "idle" | "pass" | "fail";
 
@@ -23,6 +24,14 @@ export default function DynamicChallengePage({ params }: { params: Promise<{ slu
   if (!challenge) notFound();
 
   const [code, setCode] = useState(challenge.starter);
+
+  useEffect(() => {
+    track("challenge_started", {
+      slug: challenge.slug,
+      level: challenge.level,
+      language: challenge.language,
+    });
+  }, [challenge.slug, challenge.level, challenge.language]);
   const [results, setResults] = useState<TestState[]>(() =>
     challenge.testCases.map(() => "idle")
   );
@@ -31,13 +40,76 @@ export default function DynamicChallengePage({ params }: { params: Promise<{ slu
   const [running, setRunning] = useState(false);
   const py = usePyodide();
 
+  const modalRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!won) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setWon(false);
+        e.preventDefault();
+        return;
+      }
+      if (e.key === "Tab") {
+        if (!modalRef.current) return;
+        const focusable = modalRef.current.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), [tabindex="0"]'
+        );
+        if (focusable.length === 0) return;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+
+        if (e.shiftKey) {
+          if (document.activeElement === first) {
+            last.focus();
+            e.preventDefault();
+          }
+        } else {
+          if (document.activeElement === last) {
+            first.focus();
+            e.preventDefault();
+          }
+        }
+      }
+    };
+
+    // Auto-focus the first element in modal
+    setTimeout(() => {
+      if (modalRef.current) {
+        const focusable = modalRef.current.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled])'
+        );
+        if (focusable.length > 0) {
+          focusable[0].focus();
+        }
+      }
+    }, 50);
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [won]);
+
   const runTests = async () => {
     setError(null);
     setRunning(true);
 
-    if (challenge.language === "JavaScript") {
+    if (challenge.language === "JavaScript" || challenge.language === "TypeScript") {
       try {
-        const fn = new Function(`${code}; return ${challenge.functionName};`)();
+        let runnableCode = code;
+        if (challenge.language === "TypeScript") {
+          const tr = await fetch("/api/transpile", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ code }),
+          });
+          if (!tr.ok) throw new Error("Could not reach the TypeScript compiler.");
+          const tdata = await tr.json();
+          if (Array.isArray(tdata.diagnostics) && tdata.diagnostics.length > 0) {
+            throw new Error(tdata.diagnostics[0]);
+          }
+          runnableCode = tdata.js || "";
+        }
+        const fn = new Function(`${runnableCode}; return ${challenge.functionName};`)();
         if (typeof fn !== "function") throw new Error(`${challenge.functionName} is not defined`);
 
         const next = challenge.testCases.map((t) => {
@@ -53,6 +125,11 @@ export default function DynamicChallengePage({ params }: { params: Promise<{ slu
         const allPassed = next.every((r) => r === "pass");
         recordSubmission(challenge.slug, code, allPassed);
         if (allPassed) {
+          track("challenge_passed", {
+            slug: challenge.slug,
+            level: challenge.level,
+            language: challenge.language,
+          });
           setWon(true);
           addXP(challenge.xp);
           if (challenge.badge) unlockBadge(challenge.badge);
@@ -96,6 +173,11 @@ print("TEST_OUTPUTS:" + json.dumps(results))
             const allPassed = next.every((r) => r === "pass");
             recordSubmission(challenge.slug, code, allPassed);
             if (allPassed) {
+              track("challenge_passed", {
+                slug: challenge.slug,
+                level: challenge.level,
+                language: challenge.language,
+              });
               setWon(true);
               addXP(challenge.xp);
               if (challenge.badge) unlockBadge(challenge.badge);
@@ -196,9 +278,9 @@ print("TEST_OUTPUTS:" + json.dumps(results))
           className="glass-strong"
           style={{ borderRadius: 20, boxShadow: "0 20px 44px rgba(60,80,150,.22)", padding: "26px 26px" }}
         >
-          <h3 className="font-display" style={{ fontWeight: 800, fontSize: 24, color: "#13335f", margin: "0 0 12px" }}>
+          <h1 className="font-display" style={{ fontWeight: 800, fontSize: 24, color: "#13335f", margin: "0 0 12px" }}>
             {challenge.name}
-          </h3>
+          </h1>
           <p style={{ fontSize: 15, lineHeight: 1.7, color: "#41608f", fontWeight: 600, margin: "0 0 18px", textWrap: "pretty" }}>
             {challenge.instructions}
           </p>
@@ -219,7 +301,7 @@ print("TEST_OUTPUTS:" + json.dumps(results))
 
         {/* editor */}
         <EditorFrame
-          filename={challenge.language === "JavaScript" ? "solution.js" : "solution.py"}
+          filename={challenge.language === "Python" ? "solution.py" : challenge.language === "TypeScript" ? "solution.ts" : "solution.js"}
           language={challenge.language.toUpperCase()}
           glassy
           footer={
@@ -251,7 +333,7 @@ print("TEST_OUTPUTS:" + json.dumps(results))
             <CodeEditor
               value={code}
               onChange={setCode}
-              language={challenge.language.toLowerCase() as "python" | "javascript"}
+              language={challenge.language.toLowerCase() as "python" | "javascript" | "typescript"}
               minHeight="280px"
             />
           </div>
@@ -321,7 +403,7 @@ print("TEST_OUTPUTS:" + json.dumps(results))
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src="/assets/clouds-neon/cutout-cloud-neon-1-04.webp"
-              alt=""
+              alt={challenge.badge ? `${challenge.name} badge` : "Concept Mastery"}
               className="cloud-glow"
               style={{ display: "block", width: 130, height: "auto", margin: "0 auto", animation: "floatySm 5s ease-in-out infinite" }}
             />
@@ -341,10 +423,10 @@ print("TEST_OUTPUTS:" + json.dumps(results))
         </div>
       </div>
 
-      {/* victory modal */}
       {won && (
         <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: "rgba(20,16,50,.55)", backdropFilter: "blur(6px)" }}>
           <div
+            ref={modalRef}
             className="anim-pop-in text-center"
             style={{
               background: "linear-gradient(180deg, #2b2c63, #4c4096)",
@@ -358,7 +440,7 @@ print("TEST_OUTPUTS:" + json.dumps(results))
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src="/assets/clouds-neon/cutout-cloud-neon-1-04.webp"
-              alt=""
+              alt="Celebration cloud"
               className="cloud-glow"
               style={{ display: "block", width: 160, height: "auto", margin: "0 auto", animation: "floatySm 4s ease-in-out infinite" }}
             />

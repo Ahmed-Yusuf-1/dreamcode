@@ -22,8 +22,17 @@ export default function SiteChrome({ children }: { children: React.ReactNode }) 
 
   return (
     <>
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-[100] focus:px-4 focus:py-2 focus:bg-[#121037] focus:text-[#ffe7f4] focus:border-2 focus:border-[#ff7ad9] focus:rounded-md focus:font-black focus:shadow-[0_0_15px_rgba(255,122,217,0.5)] focus:outline-none"
+      >
+        Skip to content
+      </a>
       {!hideNav && <NavBar isHome={isHome} />}
-      <div style={{ paddingTop: !hideNav && !isHome && !noSpacer ? "var(--nav-h)" : 0 }}>{children}</div>
+      {/* tabIndex -1 so the skip link moves keyboard focus here, not just the viewport */}
+      <main id="main-content" tabIndex={-1} style={{ paddingTop: !hideNav && !isHome && !noSpacer ? "var(--nav-h)" : 0, outline: "none" }}>
+        {children}
+      </main>
     </>
   );
 }

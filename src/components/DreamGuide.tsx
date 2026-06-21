@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { spendXP, useIsSignedIn } from "@/lib/profile";
+import { track } from "@/lib/telemetry";
 
 /** What the learner is currently working on, passed in by each page. */
 export interface GuideContext {
@@ -43,6 +44,59 @@ export default function DreamGuide({
   const [upgradeNeeded, setUpgradeNeeded] = useState(false);
 
   const scrollRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const launcherRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setOpen(false);
+        launcherRef.current?.focus();
+        e.preventDefault();
+        return;
+      }
+      if (e.key === "Tab") {
+        if (!panelRef.current) return;
+        const focusable = panelRef.current.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), [tabindex="0"]'
+        );
+        if (focusable.length === 0) return;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+
+        if (e.shiftKey) {
+          if (document.activeElement === first) {
+            last.focus();
+            e.preventDefault();
+          }
+        } else {
+          if (document.activeElement === last) {
+            first.focus();
+            e.preventDefault();
+          }
+        }
+      }
+    };
+
+    // Focus the textarea when open
+    setTimeout(() => {
+      if (panelRef.current) {
+        const inputEl = panelRef.current.querySelector<HTMLElement>("textarea, input");
+        if (inputEl) {
+          inputEl.focus();
+        } else {
+          const firstFocusable = panelRef.current.querySelector<HTMLElement>(
+            'a[href], button:not([disabled]), [tabindex="0"]'
+          );
+          firstFocusable?.focus();
+        }
+      }
+    }, 50);
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [open]);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
@@ -85,6 +139,7 @@ export default function DreamGuide({
         if (reply) {
           setMessages([...next, { role: "assistant", content: reply }]);
           spendXP(HINT_COST);
+          track("hint_requested", { context: context?.title || "general" });
         } else {
           setNote("The guide did not have a reply that time. Try rephrasing your question.");
         }
@@ -110,6 +165,7 @@ export default function DreamGuide({
     <>
       {/* launcher */}
       <button
+        ref={launcherRef}
         onClick={() => setOpen(true)}
         className="fixed cursor-pointer transition-transform hover:-translate-y-0.5"
         style={{
@@ -131,6 +187,7 @@ export default function DreamGuide({
 
       {open && (
         <div
+          ref={panelRef}
           className="fixed anim-pop-in flex flex-col"
           style={{
             bottom: 22,
@@ -169,6 +226,7 @@ export default function DreamGuide({
             <button
               onClick={() => setOpen(false)}
               className="cursor-pointer"
+              aria-label="Close Dream Guide"
               style={{
                 border: "none",
                 background: "rgba(255,255,255,.12)",

@@ -4,8 +4,10 @@ import { useState } from "react";
 import { addXP, unlockBadge } from "@/lib/profile";
 import Link from "next/link";
 import Cloud from "@/components/Cloud";
-import { gradientOpacity, cloudOpacity } from "@/lib/theme";
+import { cloudOpacity } from "@/lib/theme";
 import { playChime } from "@/lib/sound";
+import { track } from "@/lib/telemetry";
+import { useActiveTrack } from "@/lib/track";
 
 type Question = {
   id: number;
@@ -46,6 +48,7 @@ const QUESTIONS: Question[] = [
 const cs = cloudOpacity.practice;
 
 export default function PlacementPage() {
+  const { track: activeTrack } = useActiveTrack();
   const [step, setStep] = useState<"welcome" | "quiz" | "result">("welcome");
   const [currentQ, setCurrentQ] = useState(0);
   const [score, setScore] = useState(0);
@@ -70,6 +73,7 @@ export default function PlacementPage() {
       setStep("result");
       addXP(50);
       unlockBadge("bug-catcher");
+      track("placement_completed", { track: activeTrack });
       playChime("success");
     }
   };

@@ -32,92 +32,71 @@ dashboards):** add `https://dreamcoder.dev` alongside localhost in Supabase Auth
 (Site URL + redirect), the Google and GitHub OAuth apps, and the Spotify app
 redirect URI. See PROJECT.md "Custom domain".
 
-### 2. Content depth (the major effort) - in progress
-Goal: every language is a vast beginner -> expert path where each concept gets
-MULTIPLE lessons + practice + a challenge, so the learner becomes genuinely
-proficient, not one shallow lesson per topic.
+### 2. Backend live end-to-end test + run the migrations (Owner)
+The sync path is fully code-audited and fixed by Claude (idempotent upserts, zeroed
+demo seed, server-derived level, RLS verified); only the LIVE cross-device test
+remains, which needs the owner's provisioned Supabase. Owner: apply
+`supabase/migrations/0001_init.sql` AND `0002_telemetry.sql`, set `.env.local`, then
+sign up (email + Google + GitHub); earn XP / complete a stop / pass a section
+challenge / rate a review; reload and on a SECOND device confirm XP, streak, badges,
+completed stops, and FSRS due dates persist; confirm rows in `profiles /
+completed_stops / unlocked_badges / srs_cards / submissions / events` and that RLS
+blocks other users' rows. Report mismatches; Claude fixes the specific sync path.
+(Non-blocking edges: no offline-retry queue and no anonymous -> account merge - both
+fine for an online-first MVP.)
 
-Shipped so far (current state in PROJECT.md): the `/industry` section, the modular
-+ tiered model + `getModules()`, module grouping in the journey/catalog, the C#
-read+quiz mode, and **beginner -> expert content for all three languages** - Python
-44 lessons / 11 modules, JavaScript 25 / 7, C# 21 / 6 (read+quiz). The journey
-module-ordering and C# kicker issues from the prior audit are fixed and verified.
+---
 
-Also shipped + verified since: **2k-A** - every runnable lesson's practice dataset
-(58 `practiceDatasets` in `data.ts`, all predict answers executed and confirmed
-correct, indentation normalized, scratch files removed); **2k-C** - the async JS
-runner fix in `LessonView`; and the **2k-B INFRASTRUCTURE** - `moduleChallenges` +
-`getModuleChallenge()` in `data.ts`, gold "Section challenge" nodes on `/journey`
-(locked until the whole module is complete, then a clickable gold star, "cleared"
-once passed), and a last-lesson "Section challenge" CTA in `LessonView`. Verified
-in the browser across locked / unlocked / CTA / C#-has-no-node states.
+## Recently shipped (full current-state detail in PROJECT.md)
 
-**2k-B content** then shipped (Gemini, Claude-verified): every remaining runnable
-module now has its own real, graded section challenge - 21 challenges total, so
-each runnable Python and JavaScript module ends with a difficulty-matched capstone
-(C# and the Python read+quiz modules keep their quizzes, no code challenge). All
-challenge test cases were verified by running reference solutions; the in-app
-grader was confirmed (js-expert-proxy passes 3/3 in the browser); a third test
-case was added to the two challenges that had only two. tsc/eslint/build green.
+- **Content depth:** three tracks beginner -> expert (Python 44 / JS 25 / C# 21
+  lessons), modular + tiered model (`getModules`), `/industry`, C# read+quiz mode.
+- **TypeScript = 4th track (SHIPPED + VERIFIED):** server-side type-strip
+  (`/api/transpile`) then run in the JS engine - no external service. 14 lessons
+  across 4 tiers (beginner -> expert), 14 practice sets, 4 section challenges
+  (reference seed by Claude, full curriculum by Gemini). All verified: lessons run,
+  predicts correct, challenges grade, journey/CTA wired. The one follow-on is
+  semantic type-checking (needs lib `.d.ts` in-browser; backlog).
+- **Practice (2k-A):** all 58 runnable Python/JS lessons have a verified `PracticeDataset`.
+- **Section challenges (2k-B):** every runnable Python/JS/TS module ends with a
+  graded capstone (`moduleChallenges` + `/journey` node + last-lesson CTA); 25 challenges.
+- **JS runner (2k-C):** async / event-loop lessons capture deferred output.
+- **Accessibility:** skip link + `<main>` landmark, keyboard-operable Explore
+  dropdown, focus-trapped modals, aria-labels on icon buttons, one `<h1>` per page,
+  a WCAG-AA contrast pass.
+- **Telemetry:** `events` table + `/api/events` + batched `track()` + a `/profile`
+  activity view; all 13 canonical events instrumented.
+- **Security review:** fixed an open redirect in the OAuth callback (the `next`
+  param is now validated to same-origin relative paths) and added baseline response
+  headers (`X-Frame-Options: DENY`, `nosniff`, `Referrer-Policy`, `Permissions-Policy`).
 
-Step 2 (content depth) is now essentially complete: three tracks beginner ->
-expert, practice for every runnable lesson, and a difficulty-matched section
-challenge at the end of every runnable module. Deeper expansion (more lessons per
-concept, a 4th language) lives in "Later / backlog". The next active chunk is set
-below once the owner picks a direction.
+---
 
-### 3. Accessibility + SEO - core shipped (Owner: Gemini for the remainder)
-Reduced-motion (CSS + Parallax `matchMedia` guard), keyboard `:focus-visible`
-rings, per-lesson `generateMetadata`, and domain-aware Open Graph / canonical are
-in. Remaining: a broader keyboard-nav + alt-text audit and i18n groundwork.
+## Security hardening (audit follow-ups, not yet done)
 
-### 4. Confirm the backend end to end (Owner: OWNER live test; Claude audited the code)
+Full review done (auth, RLS, the `/api/*` surface, secrets, injection/XSS, deps).
+Posture is solid: all DB access is RLS-scoped via the anon key + the user's session
+(no service-role key anywhere in the app), routes are auth-gated + Zod-validated, and
+the client-side runners only ever execute the learner's OWN code in their OWN browser.
+Fixed this pass: the OAuth-callback open redirect + missing security headers. The rest
+is non-blocking, to do before/at public launch:
 
-**Code audit (Claude) - DONE.** Full review of the sync path: `profile.ts`, `srs.ts`,
-`track.ts`, the `/api/{profile,progress,badges,srs,submissions}` routes, the
-RLS-scoped data layer (`src/lib/supabase/data.ts`), the auth plumbing
-(`supabase/server.ts`, `proxy.ts`), and the schema (`0001_init.sql`). Findings:
-- The architecture is correct. Auth uses `supabase.auth.getUser()` (verifies the
-  JWT, not just the cookie); every data function is RLS-scoped; routes are
-  auth-gated + Zod-validated; the server DERIVES `level` from `xp` so the client
-  never desyncs level; `srs_cards` has the UPDATE policy FSRS needs every review;
-  the signup trigger seeds a `profiles` row.
-- **Fixed:** `completeStop` / `unlockBadge` used the default upsert (ON CONFLICT DO
-  UPDATE), but `completed_stops` / `unlocked_badges` have no UPDATE RLS policy, so a
-  redundant call (e.g. a stale second device re-posting) was RLS-denied. Switched
-  both to `ignoreDuplicates: true` (ON CONFLICT DO NOTHING, insert-only) - now
-  genuinely idempotent. tsc/eslint/build green.
-
-**Known edges (owner to decide; not blocking the happy path):**
-1. **Demo seed can corrupt the server (recommend fixing).** `DEFAULT_PROFILE` in
-   `profile.ts` ships FAKE progress (level 4, 540 XP, 7-day streak, 5 badges, 3
-   completed stops). On a fresh signed-in device, if an XP action fires in the
-   sub-second window before the first `syncProfileFromApi()` returns, `addXP` reads
-   that fake local profile and PATCHes an inflated `totalXp` to the server. Also,
-   new anonymous visitors see fake progress they did not earn. Recommend zeroing
-   `DEFAULT_PROFILE` to a true empty state (level 1, xp 0, streak 0, no badges, no
-   completedStops, flat weekActivity). This is a product/demo call, so left to the
-   owner.
-2. **No offline retry / no anonymous-merge.** A failed PATCH/POST (network blip) is
-   not retried, and a reload pulls server truth over local, so that one action is
-   lost; and signing in overwrites local with server (pre-login anonymous progress
-   is not merged up). Both are acceptable for an online-first MVP - flag only.
-3. **Pre-trigger users:** `updateProfile` silently no-ops if no `profiles` row
-   exists, so the `0001_init.sql` trigger MUST be installed before first signups.
-
-**Live end-to-end test (OWNER - needs the provisioned Supabase + `.env.local`; cannot
-be run from this repo without secrets):**
-1. Apply `supabase/migrations/0001_init.sql` and set `.env.local` (see PROJECT.md).
-2. Sign up (email/password, and once each via Google + GitHub OAuth).
-3. While signed in: complete a lesson (XP + stop), pass a section challenge (XP +
-   stop + maybe badge), and rate a `/review` card.
-4. Reload: dashboard XP/level, streak, badges, completed journey stops, and the
-   `/review` due count should match (pulled from the server, not the demo seed).
-5. On a SECOND device/browser, sign in as the same user: the same progress, streak,
-   badges, and FSRS due dates should appear.
-6. In Supabase, confirm rows in `profiles`, `completed_stops`, `unlocked_badges`,
-   `srs_cards`, `submissions`, and that RLS blocks reading another user's rows.
-Report any mismatch back; Claude will fix the specific sync path.
+- **Content-Security-Policy** is not set yet. A strict CSP needs per-source
+  allowances for the app's inline styles plus the Spotify SDK and Supabase; build it
+  report-only first, then enforce.
+- **Rate limiting.** `/api/transpile` (public, CPU) and `/api/guide` (auth-gated but
+  spends model budget) have no limiter. Add one at launch (e.g. Vercel/Upstash, keyed
+  by IP / user) - needs an external store, so flag it.
+- **Dependency advisory.** `npm audit` shows 2 MODERATE issues from `postcss` bundled
+  inside Next (CSS-stringify XSS). Low real-world risk here (we never process
+  untrusted CSS) and the audit "fix" downgrades Next, which we will NOT do; resolve by
+  bumping Next when a patched release ships.
+- **Community / imported content (when it lands).** The lesson runners execute code
+  client-side - safe for first-party content, but user-submitted lessons would be an
+  XSS / data-exfiltration vector. Sandbox that execution (sandboxed iframe, no
+  same-origin / cookies) before shipping community content.
+- **`/api/events` props cap.** The route caps batch size (50) + name length but not
+  the per-event `props` size; add a small cap to bound storage abuse.
 
 ---
 
@@ -146,10 +125,9 @@ Report any mismatch back; Claude will fix the specific sync path.
 
 ## Later / backlog
 
-- **Telemetry**: an events table + time-to-first-success / drop-off tracking, to
-  drive curriculum improvements.
 - **Expert tracks** (metaprogramming, concurrency, internals) for both languages.
-- **TypeScript track** (behind Python / JavaScript / C#).
+- **Semantic TS type-checking** in the editor (needs lib `.d.ts` in-browser; see the
+  type-check note under the TypeScript track).
 - **Community / imported content** support.
 - **Institutional/admin** direction (class dashboards, standards alignment) if the
   audience ever expands past individual learners.

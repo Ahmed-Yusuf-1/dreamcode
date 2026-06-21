@@ -2,10 +2,11 @@
 
 import { useState, useEffect } from "react";
 import { updateProfile } from "@/lib/profile";
+import { track as telemetryTrack } from "@/lib/telemetry";
 
-export type Track = "python" | "javascript" | "csharp";
+export type Track = "python" | "javascript" | "csharp" | "typescript";
 
-const TRACKS: Track[] = ["python", "javascript", "csharp"];
+const TRACKS: Track[] = ["python", "javascript", "csharp", "typescript"];
 const isTrack = (v: unknown): v is Track => TRACKS.includes(v as Track);
 
 /**
@@ -39,6 +40,7 @@ export function useActiveTrack() {
     } catch (e) {
       console.error("Failed to sync track selection to backend", e);
     }
+    telemetryTrack("track_switched", { track: newTrack });
   };
 
   useEffect(() => {

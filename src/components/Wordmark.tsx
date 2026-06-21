@@ -14,7 +14,7 @@ export default function Wordmark({
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src="/assets/clouds-neon/cutout-cloud-neon-1-03.webp"
-        alt=""
+        alt="dreamcode"
         style={{
           display: "block",
           width: cloudW,

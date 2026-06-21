@@ -63,12 +63,12 @@ export default function ProjectsPage() {
 
       <div className="relative z-5 mx-auto" style={{ maxWidth: 1000, padding: "4vh 32px 90px" }}>
         <div className="text-center" style={{ marginBottom: 44 }}>
-          <h2
+          <h1
             className="font-display glow-heading"
             style={{ fontWeight: 800, fontSize: 46, color: "#ffffff", margin: "0 0 10px" }}
           >
             Build something real
-          </h2>
+          </h1>
           <p
             style={{
               fontSize: 17,
@@ -91,12 +91,12 @@ export default function ProjectsPage() {
           return (
             <div key={tier.name} style={{ marginBottom: 40 }}>
               <div className="flex items-baseline" style={{ gap: 14, marginBottom: 6 }}>
-                <h3
+                <h2
                   className="font-display"
                   style={{ fontWeight: 800, fontSize: 27, color: "#ffffff", margin: 0, textShadow: "0 2px 14px rgba(40,40,100,.6)" }}
                 >
                   {tier.name}
-                </h3>
+                </h2>
                 <span style={{ fontSize: 13.5, fontWeight: 700, color: "rgba(255,255,255,.85)" }}>{tier.blurb}</span>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2" style={{ gap: 16, marginTop: 14 }}>

@@ -10,6 +10,7 @@ import { practiceDatasets, PracticeDataset } from "@/lib/data";
 import { addXP, unlockBadge, completeStop } from "@/lib/profile";
 import { playChime } from "@/lib/sound";
 import { getAdjacent, getLesson } from "@/lib/curriculum";
+import { track } from "@/lib/telemetry";
 
 type Step = 0 | 1 | 2 | 3;
 const STEP_LABELS = ["Predict", "Arrange", "Fill in", "Done"];
@@ -138,9 +139,9 @@ function PracticeCard({ kicker, title, children }: { kicker: string; title: stri
       >
         {kicker}
       </span>
-      <h2 className="font-display" style={{ fontWeight: 800, fontSize: 28, color: "#13335f", margin: "16px 0 10px" }}>
+      <h1 className="font-display" style={{ fontWeight: 800, fontSize: 28, color: "#13335f", margin: "16px 0 10px" }}>
         {title}
-      </h2>
+      </h1>
       {children}
     </div>
   );
@@ -435,6 +436,7 @@ function DoneStep({ slug }: { slug: string }) {
     addXP(20);
     completeStop(`practice:${slug}`);
     unlockBadge("first-loop");
+    track("practice_completed", { slug });
     playChime("success");
   }, [slug]);
 

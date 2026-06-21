@@ -7,6 +7,7 @@ import { gradientOpacity, cloudOpacity } from "@/lib/theme";
 import Cloud from "./Cloud";
 import { createClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
+import { track } from "@/lib/telemetry";
 
 /**
  * Shared login/signup scene: doorway-clouds background + frosted card.
@@ -52,6 +53,7 @@ export default function AuthScene({ mode }: { mode: "login" | "signup" }) {
           setError(error.message);
           return;
         }
+        track("signup", {});
         if (data.session) {
           router.push(dest);
           return;
@@ -63,6 +65,7 @@ export default function AuthScene({ mode }: { mode: "login" | "signup" }) {
           setError(error.message);
           return;
         }
+        track("login", {});
         router.push(dest);
       }
     } finally {
@@ -129,9 +132,9 @@ export default function AuthScene({ mode }: { mode: "login" | "signup" }) {
               animation: "floatySm 6s ease-in-out infinite",
             }}
           />
-          <div className="font-display neon-title" style={{ fontWeight: 800, fontSize: 38, color: "#fff6fb" }}>
+          <h1 className="font-display neon-title" style={{ fontWeight: 800, fontSize: 38, color: "#fff6fb", margin: 0 }}>
             dreamcode
-          </div>
+          </h1>
           <p style={{ fontSize: 15, fontWeight: 700, color: "#ffffff", textShadow: "0 2px 14px rgba(30,30,80,.7)", margin: "8px 0 0" }}>
             {isSignup ? "A whole sky of code is waiting. It's free to start." : "Welcome back, night driver."}
           </p>
@@ -147,6 +150,8 @@ export default function AuthScene({ mode }: { mode: "login" | "signup" }) {
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="What should the clouds call you?"
+              aria-label="Full name"
+              className="transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[#ff7ad9] focus:border-transparent"
               style={{ ...fieldStyle, marginBottom: 12 }}
             />
           )}
@@ -156,6 +161,8 @@ export default function AuthScene({ mode }: { mode: "login" | "signup" }) {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="Email"
+            aria-label="Email address"
+            className="transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[#ff7ad9] focus:border-transparent"
             style={{ ...fieldStyle, marginBottom: 12 }}
           />
           <input
@@ -164,6 +171,8 @@ export default function AuthScene({ mode }: { mode: "login" | "signup" }) {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="Password"
+            aria-label="Password"
+            className="transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[#ff7ad9] focus:border-transparent"
             style={{ ...fieldStyle, marginBottom: 18 }}
           />
           {error && (
