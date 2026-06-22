@@ -7,11 +7,12 @@ framework code (per `AGENTS.md`). Keep this file updated at the end of each chat
 
 ## What it is
 
-Dreamcode is a web app for learning to program (Python and JavaScript), beginner
-to advanced. The thesis: beat "tutorial hell" by having the learner write and run
-real code at every step, with spaced review and an optional Socratic AI guide that
-asks questions instead of giving answers. Visual identity: a dreamy neon-dusk /
-night-sky theme (pastel gradients, floating cloud cutouts, glowing wordmark).
+Dreamcode is a web app for learning to program, beginner to expert, across four
+tracks: **Python, JavaScript, C#, and TypeScript**. The thesis: beat "tutorial hell"
+by having the learner write and run real code at every step, with spaced review and
+an optional Socratic AI guide that asks questions instead of giving answers. Visual
+identity: a dreamy neon-dusk / night-sky theme (pastel gradients, floating cloud
+cutouts, glowing wordmark, cloud-and-spark favicon at `src/app/icon.svg`).
 
 Monetization: **freemium**. The AI guide (DreamGuide) is the intended **paid**
 feature; `profiles.tier` (`free`/`pro`) exists to gate it. Audience: individual
@@ -74,9 +75,9 @@ self-learners, students, beginners. Community-imported content is a later idea.
   `/journey` (locked until every lesson in the module is complete, then a
   clickable gold star, "cleared" once passed) and a CTA on the module's last
   lesson in `LessonView`. The challenge level matches the module tier. Every
-  runnable Python and JavaScript module is now mapped to its own graded challenge
-  (16 entries in `moduleChallenges`). C# and the Python read+quiz modules keep
-  their quizzes (no code challenge).
+  runnable Python, JavaScript, and TypeScript module is mapped to its own graded
+  challenge in `moduleChallenges`. C# and the Python read+quiz modules keep their
+  quizzes (no code challenge).
 - **Telemetry (complete & verified):** an append-only `events` table
   (`supabase/migrations/0002_telemetry.sql`, RLS select/insert own) + `/api/events`
   (POST batch / GET recent, auth-gated, Zod) + `src/lib/telemetry.ts` `track(name,
@@ -85,7 +86,21 @@ self-learners, students, beginners. Community-imported content is a later idea.
   challenges, projects, AI hints, placement, track switches, reviews) and implemented
   a gorgeous, on-theme per-user activity timeline and aggregate counts view on the
   `/profile` page. Owner must run `0002_telemetry.sql` in production.
-- **Spotify:** real Web Playback SDK + PKCE OAuth player in the nav.
+- **Spotify:** real Web Playback SDK + PKCE OAuth player in the nav. The client ID
+  comes ONLY from the server (`/api/spotify/config`, env `SPOTIFY_CLIENT_ID`); there
+  is no in-app settings cog or client-ID paste form (removed) and no manual
+  embed/SDK toggle. Non-Premium accounts / SDK failures fall back to the iframe embed
+  automatically. The Connect button no-ops if the server has no client ID configured.
+- **Onboarding + auth-aware UX:** a brand-new learner is guided from lesson 1, never
+  mid-curriculum. `getNextLesson(track, completedStops)` (curriculum.ts) drives the
+  guided routing; `src/components/JourneyCtas.tsx` makes the home hero/final CTAs
+  auth-aware (Start free/Start here -> Continue learning once signed in) and the
+  `/start` button + home "continue" card point to the real next lesson. The NavBar
+  swaps "Start free" for a profile-avatar chip (-> `/profile`) once signed in.
+  `src/components/GuidePath.tsx` (global via `SiteChrome`) is a dismissible coach that
+  strings Learn -> Practice -> Challenge -> Build for new learners (under 6 completed
+  stops) with route-aware tips + one next-step CTA, and hides on dismiss. Home
+  landing stats are honest (100+ lessons / 70+ practice sets / 10 badges).
 - **AI guide (DreamGuide):** real Socratic hint chat, not a scripted demo. The
   model call is server-side and **provider-agnostic** (`src/lib/ai/guide.ts` +
   `/api/guide`): set `AI_PROVIDER` (gemini|openai|anthropic) + `AI_API_KEY` +
@@ -103,12 +118,19 @@ self-learners, students, beginners. Community-imported content is a later idea.
   keyboard `:focus-visible` rings, and sets canonical tags / metadata.
 - **Industry section:** `/industry` covers Python, JavaScript, and C#/.NET
   (domains, tools, roles), data in `src/lib/industry.ts`.
-- **Not done (all remaining work):** owner external actions (custom-domain dashboard
-  entries; the live cross-device backend test). External-service / "Final" bucket: a
-  **server-side sandbox** so C# can run (Python/JS/TS run client-side, C# cannot);
-  the AI provider key; billing/Stripe to sell Pro (flip `GUIDE_REQUIRE_PRO`).
-  Backlog: semantic TS type-checking in-editor (needs lib `.d.ts` in-browser),
-  expert tracks, i18n, community content.
+- **Not done (all remaining work; full detail in PLAN.md):**
+  - *Owner actions (no code):* run the two Supabase migrations + set `.env.local`;
+    add `dreamcoder.dev` to the Supabase/Google/GitHub/Spotify dashboards; add the
+    bare `/auth/callback` URL to Supabase Redirect URLs (else OAuth sign-in returns
+    "requested path is invalid"); run the live cross-device backend test.
+  - *Security hardening (pre-launch):* a Content-Security-Policy; rate limiting on
+    `/api/transpile` + `/api/guide`; bump Next to clear the postcss audit advisory;
+    cap `/api/events` props size.
+  - *Final / deferred externals:* the AI provider key; Stripe billing (flip
+    `GUIDE_REQUIRE_PRO`); a server-side sandbox so C# can run (Py/JS/TS run
+    client-side, C# cannot).
+  - *Backlog:* semantic TS type-checking in-editor (needs lib `.d.ts` in-browser),
+    expert tracks, community content (would need a UGC code-exec sandbox), i18n.
 
 ## Run it
 
@@ -153,9 +175,12 @@ so the Spotify player never remounts), `NavBar`, `SpotifyPlayer`, `LessonView`
 `CodeEditor`, `EditorFrame`, `DreamGuide` (real Socratic AI hint chat -> `/api/guide`,
 signed-in gated, takes problem `context` + `getCode`), `FlowSteps`,
 `Cloud`/`Parallax`, `SceneTopBar`, `AuthScene` (Supabase auth, falls back to demo
-routing pre-config), `Wordmark`, `StreakFlame`.
+routing pre-config), `Wordmark`, `StreakFlame`, `JourneyCtas` (auth/progress-aware
+home + /start CTAs), `GuidePath` (dismissible first-run Learn->Practice->Challenge->
+Build coach, mounted globally in `SiteChrome`).
 
-Lib (`src/lib/`): `curriculum.ts` (typed `Lesson[]` + `getAdjacent` track-aware),
+Lib (`src/lib/`): `curriculum.ts` (typed `Lesson[]`; `getAdjacent` + `getModules` +
+`getFirstLesson`/`getNextLesson` track-aware, `getModuleChallenge`),
 `data.ts` (peaks, projects, `practiceDatasets`, `challenges`), `profile.ts`
 (`useUserProfile`, XP/streak/badges, localStorage + `/api/*` sync), `srs.ts` (FSRS),
 `track.ts` (active track), `telemetry.ts` (batched `track()` -> `/api/events`),
@@ -165,7 +190,9 @@ Lib (`src/lib/`): `curriculum.ts` (typed `Lesson[]` + `getAdjacent` track-aware)
 `ai/guide.ts` (server-only, provider-agnostic AI hint adapters + system prompt).
 
 Other: `src/proxy.ts` (Next 16 Proxy = renamed Middleware; refreshes the session),
-`public/pyodide-worker.js`, `supabase/migrations/{0001_init,0002_telemetry}.sql`,
+`src/app/icon.svg` (brand favicon), `next.config.ts` (security headers +
+allowedDevOrigins), `public/pyodide-worker.js`,
+`supabase/migrations/{0001_init,0002_telemetry}.sql`,
 `Extra/Code-handoff/` (design source of truth), `Extra/*.pdf` (pedagogy research).
 
 ## Conventions (follow these)

@@ -20,7 +20,6 @@ const PLAYLIST_ID = "37i9dQZF1DWWQRwui0ExPn"; // Lo-Fi Beats
 const EMBED_SRC = `https://open.spotify.com/embed/playlist/${PLAYLIST_ID}?utm_source=generator&theme=0`;
 const STORAGE_KEY = "dc_spotify_connected";
 const STORAGE_STYLE_KEY = "dc_spotify_btn_style";
-const STORAGE_CLIENT_KEY = "dc_spotify_client_id";
 const STORAGE_FALLBACK_KEY = "dc_spotify_use_embed";
 
 const BUTTON_STYLES = [
@@ -170,11 +169,9 @@ export default function SpotifyPlayer() {
   const [styleIndex, setStyleIndex] = useState(0);
   const wrapRef = useRef<HTMLDivElement>(null);
 
-  // Spotify SDK Integration states
+  // Spotify SDK Integration states. The client ID is provided by the server
+  // (/api/spotify/config); there is no in-app settings form for it.
   const [clientId, setClientId] = useState("");
-  const [clientIdInput, setClientIdInput] = useState("");
-  const [isGlobalClient, setIsGlobalClient] = useState(false);
-  const [showSettings, setShowSettings] = useState(false);
   const [isPremium, setIsPremium] = useState(true);
   const [useEmbedFallback, setUseEmbedFallback] = useState(false);
   const [player, setPlayer] = useState<SpotifyPlayerInstance | null>(null);
@@ -228,83 +225,42 @@ export default function SpotifyPlayer() {
       }, 0);
     } catch { }
 
-    // Fetch client ID from server dynamically at runtime
+    // Fetch the globally-configured Spotify client ID from the server.
     fetch("/api/spotify/config")
       .then((res) => res.json())
       .then((data) => {
         const serverClientId = data.clientId || "";
-        const storedClientId = serverClientId || localStorage.getItem(STORAGE_CLIENT_KEY) || "";
-
-        setTimeout(() => {
-          setClientId(storedClientId);
-          setClientIdInput(storedClientId);
-          if (serverClientId) {
-            setIsGlobalClient(true);
-          }
-
-          if (!storedClientId) {
-            setShowSettings(true);
-          } else {
-            setShowSettings(false);
-          }
-        }, 0);
+        setTimeout(() => setClientId(serverClientId), 0);
       })
-      .catch((err) => {
-        console.error("Failed to fetch Spotify config:", err);
-        const storedClientId = localStorage.getItem(STORAGE_CLIENT_KEY) || "";
-        setTimeout(() => {
-          setClientId(storedClientId);
-          setClientIdInput(storedClientId);
-          if (!storedClientId) {
-            setShowSettings(true);
-          } else {
-            setShowSettings(false);
-          }
-        }, 0);
-      });
+      .catch((err) => console.error("Failed to fetch Spotify config:", err));
   }, []);
 
   // Handle OAuth code callback in the URL
   useEffect(() => {
     const searchParams = new URLSearchParams(window.location.search);
     const code = searchParams.get("code");
-    if (code) {
-      // Fetch the config dynamically to get the client ID for token exchange
-      fetch("/api/spotify/config")
-        .then((res) => res.json())
-        .then((data) => {
-          const serverClientId = data.clientId || "";
-          const storedClientId = serverClientId || localStorage.getItem(STORAGE_CLIENT_KEY) || "";
-          if (storedClientId) {
-            exchangeCodeForToken(storedClientId, code).then((token) => {
-              if (token) {
-                setConnected(true);
-                try {
-                  localStorage.setItem(STORAGE_KEY, "1");
-                } catch { }
-                setOpen(true); // Open settings to show they connected
-              }
-              cleanUrlParams();
-            });
+    if (!code) return;
+    // Exchange the OAuth code using the server-configured client ID.
+    fetch("/api/spotify/config")
+      .then((res) => res.json())
+      .then((data) => {
+        const serverClientId = data.clientId || "";
+        if (!serverClientId) {
+          cleanUrlParams();
+          return;
+        }
+        exchangeCodeForToken(serverClientId, code).then((token) => {
+          if (token) {
+            setConnected(true);
+            try {
+              localStorage.setItem(STORAGE_KEY, "1");
+            } catch { }
+            setOpen(true);
           }
-        })
-        .catch((err) => {
-          console.error("Failed to fetch Spotify config in OAuth callback:", err);
-          const storedClientId = localStorage.getItem(STORAGE_CLIENT_KEY) || "";
-          if (storedClientId) {
-            exchangeCodeForToken(storedClientId, code).then((token) => {
-              if (token) {
-                setConnected(true);
-                try {
-                  localStorage.setItem(STORAGE_KEY, "1");
-                } catch { }
-                setOpen(true);
-              }
-              cleanUrlParams();
-            });
-          }
+          cleanUrlParams();
         });
-    }
+      })
+      .catch((err) => console.error("Failed to fetch Spotify config in OAuth callback:", err));
   }, []);
 
   // Initialize Spotify Web Playback SDK
@@ -684,11 +640,7 @@ export default function SpotifyPlayer() {
   };
 
   const connect = () => {
-    if (!clientId) {
-      setOpen(true);
-      setShowSettings(true);
-      return;
-    }
+    if (!clientId) return; // Spotify is not configured on the server.
     redirectToSpotifyAuth(clientId);
   };
 
@@ -703,29 +655,10 @@ export default function SpotifyPlayer() {
     } catch { }
   };
 
-  const saveSettings = () => {
-    const trimmed = clientIdInput.trim();
-    if (!trimmed) return;
-    try {
-      localStorage.setItem(STORAGE_CLIENT_KEY, trimmed);
-    } catch { }
-    setClientId(trimmed);
-    setShowSettings(false);
-    redirectToSpotifyAuth(trimmed);
-  };
-
   const changeStyle = (idx: number) => {
     setStyleIndex(idx);
     try {
       localStorage.setItem(STORAGE_STYLE_KEY, BUTTON_STYLES[idx].id);
-    } catch { }
-  };
-
-  const toggleFallback = () => {
-    const nextVal = !useEmbedFallback;
-    setUseEmbedFallback(nextVal);
-    try {
-      localStorage.setItem(STORAGE_FALLBACK_KEY, nextVal ? "1" : "0");
     } catch { }
   };
 
@@ -1001,23 +934,6 @@ export default function SpotifyPlayer() {
             </button>
           )}
 
-          {clientId && (
-            <button
-              type="button"
-              onClick={() => {
-                setOpen(true);
-                setShowSettings(true);
-              }}
-              className="cursor-pointer p-2 rounded-full hover:bg-white/10 text-lavender/65 hover:text-white transition-colors"
-              title="Spotify Settings"
-              aria-label="Spotify Settings"
-            >
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="12" r="3"></circle>
-                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
-              </svg>
-            </button>
-          )}
         </div>
       ) : (
         // Connected State Button
@@ -1128,84 +1044,7 @@ export default function SpotifyPlayer() {
           pointerEvents: open ? "auto" : "none",
         }}
       >
-        {showSettings ? (
-          // Spotify Credentials Settings Form
-          <div className="flex flex-col gap-3">
-            <div style={{ fontWeight: 900, fontSize: 13 }} className={theme.textColor}>
-              Spotify Settings
-            </div>
-            {isGlobalClient ? (
-              <div style={{ fontSize: 11, lineHeight: 1.45 }} className={theme.mutedTextColor}>
-                Spotify integration is configured globally by the application.
-                <div className="mt-2 text-xs font-mono select-all text-white/70">
-                  Client ID: {clientId.substring(0, 8)}...
-                </div>
-              </div>
-            ) : (
-              <>
-                <div style={{ fontSize: 11, lineHeight: 1.45 }} className={theme.mutedTextColor}>
-                  Connect your Spotify account using a developer Client ID:
-                  <ol className="list-decimal pl-4 mt-2 flex flex-col gap-1">
-                    <li>Create a Developer App on the <a href="https://developer.spotify.com/dashboard" target="_blank" rel="noopener noreferrer" className="underline text-cyan-glow hover:text-white">Spotify Dashboard</a>.</li>
-                    <li>Set the **Redirect URI** to exactly: <code className="bg-white/10 px-1 py-0.5 rounded font-mono text-[10px] select-all">{typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000'}</code> (Ensure no trailing slash).</li>
-                    <li>Paste your **Client ID** below:</li>
-                  </ol>
-                </div>
-                <div className="flex flex-col gap-1.5 mt-1">
-                  <input
-                    type="text"
-                    placeholder="Spotify Client ID"
-                    value={clientIdInput}
-                    onChange={(e) => setClientIdInput(e.target.value)}
-                    className={`w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-[12px] font-mono outline-none transition-colors ${theme.textColor} focus:border-white/40`}
-                    style={{ borderColor: theme.textAccent + "33" }}
-                  />
-                  <div className="flex gap-2 mt-1">
-                    <button
-                      type="button"
-                      onClick={saveSettings}
-                      className="flex-1 cursor-pointer rounded-lg py-2 text-[12px] font-extrabold hover:bg-white/10 active:scale-95 transition-all text-center border"
-                      style={{
-                        borderColor: theme.textAccent + "66",
-                        backgroundColor: theme.textAccent + "1c",
-                        color: theme.isDark ? "#ffffff" : theme.textAccent,
-                      }}
-                    >
-                      Save & Connect
-                    </button>
-                    {clientId && (
-                      <button
-                        type="button"
-                        onClick={() => setShowSettings(false)}
-                        className="cursor-pointer bg-white/5 border border-white/10 text-white/80 rounded-lg px-3 py-2 text-[12px] font-bold hover:bg-white/10"
-                      >
-                        Cancel
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </>
-            )}
-            {isGlobalClient && (
-              <div className="flex flex-col gap-2 mt-2 pt-2 border-t border-white/5">
-                <button
-                  type="button"
-                  onClick={toggleFallback}
-                  className="w-full cursor-pointer bg-white/5 border border-white/10 text-white/80 rounded-lg py-2 text-[12px] font-bold hover:bg-white/10 active:scale-95 transition-all text-center"
-                >
-                  {useEmbedFallback ? "Switch to SDK Player" : "Switch to Embed Player"}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowSettings(false)}
-                  className="w-full cursor-pointer bg-white/10 border border-white/20 text-white rounded-lg py-2 text-[12px] font-bold hover:bg-white/20 active:scale-95 transition-all text-center"
-                >
-                  Close Settings
-                </button>
-              </div>
-            )}
-          </div>
-        ) : (
+        {(
           // Active Playback view
           <div>
             {!isPremium && (
@@ -1706,14 +1545,6 @@ export default function SpotifyPlayer() {
                       Spotify Theme
                     </div>
                     <div className="flex items-center gap-1.5 text-[9.5px]">
-                      <button
-                        type="button"
-                        onClick={() => setShowSettings(true)}
-                        className={`cursor-pointer hover:underline transition-colors font-bold ${theme.isDark ? 'text-white/50 hover:text-white' : 'text-slate-700/60 hover:text-slate-900'}`}
-                      >
-                        Configure
-                      </button>
-                      <span className="opacity-15 text-white/50">|</span>
                       <button
                         type="button"
                         onClick={disconnect}

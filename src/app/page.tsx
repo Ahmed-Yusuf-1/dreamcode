@@ -151,9 +151,9 @@ export default function Home() {
         {/* stats anchored over the dark field */}
         <div className="absolute z-5 flex justify-center" style={{ left: 0, right: 0, bottom: 88, gap: 38 }}>
           {[
-            ["300+", "bite-size lessons"],
-            ["1,200", "practice problems"],
-            ["48", "cloud badges to earn"],
+            ["100+", "bite-size lessons"],
+            ["70+", "practice sets"],
+            ["10", "cloud badges to earn"],
           ].map(([num, label], i) => (
             <div key={label} className="flex" style={{ gap: 38 }}>
               {i > 0 && <div style={{ width: 1, background: "rgba(255,255,255,.35)" }} />}
@@ -369,7 +369,7 @@ export default function Home() {
               The sky keeps score
             </h2>
             <p style={{ fontSize: 16, fontWeight: 700, color: "rgba(255,255,255,.88)", maxWidth: 540, margin: "0 auto 40px", lineHeight: 1.65 }}>
-              Streaks, XP and 48 neon clouds to collect - but every shiny thing is welded to a real
+              Streaks, XP and a sky of neon clouds to collect - but every shiny thing is welded to a real
               skill. Nothing unlocks until you can actually do it.
             </p>
 
@@ -383,7 +383,7 @@ export default function Home() {
                 <span style={{ fontWeight: 900, fontSize: 15, color: "#ffffff" }}>for every win</span>
               </div>
               <div className="glass flex items-center" style={{ gap: 9, borderRadius: 999, padding: "12px 22px", boxShadow: "0 0 22px rgba(189,160,255,.4)" }}>
-                <span style={{ fontWeight: 900, fontSize: 15, color: "#e6d9ff", textShadow: "0 0 10px rgba(189,160,255,.8)" }}>48</span>
+                <span style={{ fontWeight: 900, fontSize: 15, color: "#e6d9ff", textShadow: "0 0 10px rgba(189,160,255,.8)" }}>10</span>
                 <span style={{ fontWeight: 900, fontSize: 15, color: "#ffffff" }}>badges to find</span>
               </div>
             </div>

@@ -148,7 +148,9 @@ export default function DashboardPage() {
           Good evening, {profile.name}.
         </h1>
         <p style={{ fontSize: 15, fontWeight: 700, color: "rgba(255,255,255,.85)", margin: "0 0 24px" }}>
-          The sky kept your place. Here is tonight&apos;s plan.
+          {completed.length === 0
+            ? "Welcome in. Your first lesson is one tap away below."
+            : "The sky kept your place. Here is tonight’s plan."}
         </p>
 
         {/* the path - always visible so the next move is obvious */}
