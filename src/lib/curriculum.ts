@@ -4343,6 +4343,29 @@ export function getAllLessonSlugs(): string[] {
   return lessons.map((l) => l.slug);
 }
 
+type TrackName = "python" | "javascript" | "csharp" | "typescript";
+
+/** The first lesson of a track, by order (the true "lesson 1" / start here). */
+export function getFirstLesson(track: TrackName): Lesson | null {
+  const ls = lessons
+    .filter((l) => (l.language || "python") === track)
+    .sort((a, b) => a.order - b.order);
+  return ls[0] ?? null;
+}
+
+/**
+ * The learner's next lesson in a track: the first not-yet-completed one by order,
+ * or the last lesson once every one is done. Drives the guided "continue" CTAs so a
+ * brand-new learner always begins at lesson 1, never mid-curriculum.
+ */
+export function getNextLesson(track: TrackName, completedStops: string[]): Lesson | null {
+  const ls = lessons
+    .filter((l) => (l.language || "python") === track)
+    .sort((a, b) => a.order - b.order);
+  if (ls.length === 0) return null;
+  return ls.find((l) => !completedStops.includes(l.slug)) ?? ls[ls.length - 1];
+}
+
 export interface LessonLink {
   slug: string;
   title: string;

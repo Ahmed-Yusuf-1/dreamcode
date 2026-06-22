@@ -2,6 +2,7 @@ import Link from "next/link";
 import Cloud from "@/components/Cloud";
 import StreakFlame from "@/components/StreakFlame";
 import Wordmark from "@/components/Wordmark";
+import { HeroStartCta, FinalStartCta, ContinueCard } from "@/components/JourneyCtas";
 import { gradientOpacity, cloudOpacity } from "@/lib/theme";
 
 // One continuous gradient for everything below the hero, so the sections read
@@ -87,22 +88,7 @@ export default function Home() {
             mile at a time.
           </p>
           <div className="flex flex-wrap justify-center" style={{ gap: 14, marginTop: 34 }}>
-            <Link
-              href="/start"
-              className="font-display cursor-pointer transition-transform hover:-translate-y-[3px] hover:scale-[1.02]"
-              style={{
-                border: "none",
-                background: "linear-gradient(135deg, #ff7ad9, #ff4fb0)",
-                color: "#ffffff",
-                fontWeight: 800,
-                fontSize: 18,
-                padding: "15px 34px",
-                borderRadius: 999,
-                boxShadow: "0 0 28px rgba(255,100,200,.7), 0 18px 40px rgba(40,16,60,.45)",
-              }}
-            >
-              Start here
-            </Link>
+            <HeroStartCta />
             <Link
               href="/challenge/cloud-hopper"
               className="font-display cursor-pointer backdrop-blur-sm transition-colors hover:bg-[rgba(110,230,255,.22)]"
@@ -160,32 +146,7 @@ export default function Home() {
             +15 XP tonight
           </span>
         </div>
-        <Link
-          href="/lesson/loops"
-          className="dc-side-float absolute z-6 cursor-pointer backdrop-blur-lg transition-colors hover:bg-white/26"
-          style={{
-            left: "7%",
-            bottom: "22%",
-            animation: "floatySm 8s ease-in-out .5s infinite",
-            background: "rgba(255,255,255,.14)",
-            border: "1px solid rgba(255,255,255,.45)",
-            borderRadius: 18,
-            padding: "14px 18px",
-            boxShadow: "0 14px 34px rgba(20,16,50,.35)",
-            textAlign: "left",
-            display: "block",
-          }}
-        >
-          <div style={{ fontSize: 11, fontWeight: 900, letterSpacing: 1.2, color: "#ffd9ef", textShadow: "0 0 10px rgba(255,138,222,.7)" }}>
-            CONTINUE
-          </div>
-          <div
-            className="font-display"
-            style={{ fontWeight: 800, fontSize: 17, color: "#ffffff", marginTop: 3, textShadow: "0 1px 10px rgba(20,16,50,.6)" }}
-          >
-            Loops {"\u00b7"} Lesson 3 of 5 {"\u2192"}
-          </div>
-        </Link>
+        <ContinueCard />
 
         {/* stats anchored over the dark field */}
         <div className="absolute z-5 flex justify-center" style={{ left: 0, right: 0, bottom: 88, gap: 38 }}>
@@ -369,13 +330,13 @@ export default function Home() {
                   <div className="font-display" style={{ fontWeight: 800, fontSize: 24, color: "#ffffff" }}>
                     JavaScript
                   </div>
-                  <span style={{ background: "#fff3c9", color: "#7a5410", fontWeight: 900, fontSize: 11, padding: "5px 12px", borderRadius: 999 }}>
-                    PEAKS OPEN · TRACK SOON
+                  <span style={{ background: "#d9f5e6", color: "#0f5c38", fontWeight: 900, fontSize: 11, padding: "5px 12px", borderRadius: 999 }}>
+                    AVAILABLE NOW
                   </span>
                 </div>
                 <p style={{ fontSize: 14, fontWeight: 600, color: "rgba(255,255,255,.9)", lineHeight: 1.65, margin: "10px 0 16px" }}>
-                  The language the web dreams in. Problem Peaks are climbable today; the full guided
-                  track lands next.
+                  The language the web dreams in. A full guided track, from your first function to
+                  closures, async and the DOM - plus C# and TypeScript tracks waiting in the catalog.
                 </p>
                 <div className="font-mono" style={{ background: "rgba(8,18,46,.8)", borderRadius: 14, padding: "14px 18px", fontSize: 13, lineHeight: 1.9 }}>
                   <div>
@@ -478,21 +439,7 @@ export default function Home() {
               Free to start. No setup. The editor lives in your browser and the night is long.
             </p>
             <div className="flex flex-wrap justify-center" style={{ gap: 14, marginTop: 30 }}>
-              <Link
-                href="/signup"
-                className="font-display cursor-pointer transition-transform hover:-translate-y-[3px] hover:scale-[1.02]"
-                style={{
-                  background: "linear-gradient(135deg, #ff7ad9, #ff4fb0)",
-                  color: "#ffffff",
-                  fontWeight: 800,
-                  fontSize: 18,
-                  padding: "15px 36px",
-                  borderRadius: 999,
-                  boxShadow: "0 0 30px rgba(255,100,200,.7), 0 18px 40px rgba(20,10,50,.5)",
-                }}
-              >
-                Start free tonight {"\u2192"}
-              </Link>
+              <FinalStartCta />
               <Link
                 href="/lessons"
                 className="font-display cursor-pointer backdrop-blur-sm transition-colors hover:bg-[rgba(110,230,255,.22)]"

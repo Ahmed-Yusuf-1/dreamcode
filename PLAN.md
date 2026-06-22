@@ -69,6 +69,14 @@ fine for an online-first MVP.)
 - **Security review:** fixed an open redirect in the OAuth callback (the `next`
   param is now validated to same-origin relative paths) and added baseline response
   headers (`X-Frame-Options: DENY`, `nosniff`, `Referrer-Policy`, `Permissions-Policy`).
+- **UX / onboarding polish:** unique brand favicon (`src/app/icon.svg`); guided
+  onboarding now routes a new learner to their real first lesson (was hardcoded to
+  the mid-curriculum `loops`) via `getNextLesson`; home CTAs are auth-aware
+  (`JourneyCtas.tsx`) so "Start free / Start here" become "Continue learning" once
+  signed in, and the floating "continue" card shows the real next lesson instead of
+  a fake stop; corrected the stale "JavaScript track soon" badge (it ships now).
+  Also fixed the Google OAuth redirect (bare `…/auth/callback`, no query string) so
+  it matches the Supabase allowlist.
 
 ---
 

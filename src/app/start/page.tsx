@@ -2,6 +2,7 @@ import Link from "next/link";
 import Cloud from "@/components/Cloud";
 import Wordmark from "@/components/Wordmark";
 import FlowSteps from "@/components/FlowSteps";
+import { StartFirstLessonButton } from "@/components/JourneyCtas";
 import { cloudOpacity } from "@/lib/theme";
 
 const cs = cloudOpacity.lessons;
@@ -86,23 +87,9 @@ export default function StartPage() {
           <FlowSteps current={0} />
         </div>
 
-        {/* one clear primary action */}
+        {/* one clear primary action - routes to the learner's actual first/next lesson */}
         <div className="flex flex-col items-center" style={{ marginTop: 40, gap: 14 }}>
-          <Link
-            href="/lesson/loops"
-            className="font-display cursor-pointer transition-transform hover:-translate-y-[3px] hover:scale-[1.02]"
-            style={{
-              background: "linear-gradient(135deg, #ff7ad9, #ff4fb0)",
-              color: "#ffffff",
-              fontWeight: 800,
-              fontSize: 19,
-              padding: "16px 40px",
-              borderRadius: 999,
-              boxShadow: "0 0 30px rgba(255,100,200,.7), 0 18px 40px rgba(20,10,50,.5)",
-            }}
-          >
-            Start your first lesson
-          </Link>
+          <StartFirstLessonButton />
           <div style={{ fontSize: 14, fontWeight: 700, color: "rgba(255,255,255,.7)" }}>
             Takes about five minutes. Step 1 of 4.
           </div>
