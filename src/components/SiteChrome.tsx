@@ -2,6 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import NavBar from "./NavBar";
+import GuidePath from "./GuidePath";
 
 // Focused, full-screen flows that should not show the global nav.
 const HIDE_NAV = new Set(["/login", "/signup", "/start"]);
@@ -33,6 +34,7 @@ export default function SiteChrome({ children }: { children: React.ReactNode }) 
       <main id="main-content" tabIndex={-1} style={{ paddingTop: !hideNav && !isHome && !noSpacer ? "var(--nav-h)" : 0, outline: "none" }}>
         {children}
       </main>
+      <GuidePath />
     </>
   );
 }

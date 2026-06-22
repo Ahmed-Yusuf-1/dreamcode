@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Wordmark from "./Wordmark";
 import SpotifyPlayer from "./SpotifyPlayer";
+import { useIsSignedIn, useUserProfile } from "@/lib/profile";
 
 // Primary links shown inline on wide screens; the full set always lives in the
 // Explore menu (so small screens still reach everything).
@@ -45,6 +46,8 @@ export default function NavBar({ isHome = false }: { isHome?: boolean }) {
   const [scrolled, setScrolled] = useState(false);
   const [exploreOpen, setExploreOpen] = useState(false);
   const exploreRef = useRef<HTMLDivElement>(null);
+  const signedIn = useIsSignedIn();
+  const { profile } = useUserProfile();
 
   useEffect(() => {
     const onScroll = () => setScrolled((window.scrollY || 0) > 40);
@@ -227,24 +230,48 @@ export default function NavBar({ isHome = false }: { isHome?: boolean }) {
 
           <SpotifyPlayer />
 
-          <Link
-            href="/signup"
-            id="nav-btn-signup"
-            className="hidden cursor-pointer backdrop-blur-md transition-colors hover:bg-white/32 sm:block"
-            style={{
-              background: "rgba(255,255,255,.16)",
-              border: "2px solid rgba(255,255,255,.7)",
-              color: "#ffffff",
-              fontWeight: 900,
-              fontSize: 14,
-              padding: "9px 20px",
-              borderRadius: 999,
-              boxShadow: "0 0 18px rgba(255,170,220,.35)",
-              whiteSpace: "nowrap",
-            }}
-          >
-            Start free
-          </Link>
+          {signedIn ? (
+            // Signed in: an account chip (the profile hub is where Sign out lives).
+            // No "Start free" - the learner already has an account.
+            <Link
+              href="/profile"
+              aria-label="Your profile and settings"
+              className="font-display flex items-center justify-center transition-transform hover:-translate-y-0.5"
+              style={{
+                width: 38,
+                height: 38,
+                borderRadius: "50%",
+                background: "linear-gradient(135deg, #ffb6d9, #cdb9f7)",
+                border: "2px solid rgba(255,255,255,.85)",
+                color: "#ffffff",
+                fontWeight: 800,
+                fontSize: 15,
+                boxShadow: "0 0 16px rgba(255,170,230,.45)",
+                flexShrink: 0,
+              }}
+            >
+              {profile.initial}
+            </Link>
+          ) : (
+            <Link
+              href="/signup"
+              id="nav-btn-signup"
+              className="hidden cursor-pointer backdrop-blur-md transition-colors hover:bg-white/32 sm:block"
+              style={{
+                background: "rgba(255,255,255,.16)",
+                border: "2px solid rgba(255,255,255,.7)",
+                color: "#ffffff",
+                fontWeight: 900,
+                fontSize: 14,
+                padding: "9px 20px",
+                borderRadius: 999,
+                boxShadow: "0 0 18px rgba(255,170,220,.35)",
+                whiteSpace: "nowrap",
+              }}
+            >
+              Start free
+            </Link>
+          )}
         </nav>
       </div>
     </header>
