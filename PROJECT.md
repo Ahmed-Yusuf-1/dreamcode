@@ -104,7 +104,11 @@ self-learners, students, beginners. Community-imported content is a later idea.
   guided routing; `src/components/JourneyCtas.tsx` makes the home hero/final CTAs
   auth-aware (Start free/Start here -> Continue learning once signed in) and the
   `/start` button + home "continue" card point to the real next lesson. The NavBar
-  swaps "Start free" for a profile-avatar chip (-> `/profile`) once signed in.
+  swaps "Start free" for a profile-avatar chip (-> `/profile`) once signed in. The
+  `/profile` page is now auth-aware: when signed in it shows a real Sign out (a form
+  POST to `/auth/signout` that clears the session); when signed out it shows a Sign
+  in pill plus a guest banner (progress is local-only) instead of the old hardcoded
+  "Sign out" link that wrongly appeared and only routed to `/login`.
   `src/components/GuidePath.tsx` (global via `SiteChrome`) is a dismissible coach that
   strings Learn -> Practice -> Challenge -> Build for new learners (under 6 completed
   stops) with route-aware tips + one next-step CTA, and hides on dismiss. Home
@@ -132,7 +136,14 @@ self-learners, students, beginners. Community-imported content is a later idea.
   dropdown was right-anchored to its button, so on phones (where the button sits
   mid-nav) the panel ran off the left edge; it is now viewport-anchored
   (`position: fixed`, `right: clamp(...)`, width capped to `100vw - 24px`) so it
-  always fits, on both phone and desktop.
+  always fits, on both phone and desktop. Further mobile fixes: the `/lessons`
+  language selector now wraps (was `width:max-content`, which overflowed and hid
+  C# / TypeScript off-screen); the NavBar fits the signed-in profile chip on phones
+  (responsive wordmark via `clamp()`, the Spotify button collapses to an icon-only
+  control on phones with a screen-reader label, tighter gaps); and the `/journey`
+  map (a fixed 720-unit coordinate space) now scales uniformly via a measured
+  `transform: scale` wrapper so the nodes no longer land off the right edge on
+  phones.
 - **Industry section:** `/industry` covers Python, JavaScript, and C#/.NET
   (domains, tools, roles), data in `src/lib/industry.ts`.
 - **Not done (all remaining work; full detail in PLAN.md):**
@@ -147,8 +158,9 @@ self-learners, students, beginners. Community-imported content is a later idea.
     the rate limiter with a durable store (Upstash/KV) for cross-instance limits; the
     postcss audit advisory waits on a patched Next (`16.2.9` is already latest).
   - *Final / deferred externals:* the AI provider key; Stripe billing (flip
-    `GUIDE_REQUIRE_PRO`); a server-side sandbox so C# can run (Py/JS/TS run
-    client-side, C# cannot).
+    `GUIDE_REQUIRE_PRO`); a server-side code-execution sandbox so C# AND Rust can run
+    (Py/JS/TS run client-side, C#/Rust cannot). The sandbox is prolonged into its own
+    track with provider research (Judge0/Piston, free vs paid) in PLAN.md section 5.
   - *Backlog:* expert tracks (Gemini content), community content (needs a UGC
     code-exec sandbox), i18n (needs a locale layer), institutional/admin direction.
     (Semantic TS type-checking is now DONE - see the TypeScript note above.)
@@ -218,7 +230,8 @@ Other: `src/proxy.ts` (Next 16 Proxy = renamed Middleware; refreshes the session
 report-only CSP, `poweredByHeader: false`, allowedDevOrigins),
 `public/pyodide-worker.js`,
 `supabase/migrations/{0001_init,0002_telemetry}.sql`,
-`Extra/Code-handoff/` (design source of truth), `Extra/*.pdf` (pedagogy research).
+`Extra/Code-handoff/` (design source of truth), `Extra/*.pdf` (pedagogy research),
+`Extra/Gemini-tasks/` (work orders Claude wrote for Gemini: expert tracks, Rust track).
 
 ## Conventions (follow these)
 

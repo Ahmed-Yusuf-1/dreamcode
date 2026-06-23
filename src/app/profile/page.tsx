@@ -6,7 +6,7 @@ import Cloud from "@/components/Cloud";
 import { cloudOpacity } from "@/lib/theme";
 import SceneTopBar, { GlassPill } from "@/components/SceneTopBar";
 import StreakFlame from "@/components/StreakFlame";
-import { useUserProfile } from "@/lib/profile";
+import { useUserProfile, useIsSignedIn } from "@/lib/profile";
 import { useActiveTrack } from "@/lib/track";
 
 function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void }) {
@@ -46,6 +46,7 @@ const cs = cloudOpacity.profile;
 export default function ProfilePage() {
   const { profile, updateProfile } = useUserProfile();
   const { track, setTrack } = useActiveTrack();
+  const signedIn = useIsSignedIn();
   const [events, setEvents] = useState<TelemetryEvent[]>([]);
   const [loadingEvents, setLoadingEvents] = useState(true);
 
@@ -84,7 +85,62 @@ export default function ProfilePage() {
       <Cloud src="/assets/clouds-sunset/cutout-cloud-sunset-1-01.webp" speed={0.14} pos={{ left: "-3%", bottom: "8%" }} width="min(300px, 24vw)" opacity={0.6} anim="floatySm" duration={10} delay={0.8} scale={cs} />
       <Cloud src="/assets/clouds-sunset/cutout-cloud-sunset-15.webp" speed={0.1} pos={{ left: "-4%", top: "30%" }} width="min(260px, 22vw)" opacity={0.55} duration={12} delay={0.5} neon="cyan" scale={cs} />
 
-      <SceneTopBar back={{ href: "/dashboard", label: "\u2190 Dashboard" }} right={<GlassPill href="/login">Sign out</GlassPill>} />
+      <SceneTopBar
+        back={{ href: "/dashboard", label: "\u2190 Dashboard" }}
+        right={
+          signedIn ? (
+            // Real sign out: POST to the route that clears the Supabase session
+            // cookies server-side, then redirects home. Only shown when signed in.
+            <form action="/auth/signout" method="post">
+              <button
+                type="submit"
+                className="cursor-pointer text-white backdrop-blur-md transition-colors hover:bg-white/38"
+                style={{
+                  background: "rgba(255,255,255,.2)",
+                  border: "2px solid rgba(255,255,255,.7)",
+                  fontWeight: 900,
+                  fontSize: 13,
+                  padding: "9px 18px",
+                  borderRadius: 999,
+                }}
+              >
+                Sign out
+              </button>
+            </form>
+          ) : (
+            <GlassPill href="/login">Sign in</GlassPill>
+          )
+        }
+      />
+
+      {!signedIn && (
+        <div className="relative z-6 mx-auto" style={{ maxWidth: 640, padding: "0 28px", marginTop: 2 }}>
+          <div
+            className="glass flex flex-wrap items-center justify-between"
+            style={{ borderRadius: 18, padding: "13px 18px", gap: 10, boxShadow: "0 12px 30px rgba(15,12,50,.3)" }}
+          >
+            <div style={{ fontSize: 13.5, fontWeight: 700, color: "#ffffff", lineHeight: 1.5 }}>
+              You are exploring as a guest. Progress is saved on this device only.
+            </div>
+            <div className="flex" style={{ gap: 8 }}>
+              <Link
+                href="/login"
+                className="cursor-pointer transition-transform hover:-translate-y-0.5"
+                style={{ background: "rgba(255,255,255,.95)", color: "#5b3f78", fontWeight: 800, fontSize: 12.5, padding: "7px 14px", borderRadius: 999, whiteSpace: "nowrap" }}
+              >
+                Sign in
+              </Link>
+              <Link
+                href="/signup"
+                className="cursor-pointer transition-colors hover:bg-white/30"
+                style={{ background: "rgba(255,255,255,.16)", border: "1.5px solid rgba(255,255,255,.6)", color: "#ffffff", fontWeight: 800, fontSize: 12.5, padding: "7px 14px", borderRadius: 999, whiteSpace: "nowrap" }}
+              >
+                Create account
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="relative z-5 mx-auto" style={{ maxWidth: 640, padding: "3vh 28px 90px" }}>
         {/* identity card */}
@@ -109,7 +165,7 @@ export default function ProfilePage() {
             {profile.name}
           </h1>
           <div style={{ fontSize: 14, fontWeight: 700, color: "rgba(255,255,255,.85)", marginTop: 2 }}>
-            Level {profile.level} {"\u00b7"} night driver since June 2026
+            Level {profile.level} {"\u00b7"} {signedIn ? "night driver since June 2026" : "browsing as a guest"}
           </div>
           <div className="flex justify-center" style={{ gap: 12, marginTop: 18 }}>
             <div className="flex items-center" style={{ gap: 7, background: "rgba(255,255,255,.92)", padding: "7px 14px", borderRadius: 999 }}>

@@ -89,13 +89,14 @@ export default function NavBar({ isHome = false }: { isHome?: boolean }) {
     >
       <div
         className="flex h-full items-center justify-between"
-        style={{ padding: "0 clamp(16px, 4vw, 44px)", gap: 14 }}
+        style={{ padding: "0 clamp(12px, 4vw, 44px)", gap: 8 }}
       >
         {/* left: brand, flush to the corner */}
         <Wordmark />
 
-        {/* right: everything else, flush to the corner */}
-        <nav className="flex items-center" style={{ gap: 18 }}>
+        {/* right: everything else, flush to the corner. Tighter gap on phones so
+            the signed-in profile chip does not crowd the wordmark. */}
+        <nav className="flex items-center gap-2.5 sm:gap-[18px]">
           <div className="hidden items-center lg:flex" style={{ gap: 22 }}>
             {PRIMARY.map(([label, href]) => (
               <Link

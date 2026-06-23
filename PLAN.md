@@ -11,8 +11,11 @@ here as they land; their detail lives in PROJECT.md. Deeper pedagogy research is
   acceptance criteria, audits the implementation (`tsc` / `eslint` / `build` +
   actual behavior), and fixes subtle/security-sensitive bits directly.
 - **Gemini (Antigravity) executes content-heavy tasks** to the spec, keeping the
-  guardrails and the "no AI tells" voice. (No Gemini task is currently open - the
-  curriculum across all four tracks is complete.)
+  guardrails and the "no AI tells" voice. **Two specs are ready for Gemini** (Claude
+  wrote them, Claude verifies the output): `Extra/Gemini-tasks/expert-tracks.md`
+  (expert/advanced modules for the existing four languages) and
+  `Extra/Gemini-tasks/rust-track.md` (a full new Rust track, beginner to advanced,
+  read + quiz like C#).
 
 **Guardrails (do not regress):** the learner writes and runs real code at every step
 (Python via Pyodide, JavaScript in-browser, TypeScript via server type-strip then
@@ -85,10 +88,10 @@ redirect, baseline security headers.) Remaining, non-blocking:
   / `AI_MODEL` in `.env.local` (gemini | openai | anthropic).
 - **Billing (Stripe)** to sell the `pro` tier, then set `GUIDE_REQUIRE_PRO=true` to
   gate the Dream Guide behind it.
-- **C# / .NET execution sandbox.** C# can't run client-side. Needs an external
-  service (Judge0 cloud) or a self-hosted runner (Docker) OR a heavy in-browser .NET
-  WASM runtime - a flagged external/architecture decision. Until then C# stays
-  read + quiz. (Owner chose to defer this with AI + billing.)
+- **Code execution sandbox (C# + Rust).** Both languages need a server-side runner
+  to execute real code. Deliberately prolonged into its own track - see section 5
+  for how it works, the provider options, and the free vs paid trade-offs. Until it
+  lands, C# and Rust stay read + quiz.
 
 ## 4. Later / backlog
 
@@ -105,8 +108,19 @@ The rest are large efforts, not quick changes - each needs either content work
 (Gemini) or an architecture/product decision before building:
 
 - **Expert tracks** (deeper metaprogramming / concurrency / internals) per language.
-  This is curriculum CONTENT at volume - the right job for Gemini against a Claude
-  spec, not a code change.
+  Curriculum CONTENT at volume - the job for Gemini. **Spec ready:**
+  `Extra/Gemini-tasks/expert-tracks.md` (data shapes, scope, acceptance criteria).
+  **Timing: do these independently of the sandbox.** Python / JavaScript / TypeScript
+  already run client-side, so their expert content needs no new infra and can ship
+  now. C# expert content is read + quiz either way. The sandbox (section 5) only
+  changes whether C#/Rust code can RUN; it does not gate expert content. Recommend
+  shipping expert tracks for Py/JS/TS first, then revisiting C#/Rust once the
+  sandbox exists.
+- **Rust track** (new language, beginner to advanced). Rust has no client-side
+  runtime, so it follows the C# read + quiz model (quizzes stand in for code
+  challenges until a server sandbox lands). **Spec ready:**
+  `Extra/Gemini-tasks/rust-track.md` (the small track-registration edits + the
+  content shape + acceptance criteria).
 - **Community / imported content.** Blocked on the UGC code-execution sandbox
   (sandboxed iframe, no same-origin/cookies) from the security work - a real
   security-sensitive build, not simple.
@@ -115,3 +129,58 @@ The rest are large efforts, not quick changes - each needs either content work
 - **Institutional / admin** direction (class dashboards, standards alignment) - a
   whole new product surface (roles, data model, RLS) if the audience expands past
   individual learners.
+
+## 5. Code execution sandbox (C# + Rust) - deferred to its own track
+
+**Why this exists.** Python (Pyodide), JavaScript (`new Function`), and TypeScript
+(server type-strip then the JS engine) all run in the LEARNER's own browser, for
+free, with no server risk. C# and Rust have no in-browser runtime, so to let
+learners actually RUN code (and to grade real code challenges) we need to execute
+their code on a server. Running untrusted code on a server is the "sandbox"
+problem: it must be isolated (no network, no filesystem escape, CPU/memory/time
+limits) so a learner's code cannot harm the host or other users. Both C# and Rust
+are unlocked by the SAME sandbox, so this is one integration, not two.
+
+**How it works (the shape of the integration).** A new auth-gated, rate-limited
+server route (e.g. `/api/run`, modeled on `/api/guide`) takes `{ language, code,
+stdin }`, forwards it to a code-execution service, and returns `{ stdout, stderr,
+compileOutput, status, time, memory }`. For challenges, wrap the learner's function
+with the test harness (or run each test case) and compare output, exactly like the
+JS/TS challenge runner does today, just server-side. Keep it provider-agnostic via
+env vars (`RUN_PROVIDER` / `RUN_BASE_URL` / `RUN_API_KEY`) like the AI guide, and
+behind a flag until ready. Then flip C#/Rust lessons to `runnable: true`, give them
+real `starter` code, and add graded `challenges` with `testCases`.
+
+**Provider options (verify current pricing before committing - these move):**
+
+- **Judge0** - the most common open-source online judge. One API runs 60+ languages
+  including C# and Rust in isolated sandboxes (cgroups/isolate). Two ways to use it:
+  - *Self-host Judge0 CE (Community Edition)* via Docker on a small VPS. The software
+    is FREE/open-source; you pay only for the VPS (roughly $5-20/month) and you own
+    the ops. Best long-term cost control and privacy.
+  - *Managed via RapidAPI* - no servers to run. Has a FREE tier (a small number of
+    requests/day, fine for prototyping) and paid tiers (roughly $10+/month) that
+    scale request volume. Fastest to start; you can migrate to self-host later.
+- **Piston** (Engineer Man) - open-source, free, self-hostable execution engine,
+  many languages incl. C# and Rust. A public instance exists (rate-limited, not for
+  production) and you can self-host via Docker. Similar free/self-host trade-off to
+  Judge0 CE; lighter weight, fewer features.
+- **Sphere Engine** - the commercial product from the Judge0 author. Robust, managed,
+  PAID (enterprise pricing). Overkill unless volume/SLA demands it.
+- **Roll your own** (ephemeral Docker containers, or Firecracker/gVisor microVMs) -
+  maximum control, but you own all the security hardening. Most effort and risk; not
+  recommended over Judge0/Piston unless there is a strong reason.
+- **In-browser (no server):** Rust->WASM needs the Rust compiler in the browser
+  (impractical); C# can run via Blazor/.NET WASM but it is a heavy multi-MB runtime
+  and awkward to grade arbitrary code. Not recommended for a sandbox-with-grading.
+
+**Recommendation.** Prototype on **Judge0 via RapidAPI's free tier** to prove the
+`/api/run` flow and the challenge grading end to end, then for production either
+upgrade the RapidAPI plan or **self-host Judge0 CE** on a small VPS for predictable
+cost. This is an OWNER decision because it adds an external service + a recurring
+cost + a security surface (untrusted code execution). Flag before adopting.
+
+**Free vs paid, in one line:** there IS a free path (self-host Judge0 CE / Piston,
+you pay only cheap hosting; or RapidAPI's limited free tier for low volume); the
+paid managed tiers (RapidAPI plans, Sphere Engine) buy you "no servers to run" and
+higher request limits.

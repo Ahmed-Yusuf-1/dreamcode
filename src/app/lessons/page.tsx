@@ -82,16 +82,19 @@ export default function LessonsPage() {
           A guided road through Python, JavaScript, and C# - one small, glowing stop at a time.
         </p>
 
-        {/* Tab Selector */}
+        {/* Tab Selector. width:max-content keeps it compact on desktop; max-width
+            + flex-wrap let it wrap to two rows on phones so every track stays
+            reachable (it used to overflow off-screen and hide C# / TypeScript). */}
         <div
-          className="mx-auto flex justify-center"
+          className="mx-auto flex flex-wrap justify-center"
           style={{
-            gap: 12,
+            gap: 8,
             marginBottom: 38,
             background: "rgba(24,20,70,.3)",
             padding: 6,
-            borderRadius: 999,
+            borderRadius: 28,
             width: "max-content",
+            maxWidth: "100%",
             border: "1px solid rgba(255,255,255,.16)",
             backdropFilter: "blur(12px)",
           }}

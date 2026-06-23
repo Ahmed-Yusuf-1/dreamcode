@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, Fragment } from "react";
+import { useEffect, useRef, useState, Fragment } from "react";
 import Link from "next/link";
 import Cloud from "@/components/Cloud";
 import StreakFlame from "@/components/StreakFlame";
@@ -55,6 +55,22 @@ export default function JourneyPage() {
 
   useEffect(() => {
     document.title = "Journey Map - dreamcode";
+  }, []);
+
+  // The map is laid out in a fixed 720-unit coordinate space (the SVG road and
+  // the absolutely-positioned HTML nodes share it). To fit narrow screens we
+  // scale the WHOLE thing uniformly, so positions AND node sizes shrink together
+  // - otherwise the px-positioned nodes (e.g. left: 360) land off a ~352px phone.
+  const mapWrapRef = useRef<HTMLDivElement>(null);
+  const [mapScale, setMapScale] = useState(1);
+  useEffect(() => {
+    const el = mapWrapRef.current;
+    if (!el) return;
+    const update = () => setMapScale(Math.min(1, el.clientWidth / 720));
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
   }, []);
 
   // Build the road from the curriculum: this track's lessons, in order.
@@ -281,7 +297,8 @@ export default function JourneyPage() {
       </div>
 
       {/* the map - generated from the curriculum: start at the bottom, boss at the top */}
-      <div className="relative z-5" style={{ width: 720, maxWidth: "94vw", height: mapHeight, margin: "10px auto 0" }}>
+      <div ref={mapWrapRef} className="relative z-5" style={{ width: "min(720px, 94vw)", height: mapHeight * mapScale, margin: "10px auto 0" }}>
+        <div style={{ position: "absolute", top: 0, left: 0, width: 720, height: mapHeight, transformOrigin: "top left", transform: `scale(${mapScale})` }}>
         <svg
           viewBox={`0 0 720 ${mapHeight}`}
           className="absolute inset-0 h-full w-full"
@@ -495,6 +512,7 @@ export default function JourneyPage() {
               Build a tiny program of your own
             </div>
           </Link>
+        </div>
         </div>
         </div>
       </div>

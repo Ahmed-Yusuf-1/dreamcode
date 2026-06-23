@@ -7,8 +7,10 @@ export default function Wordmark({
   size?: "sm" | "md";
   href?: string;
 }) {
-  const cloudW = size === "md" ? 52 : 42;
-  const fontSize = size === "md" ? 24 : 20;
+  // The md wordmark scales down on narrow screens so it does not crowd the nav
+  // items (Explore / Spotify / profile chip) on phones.
+  const cloudW = size === "md" ? "clamp(40px, 10.5vw, 52px)" : 42;
+  const fontSize = size === "md" ? "clamp(18px, 4.8vw, 24px)" : 20;
   return (
     <Link href={href} className="flex items-center" style={{ gap: size === "md" ? 11 : 10 }}>
       {/* eslint-disable-next-line @next/next/no-img-element */}

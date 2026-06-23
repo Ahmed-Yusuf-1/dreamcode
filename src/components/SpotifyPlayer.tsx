@@ -868,7 +868,7 @@ export default function SpotifyPlayer() {
             >
               <SpotifyMark />
               <span className="hidden sm:inline">Connect Spotify</span>
-              <span className="sm:hidden">Spotify</span>
+              <span className="sr-only sm:hidden">Spotify</span>
             </button>
           ) : styleIndex === 2 ? (
             <button
@@ -882,7 +882,7 @@ export default function SpotifyPlayer() {
             >
               <SpotifyMark />
               <span className="hidden sm:inline">Connect Spotify</span>
-              <span className="sm:hidden">Spotify</span>
+              <span className="sr-only sm:hidden">Spotify</span>
             </button>
           ) : styleIndex === 3 ? (
             <button
@@ -892,7 +892,7 @@ export default function SpotifyPlayer() {
             >
               <SpotifyMark />
               <span className="hidden sm:inline">Connect Spotify</span>
-              <span className="sm:hidden">Spotify</span>
+              <span className="sr-only sm:hidden">Spotify</span>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src="/assets/clouds-sunset/cutout-cloud-sunset-1-03.webp"
@@ -930,7 +930,7 @@ export default function SpotifyPlayer() {
             >
               <SpotifyMark />
               <span className="hidden sm:inline">Connect Spotify</span>
-              <span className="sm:hidden">Spotify</span>
+              <span className="sr-only sm:hidden">Spotify</span>
             </button>
           )}
 
@@ -948,7 +948,7 @@ export default function SpotifyPlayer() {
             }}
           >
             <SpotifyMark />
-            <span className="max-w-[120px] sm:max-w-[180px] md:max-w-[260px] truncate">{buttonText}</span>
+            <span className="sr-only sm:not-sr-only max-w-[120px] sm:max-w-[180px] md:max-w-[260px] truncate">{buttonText}</span>
             {isPlaying && <Equalizer />}
           </button>
         ) : styleIndex === 2 ? (
@@ -962,7 +962,7 @@ export default function SpotifyPlayer() {
             }}
           >
             <SpotifyMark />
-            <span className="max-w-[120px] sm:max-w-[180px] md:max-w-[260px] truncate">{buttonText}</span>
+            <span className="sr-only sm:not-sr-only max-w-[120px] sm:max-w-[180px] md:max-w-[260px] truncate">{buttonText}</span>
             {isPlaying && <Equalizer />}
           </button>
         ) : styleIndex === 3 ? (
@@ -972,7 +972,7 @@ export default function SpotifyPlayer() {
             className="anim-floaty-sm flex cursor-pointer items-center gap-2 rounded-full border border-blush/40 bg-blush/16 text-white px-3.5 py-2 text-[13.5px] font-extrabold whitespace-nowrap shadow-[0_0_14px_rgba(255,182,217,0.35)] transition-all duration-200 hover:bg-blush/25"
           >
             <SpotifyMark />
-            <span className="max-w-[120px] sm:max-w-[180px] md:max-w-[260px] truncate">{buttonText}</span>
+            <span className="sr-only sm:not-sr-only max-w-[120px] sm:max-w-[180px] md:max-w-[260px] truncate">{buttonText}</span>
             {isPlaying && <Equalizer />}
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
@@ -1017,7 +1017,7 @@ export default function SpotifyPlayer() {
             className="flex cursor-pointer items-center gap-2 rounded-full border border-cyan-glow/45 bg-cyan-glow/10 text-cyan-glow px-3.5 py-2 text-[13.5px] font-extrabold whitespace-nowrap shadow-[0_0_12px_rgba(150,245,255,0.15)] transition-all duration-200 hover:bg-cyan-glow/20 hover:text-white hover:border-cyan-glow/70 hover:shadow-[0_0_18px_rgba(150,245,255,0.35)]"
           >
             <SpotifyMark />
-            <span className="max-w-[120px] sm:max-w-[180px] md:max-w-[260px] truncate">{buttonText}</span>
+            <span className="sr-only sm:not-sr-only max-w-[120px] sm:max-w-[180px] md:max-w-[260px] truncate">{buttonText}</span>
             {isPlaying && <Equalizer />}
           </button>
         )
