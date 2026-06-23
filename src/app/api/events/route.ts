@@ -10,10 +10,21 @@ export async function GET() {
   return NextResponse.json({ events: await getEvents() });
 }
 
-const EventSchema = z.object({
-  name: z.string().min(1).max(80),
-  props: z.record(z.string(), z.unknown()).optional(),
-});
+// Cap the serialized size of each event's `props` so a client cannot stuff
+// arbitrarily large blobs into the append-only events table (storage abuse).
+// 2 KB is generous for the small {slug, track, ...} payloads we actually send;
+// combined with the 50-event batch cap that bounds a request to ~100 KB.
+const MAX_PROPS_BYTES = 2048;
+
+const EventSchema = z
+  .object({
+    name: z.string().min(1).max(80),
+    props: z.record(z.string(), z.unknown()).optional(),
+  })
+  .refine((e) => !e.props || JSON.stringify(e.props).length <= MAX_PROPS_BYTES, {
+    message: "props too large",
+    path: ["props"],
+  });
 const BodySchema = z.object({
   events: z.array(EventSchema).min(1).max(50),
 });

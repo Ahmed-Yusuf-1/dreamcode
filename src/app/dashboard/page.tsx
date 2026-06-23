@@ -5,6 +5,7 @@ import Link from "next/link";
 import Cloud from "@/components/Cloud";
 import StreakFlame from "@/components/StreakFlame";
 import FlowSteps from "@/components/FlowSteps";
+import BadgeMedallion from "@/components/BadgeMedallion";
 import { badges, reviewCards } from "@/lib/data";
 import { cloudOpacity } from "@/lib/theme";
 import { useActiveTrack } from "@/lib/track";
@@ -276,14 +277,13 @@ export default function DashboardPage() {
             </div>
             <div className="flex justify-between" style={{ marginTop: 16, gap: 8 }}>
               {found.map((b, i) => (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
+                <div
                   key={b.id}
-                  src={b.img}
-                  alt={b.name}
-                  className="cloud-glow"
-                  style={{ width: "22%", height: "auto", animation: `floatySm ${6 + i}s ease-in-out ${i * 0.4}s infinite` }}
-                />
+                  style={{ width: "22%", animation: `floatySm ${6 + i}s ease-in-out ${i * 0.4}s infinite` }}
+                  title={b.name}
+                >
+                  <BadgeMedallion icon={b.icon} accent={b.accent} found />
+                </div>
               ))}
             </div>
             <div style={{ marginTop: 14, fontSize: 13.5, fontWeight: 700, color: "rgba(255,255,255,.88)" }}>

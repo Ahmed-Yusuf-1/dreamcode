@@ -30,8 +30,12 @@ self-learners, students, beginners. Community-imported content is a later idea.
   **TypeScript** is type-stripped server-side (`/api/transpile`, the bundled
   `typescript` package; a pure string->string transform, nothing executed on the
   server) and the emitted JS runs through that same in-browser engine - no new
-  runtime service, no CDN. (Type-STRIPPING only; semantic type errors are not yet
-  caught - see PLAN.md.) Challenges/projects grade against real test cases.
+  runtime service, no CDN. The route ALSO runs a real semantic type-check
+  (`src/lib/tsCheck.ts`, same bundled `typescript`), so genuine type errors (wrong
+  assignment, wrong argument type) now block running with a line-numbered message,
+  the same as syntax errors - the TS track finally enforces types, not just strips
+  them. Lenient config (no `strict`/`noImplicitAny`) so beginners are not nagged.
+  Challenges/projects grade against real test cases.
 - **Content-driven:** lessons/practice/challenges/projects are dynamic routes
   reading typed data. Today: 44 Python + 25 JS + 21 C# + 14 TS lessons (104 total),
   72 practice sets, 25 challenges, 5 gradeable projects, spanning beginner ->
@@ -68,7 +72,11 @@ self-learners, students, beginners. Community-imported content is a later idea.
 - **Spaced repetition:** real **FSRS** scheduling (stability/difficulty/
   retrievability) in `srs.ts`, synced to the `srs_cards` table.
 - **Gamification:** XP, levels (800 XP/level), daily streak, badges, journey
-  gating by `completedStops`, placement quiz, sound chimes.
+  gating by `completedStops`, placement quiz, sound chimes. Each badge now has its
+  own glyph + accent colour via `BadgeMedallion` (a glossy neon orb, found vs
+  locked states) instead of the old 5-reused cloud images, so the `/badges` wall
+  and the dashboard "YOUR SKY" preview read as ten distinct emblems. The
+  per-badge `icon`/`accent` live on the `Badge` type in `data.ts`.
 - **Section challenges:** each runnable module ends with a difficulty-matched,
   real-graded capstone. `moduleChallenges` (module name -> challenge slug) +
   `getModuleChallenge()` in `data.ts` drive a gold "Section challenge" node on
@@ -116,21 +124,34 @@ self-learners, students, beginners. Community-imported content is a later idea.
   color contrasts of locked elements, copyright, theme text properties conforming to
   WCAG AA standards. Also honors reduced-motion (CSS query and Parallax `matchMedia`) and
   keyboard `:focus-visible` rings, and sets canonical tags / metadata.
+- **Mobile:** audited at a 375px viewport - the key surfaces (home, dashboard,
+  badges, lessons, challenge, practice, projects) have no horizontal overflow. The
+  lesson top bar previously rendered one progress dot per lesson (a ~700px row that
+  blew out the page on phones); it is now a compact responsive progress bar that
+  scales to any lesson count and reads cleaner on desktop too. The NavBar Explore
+  dropdown was right-anchored to its button, so on phones (where the button sits
+  mid-nav) the panel ran off the left edge; it is now viewport-anchored
+  (`position: fixed`, `right: clamp(...)`, width capped to `100vw - 24px`) so it
+  always fits, on both phone and desktop.
 - **Industry section:** `/industry` covers Python, JavaScript, and C#/.NET
   (domains, tools, roles), data in `src/lib/industry.ts`.
 - **Not done (all remaining work; full detail in PLAN.md):**
-  - *Owner actions (no code):* run the two Supabase migrations + set `.env.local`;
-    add `dreamcoder.dev` to the Supabase/Google/GitHub/Spotify dashboards; add the
-    bare `/auth/callback` URL to Supabase Redirect URLs (else OAuth sign-in returns
-    "requested path is invalid"); run the live cross-device backend test.
-  - *Security hardening (pre-launch):* a Content-Security-Policy; rate limiting on
-    `/api/transpile` + `/api/guide`; bump Next to clear the postcss audit advisory;
-    cap `/api/events` props size.
+  - *Owner actions (no code):* setup is DONE (domain live, `.env.local` + migrations
+    in place, redirect URLs set, OAuth sign-in works end to end). Only an optional
+    cross-device persistence spot-check remains (see PLAN.md item 1).
+  - *Security hardening (pre-launch):* DONE this pass - report-only CSP +
+    `poweredByHeader: false` (`next.config.ts`), baseline in-memory rate limiting
+    (`src/lib/rateLimit.ts`) on `/api/transpile` (per-IP) + `/api/guide` (per-user),
+    `/api/events` per-event props size cap. Remaining are owner follow-ups: walk the
+    app with the console open then flip the CSP from report-only to enforcing; back
+    the rate limiter with a durable store (Upstash/KV) for cross-instance limits; the
+    postcss audit advisory waits on a patched Next (`16.2.9` is already latest).
   - *Final / deferred externals:* the AI provider key; Stripe billing (flip
     `GUIDE_REQUIRE_PRO`); a server-side sandbox so C# can run (Py/JS/TS run
     client-side, C# cannot).
-  - *Backlog:* semantic TS type-checking in-editor (needs lib `.d.ts` in-browser),
-    expert tracks, community content (would need a UGC code-exec sandbox), i18n.
+  - *Backlog:* expert tracks (Gemini content), community content (needs a UGC
+    code-exec sandbox), i18n (needs a locale layer), institutional/admin direction.
+    (Semantic TS type-checking is now DONE - see the TypeScript note above.)
 
 ## Run it
 
@@ -172,7 +193,8 @@ Routes (`src/app/*/page.tsx` unless noted):
 Components (`src/components/`): `SiteChrome` (persistent global nav in root layout,
 so the Spotify player never remounts), `NavBar`, `SpotifyPlayer`, `LessonView`
 (runs Python/JS by `lesson.language`, awards XP + completes the stop),
-`CodeEditor`, `EditorFrame`, `DreamGuide` (real Socratic AI hint chat -> `/api/guide`,
+`CodeEditor`, `EditorFrame`, `BadgeMedallion` (per-badge glyph+accent orb, used by
+`/badges` + dashboard), `DreamGuide` (real Socratic AI hint chat -> `/api/guide`,
 signed-in gated, takes problem `context` + `getCode`), `FlowSteps`,
 `Cloud`/`Parallax`, `SceneTopBar`, `AuthScene` (Supabase auth, falls back to demo
 routing pre-config), `Wordmark`, `StreakFlame`, `JourneyCtas` (auth/progress-aware
@@ -184,14 +206,17 @@ Lib (`src/lib/`): `curriculum.ts` (typed `Lesson[]`; `getAdjacent` + `getModules
 `data.ts` (peaks, projects, `practiceDatasets`, `challenges`), `profile.ts`
 (`useUserProfile`, XP/streak/badges, localStorage + `/api/*` sync), `srs.ts` (FSRS),
 `track.ts` (active track), `telemetry.ts` (batched `track()` -> `/api/events`),
+`rateLimit.ts` (best-effort in-memory rate limiter for `/api/transpile` + `/api/guide`),
+`tsCheck.ts` (server-side semantic TS type-checker powering `/api/transpile`),
 `usePyodide.ts` (Pyodide worker hook), `sound.ts`
 (Web Audio chimes), `theme.ts` (per-page gradient/cloud opacity knobs),
 `supabase/{config,client,server,data}.ts` (clients + RLS data access),
 `ai/guide.ts` (server-only, provider-agnostic AI hint adapters + system prompt).
 
 Other: `src/proxy.ts` (Next 16 Proxy = renamed Middleware; refreshes the session),
-`src/app/icon.svg` (brand favicon), `next.config.ts` (security headers +
-allowedDevOrigins), `public/pyodide-worker.js`,
+`src/app/icon.svg` (brand favicon), `next.config.ts` (security headers,
+report-only CSP, `poweredByHeader: false`, allowedDevOrigins),
+`public/pyodide-worker.js`,
 `supabase/migrations/{0001_init,0002_telemetry}.sql`,
 `Extra/Code-handoff/` (design source of truth), `Extra/*.pdf` (pedagogy research).
 
@@ -204,12 +229,18 @@ allowedDevOrigins), `public/pyodide-worker.js`,
   user can only touch their own rows. Do not add an ORM on a direct connection (it
   bypasses RLS). The app uses ONLY the anon key + the user's session (no service-role
   key anywhere); never expose a service key or set it `NEXT_PUBLIC_`. All `/api/*`
-  routes are auth-gated + Zod-validated (except `/api/transpile`, a pure no-execution
-  TS->JS transform, and `/api/spotify/config`, which returns only the PKCE-public
-  client id). The OAuth callback validates its `next` param to same-origin relative
-  paths (no open redirect). Baseline security headers are set in `next.config.ts`
-  (`X-Frame-Options: DENY`, `nosniff`, `Referrer-Policy`, `Permissions-Policy`); a
-  CSP + rate limiting are launch follow-ups (PLAN.md "Security hardening"). The code
+  routes are auth-gated + Zod-validated (except `/api/transpile`, a no-execution
+  TS->JS transform + semantic type-check, and `/api/spotify/config`, which returns
+  only the PKCE-public client id). `/api/transpile` (per-IP) and `/api/guide` (per-user) are rate limited
+  via `src/lib/rateLimit.ts` (best-effort in-memory; a durable Upstash/KV store is
+  the cross-instance follow-up). `/api/events` caps batch size, name length, and
+  per-event props size. The OAuth callback validates its `next` param to same-origin
+  relative paths (no open redirect). `next.config.ts` sets baseline security headers
+  (`X-Frame-Options: DENY`, `nosniff`, `Referrer-Policy`, `Permissions-Policy`),
+  drops `X-Powered-By` (`poweredByHeader: false`), and ships a **report-only** CSP
+  (`Content-Security-Policy-Report-Only`). The CSP must allow `'unsafe-eval'` /
+  `'unsafe-inline'` because the in-browser JS runner and Pyodide require them.
+  Flipping it to enforcing is a launch follow-up (PLAN.md "Security hardening"). The code
   runners (`new Function`, Pyodide) only ever run the learner's OWN code in their OWN
   browser - first-party content only until UGC is sandboxed.
 - **Voice (strict): no AI tells.** No em dashes, en dashes, single-char ellipsis,

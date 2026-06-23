@@ -234,23 +234,38 @@ export default function LessonView({
         >
           {"\u2190"} Back to map
         </Link>
-        <div className="flex items-center" style={{ gap: 14 }}>
-          <div className="font-display" style={{ fontWeight: 700, fontSize: 17, color: "#ffffff" }}>
+        <div className="flex items-center" style={{ gap: 12, minWidth: 0 }}>
+          <div
+            className="font-display"
+            style={{ fontWeight: 700, fontSize: 16, color: "#ffffff", whiteSpace: "nowrap" }}
+          >
             {lesson.catalogTitle} {"\u00b7"} Lesson {lesson.order} of {total}
           </div>
-          <div className="flex" style={{ gap: 6 }}>
-            {Array.from({ length: total }, (_, i) => i + 1).map((n) => (
-              <span
-                key={n}
-                style={{
-                  width: 10,
-                  height: 10,
-                  borderRadius: "50%",
-                  background: n <= lesson.order ? "#ff7ad9" : "rgba(255,255,255,.3)",
-                  boxShadow: n <= lesson.order ? "0 0 8px rgba(255,122,217,.8)" : undefined,
-                }}
-              />
-            ))}
+          {/* Compact progress bar. Scales to any lesson count, so it never blows
+              out the bar on phones the way one dot per lesson did. */}
+          <div
+            aria-hidden="true"
+            style={{
+              position: "relative",
+              width: "clamp(64px, 18vw, 150px)",
+              height: 6,
+              borderRadius: 999,
+              background: "rgba(255,255,255,.22)",
+              overflow: "hidden",
+              flexShrink: 0,
+            }}
+          >
+            <div
+              style={{
+                position: "absolute",
+                top: 0,
+                bottom: 0,
+                left: 0,
+                width: `${Math.round((lesson.order / Math.max(total, 1)) * 100)}%`,
+                background: "linear-gradient(90deg, #ff7ad9, #c8b3ff)",
+                boxShadow: "0 0 8px rgba(255,122,217,.7)",
+              }}
+            />
           </div>
         </div>
         <div

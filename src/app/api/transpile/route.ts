@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import * as ts from "typescript";
+import { rateLimit, clientIp, rateLimitHeaders } from "@/lib/rateLimit";
+import { typeCheckErrors } from "@/lib/tsCheck";
 
 // TypeScript can't run in the browser, so we strip its types to plain JS here
 // (server-side, where the already-installed `typescript` package runs natively)
@@ -13,6 +15,16 @@ export const runtime = "nodejs";
 const Schema = z.object({ code: z.string().max(20000) });
 
 export async function POST(request: Request) {
+  // Public + CPU-bound: cap per-IP throughput so it cannot be used to burn CPU.
+  // Generous for normal use (the client transpiles on each Run, not per keystroke).
+  const limit = rateLimit(`transpile:${clientIp(request)}`, { limit: 30, windowMs: 10_000 });
+  if (!limit.ok) {
+    return NextResponse.json(
+      { error: "rate_limited" },
+      { status: 429, headers: rateLimitHeaders(limit.retryAfter) },
+    );
+  }
+
   let body: unknown;
   try {
     body = await request.json();
@@ -33,9 +45,18 @@ export async function POST(request: Request) {
     reportDiagnostics: true,
   });
 
-  const diagnostics = (result.diagnostics ?? []).map((d) =>
+  // Syntax errors from the transform itself.
+  const syntax = (result.diagnostics ?? []).map((d) =>
     ts.flattenDiagnosticMessageText(d.messageText, "\n"),
   );
 
-  return NextResponse.json({ js: result.outputText, diagnostics });
+  // Only run the (heavier) semantic type-check when the code parses cleanly -
+  // type-checking broken syntax just produces noise. Type errors block running
+  // the same way syntax errors do, so the TS track now genuinely catches them.
+  const typeErrors = syntax.length === 0 ? typeCheckErrors(parsed.data.code) : [];
+
+  return NextResponse.json({
+    js: result.outputText,
+    diagnostics: [...syntax, ...typeErrors],
+  });
 }

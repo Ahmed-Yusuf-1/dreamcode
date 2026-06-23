@@ -30,39 +30,50 @@ ORM on a direct connection, no service-role key in the app). Product name stays
 
 ## 1. Owner actions (no code; only the owner can do these)
 
-- **Custom domain (dreamcoder.dev).** Code is env-driven (`NEXT_PUBLIC_SITE_URL`).
-  Add `https://dreamcoder.dev` ALONGSIDE localhost in: Supabase Auth (Site URL +
-  Redirect URLs), the Google + GitHub OAuth apps, and the Spotify app redirect URI.
-- **Run the Supabase migrations:** `supabase/migrations/0001_init.sql` then
-  `0002_telemetry.sql`, and set `.env.local` (see PROJECT.md "Supabase setup").
-- **Add the OAuth callback to Supabase Redirect URLs:**
-  `http://localhost:3000/auth/callback` and `https://dreamcoder.dev/auth/callback`
-  (the app now sends the bare callback URL, so these exact entries match). Without
-  this, Google/GitHub sign-in returns `{"error":"requested path is invalid"}`.
-- **Live backend end-to-end test** (needs the provisioned Supabase + secrets; can't
-  be run from the repo). Sign up (email + Google + GitHub); earn XP / complete a stop
-  / pass a section challenge / rate a review; reload and on a SECOND device confirm
-  XP, streak, badges, completed stops and FSRS due dates persist; confirm rows in
-  `profiles / completed_stops / unlocked_badges / srs_cards / submissions / events`
-  and that RLS blocks other users' rows. Report any mismatch; Claude fixes the sync.
-  (The sync path is already code-audited + fixed: idempotent upserts, server-derived
-  level, zeroed demo seed, RLS verified.)
+Setup is DONE (confirmed by the owner, 2026-06-22): the custom domain is live,
+`.env.local` + the Supabase migrations are in place, the dashboard redirect URLs
+are configured, and OAuth sign-in works end to end (email + Google + GitHub). The
+domain / migration / redirect items are closed. One optional verification remains:
+
+- **Confirm cross-device persistence (quick manual check).** This proves signed-in
+  progress lives in Supabase, not just the browser cache. On device A, sign in and
+  earn state (complete a lesson for XP, pass a section challenge, unlock a badge,
+  rate a review card). On device B - a DIFFERENT browser or phone, so it does NOT
+  share localStorage - sign in with the SAME account and confirm XP, level, streak,
+  badges, completed stops, and FSRS review due dates all match. Optional: in the
+  Supabase Table editor, confirm rows exist in `profiles / completed_stops /
+  unlocked_badges / srs_cards / submissions / events` for your user id, and that a
+  second account cannot see the first account's rows (RLS). If anything does not
+  carry over, report it and Claude fixes the sync (already code-audited: idempotent
+  upserts, server-derived level, RLS verified).
 
 ## 2. Security hardening (before public launch)
 
 The repo was reviewed (auth, RLS, the `/api/*` surface, secrets, injection/XSS,
-deps). Posture is solid and the found issues are fixed (OAuth-callback open redirect;
-baseline security headers in `next.config.ts`). Remaining, non-blocking:
+deps). Posture is solid. **Done this pass** (2026-06-22): a report-only
+Content-Security-Policy + `poweredByHeader: false` in `next.config.ts`; a baseline
+in-memory rate limiter (`src/lib/rateLimit.ts`) on `/api/transpile` (per-IP) and
+`/api/guide` (per-user, with a friendly 429 in `DreamGuide`); a per-event `props`
+size cap on `/api/events`. (Earlier fixes still standing: OAuth-callback open
+redirect, baseline security headers.) Remaining, non-blocking:
 
-- **Content-Security-Policy** - not set yet; needs per-source allowances for the
-  app's inline styles + Spotify SDK + Supabase. Ship report-only first, then enforce.
-- **Rate limiting** on `/api/transpile` (public, CPU) and `/api/guide` (spends model
-  budget). Needs an external store (e.g. Vercel/Upstash), keyed by IP / user - flag it.
+- **Flip the CSP to enforcing (OWNER).** It ships REPORT-ONLY today
+  (`Content-Security-Policy-Report-Only` in `next.config.ts`). Do a full walkthrough
+  with the browser console open (JS + Python lessons, TS transpile, Spotify connect,
+  auth) and confirm zero legitimate violations, then rename the header key to
+  `Content-Security-Policy` to enforce. Note the policy must keep `'unsafe-eval'` /
+  `'unsafe-inline'` because the in-browser JS runner (`new Function`) and Pyodide
+  require them - this is inherent to a client-side code runner. Optional: add a
+  `report-uri`/`report-to` collector endpoint.
+- **Durable, cross-instance rate limiting (OWNER - external service).** The current
+  limiter is per-process memory, so on multi-instance / serverless hosting each
+  instance counts independently. For a hard global cap, back it with an external
+  store (Upstash Redis / Vercel KV) keyed by IP / user, then swap the store behind
+  `rateLimit()`. Flagged because it adds an external dependency.
 - **`npm audit`:** 2 MODERATE issues from `postcss` bundled inside Next (CSS-stringify
-  XSS; low real-world risk - we never process untrusted CSS). The audit "fix"
-  downgrades Next - do NOT run `--force`; clear it by bumping Next when patched.
-- **`/api/events` props cap** - the route caps batch size + name length but not the
-  per-event `props` size; add a small cap to bound storage abuse.
+  XSS; low real-world risk - we never process untrusted CSS). Confirmed `next@16.2.9`
+  is already the latest stable, so this cannot be cleared by bumping yet. The audit
+  "fix" downgrades Next - do NOT run `--force`; clear it when a patched Next ships.
 - **Sandbox UGC code execution** - only relevant IF community/imported lessons ship
   (see backlog). First-party content is safe; user-submitted code would need a
   sandboxed iframe (no same-origin / cookies).
@@ -81,10 +92,26 @@ baseline security headers in `next.config.ts`). Remaining, non-blocking:
 
 ## 4. Later / backlog
 
-- **Semantic TS type-checking** in the editor (the runner strips types but does not
-  yet catch type errors; needs the TS lib `.d.ts` in-browser - a CDN/external dep).
+- ~~Semantic TS type-checking~~ **DONE (2026-06-23).** `/api/transpile` now runs a
+  real semantic type-check (`src/lib/tsCheck.ts`) using the already-bundled
+  `typescript` (no client CDN). Lenient options (no `strict`/`noImplicitAny`, ES2020
+  lib, injected `console`, DOM lib dropped so `location`/`status`/`name` are usable
+  variable names) catch genuine type errors and block running, the same as syntax
+  errors. Validated against all TS lesson/challenge starters + examples (0 false
+  positives). Production bundling of the lib `.d.ts` files is handled by
+  `outputFileTracingIncludes` in `next.config.ts`.
+
+The rest are large efforts, not quick changes - each needs either content work
+(Gemini) or an architecture/product decision before building:
+
 - **Expert tracks** (deeper metaprogramming / concurrency / internals) per language.
-- **Community / imported content** (triggers the UGC-sandbox hardening above).
-- **i18n** (needs a Claude-built locale/dictionary layer first).
-- **Institutional / admin** direction (class dashboards, standards alignment) if the
-  audience expands past individual learners.
+  This is curriculum CONTENT at volume - the right job for Gemini against a Claude
+  spec, not a code change.
+- **Community / imported content.** Blocked on the UGC code-execution sandbox
+  (sandboxed iframe, no same-origin/cookies) from the security work - a real
+  security-sensitive build, not simple.
+- **i18n** - needs a locale/dictionary layer, every user-facing string extracted
+  across ~12 pages, a locale switcher, plus the translations themselves (content).
+- **Institutional / admin** direction (class dashboards, standards alignment) - a
+  whole new product surface (roles, data model, RLS) if the audience expands past
+  individual learners.

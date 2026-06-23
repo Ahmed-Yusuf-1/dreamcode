@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import SceneTopBar, { GlassPill } from "@/components/SceneTopBar";
+import BadgeMedallion from "@/components/BadgeMedallion";
 import { badges } from "@/lib/data";
 import { useUserProfile } from "@/lib/profile";
 import { gradientOpacity, cloudOpacity } from "@/lib/theme";
@@ -93,23 +94,18 @@ export default function BadgesPage() {
                 boxShadow: "0 18px 44px rgba(30,16,60,.35)",
               }}
             >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={badge.img}
-                alt={badge.name}
-                className={badge.found ? "cloud-glow" : undefined}
+              <div
                 style={{
-                  display: "block",
                   width: "100%",
-                  maxWidth: 130,
-                  height: "auto",
+                  maxWidth: 116,
                   margin: "0 auto",
                   animation: badge.found
                     ? `floatySm ${7 + (i % 4) * 0.5}s ease-in-out ${(i % 5) * 0.3}s infinite`
                     : undefined,
-                  filter: badge.found ? undefined : "grayscale(1) brightness(.55) opacity(.55)",
                 }}
-              />
+              >
+                <BadgeMedallion icon={badge.icon} accent={badge.accent} found={badge.found} />
+              </div>
               <div
                 className="font-display"
                 style={{

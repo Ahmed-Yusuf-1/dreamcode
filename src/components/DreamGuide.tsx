@@ -149,6 +149,8 @@ export default function DreamGuide({
         setUpgradeNeeded(true);
       } else if (res.status === 503) {
         setNote("The Dream Guide is not switched on yet. Once an AI provider is connected, this is where it answers.");
+      } else if (res.status === 429) {
+        setNote("You are asking quite fast. Give it a few seconds and try again.");
       } else {
         setNote("The guide could not answer just now. Give it another try in a moment.");
       }

@@ -3,6 +3,7 @@ import { z } from "zod";
 import { getUser } from "@/lib/supabase/server";
 import { getFullProfile } from "@/lib/supabase/data";
 import { isGuideConfigured, buildSystemPrompt, generateHint, GuideError } from "@/lib/ai/guide";
+import { rateLimit, rateLimitHeaders } from "@/lib/rateLimit";
 
 const BodySchema = z.object({
   problem: z.object({
@@ -26,8 +27,20 @@ const BodySchema = z.object({
 
 export async function POST(request: Request) {
   // 1. Live gate for now: must be signed in (protects the model key / cost).
-  if (!(await getUser())) {
+  const user = await getUser();
+  if (!user) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  }
+
+  // 1b. Per-user rate limit. Each hint spends real model budget, so cap the
+  //     burst rate even for a signed-in user (a stuck learner sends a few
+  //     messages a minute; 20/min leaves generous headroom).
+  const limit = rateLimit(`guide:${user.id}`, { limit: 20, windowMs: 60_000 });
+  if (!limit.ok) {
+    return NextResponse.json(
+      { error: "rate_limited" },
+      { status: 429, headers: rateLimitHeaders(limit.retryAfter) },
+    );
   }
 
   // 2. Parked pro gate. Off by default; set GUIDE_REQUIRE_PRO=true at launch to

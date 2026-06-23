@@ -20,27 +20,41 @@ export const journeyNodes: JourneyNode[] = [
   { id: "functions", index: 4, title: "Functions", state: "locked", xp: 60, sub: "Finish Loops to unlock", href: "" },
 ];
 
+// Each badge has its own glyph + accent so the wall reads as ten distinct
+// emblems, not the same cloud repeated. `BadgeMedallion` maps `icon` -> SVG.
+export type BadgeIcon =
+  | "loop"
+  | "bug"
+  | "peak"
+  | "flame"
+  | "blocks"
+  | "moon"
+  | "list"
+  | "key"
+  | "function"
+  | "flask";
+
 export interface Badge {
   id: string;
   name: string;
   desc: string;
-  img: string;
+  icon: BadgeIcon;
+  /** Accent hex (6-digit, so `${accent}77` alpha suffixes stay valid). */
+  accent: string;
   found: boolean;
 }
 
-const neon = (n: number) => `/assets/clouds-neon/cutout-cloud-neon-1-0${n}.webp`;
-
 export const badges: Badge[] = [
-  { id: "first-loop", name: "First Loop", desc: "Run your first for loop", img: neon(1), found: true },
-  { id: "bug-catcher", name: "Bug Catcher", desc: "Fix a broken program", img: neon(2), found: true },
-  { id: "cloud-hopper", name: "Cloud Hopper", desc: "Pass every test on a peak", img: neon(4), found: true },
-  { id: "streak-keeper", name: "Streak Keeper", desc: "Code 7 days in a row", img: neon(5), found: true },
-  { id: "sky-builder", name: "Sky Builder", desc: "Finish a chapter project", img: neon(3), found: true },
-  { id: "night-owl", name: "Night Owl", desc: "Finish a lesson after midnight", img: neon(1), found: false },
-  { id: "list-wrangler", name: "List Wrangler", desc: "Master lists & indexes", img: neon(2), found: false },
-  { id: "dict-diver", name: "Dict Diver", desc: "Look up 50 keys", img: neon(4), found: false },
-  { id: "function-forger", name: "Function Forger", desc: "Write 10 functions", img: neon(5), found: false },
-  { id: "test-tamer", name: "Test Tamer", desc: "Write your first failing test", img: neon(3), found: false },
+  { id: "first-loop", name: "First Loop", desc: "Run your first for loop", icon: "loop", accent: "#38e1ff", found: true },
+  { id: "bug-catcher", name: "Bug Catcher", desc: "Fix a broken program", icon: "bug", accent: "#7cff9b", found: true },
+  { id: "cloud-hopper", name: "Cloud Hopper", desc: "Pass every test on a peak", icon: "peak", accent: "#6ea8ff", found: true },
+  { id: "streak-keeper", name: "Streak Keeper", desc: "Code 7 days in a row", icon: "flame", accent: "#ff9f45", found: true },
+  { id: "sky-builder", name: "Sky Builder", desc: "Finish a chapter project", icon: "blocks", accent: "#b98cff", found: true },
+  { id: "night-owl", name: "Night Owl", desc: "Finish a lesson after midnight", icon: "moon", accent: "#7c8cff", found: false },
+  { id: "list-wrangler", name: "List Wrangler", desc: "Master lists & indexes", icon: "list", accent: "#43e6c9", found: false },
+  { id: "dict-diver", name: "Dict Diver", desc: "Look up 50 keys", icon: "key", accent: "#ffd45e", found: false },
+  { id: "function-forger", name: "Function Forger", desc: "Write 10 functions", icon: "function", accent: "#ff7ad9", found: false },
+  { id: "test-tamer", name: "Test Tamer", desc: "Write your first failing test", icon: "flask", accent: "#ff6b7d", found: false },
 ];
 
 export interface LessonStop {

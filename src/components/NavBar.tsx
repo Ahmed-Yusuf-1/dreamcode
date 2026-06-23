@@ -175,16 +175,20 @@ export default function NavBar({ isHome = false }: { isHome?: boolean }) {
             <div
               id="explore-menu"
               role="menu"
-              className="absolute"
+              className="fixed"
               style={{
-                top: "calc(100% + 12px)",
-                right: 0,
+                // Anchor to the viewport's right edge (not the button), so on
+                // narrow screens the panel never runs off the left edge. Width is
+                // capped to the viewport, matching the Spotify panel's pattern.
+                top: "calc(var(--nav-h) + 6px)",
+                right: "clamp(12px, 4vw, 44px)",
                 zIndex: 80,
                 opacity: exploreOpen ? 1 : 0,
                 visibility: exploreOpen ? "visible" : "hidden",
                 transform: exploreOpen ? "translateY(0)" : "translateY(-6px)",
                 transition: "opacity .2s ease, transform .2s ease, visibility .2s",
                 width: "min(440px, calc(100vw - 24px))",
+                maxWidth: "calc(100vw - 24px)",
                 background: "rgba(20,17,60,.95)",
                 backdropFilter: "blur(16px)",
                 border: "1px solid rgba(255,255,255,.16)",
