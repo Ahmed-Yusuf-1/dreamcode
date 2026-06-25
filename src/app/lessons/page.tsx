@@ -79,7 +79,7 @@ export default function LessonsPage() {
             textWrap: "pretty",
           }}
         >
-          A guided road through Python, JavaScript, and C# - one small, glowing stop at a time.
+          A guided road through Python, JavaScript, C#, and TypeScript, one small, glowing stop at a time.
         </p>
 
         {/* Tab Selector. width:max-content keeps it compact on desktop; max-width

@@ -108,7 +108,11 @@ self-learners, students, beginners. Community-imported content is a later idea.
   `/profile` page is now auth-aware: when signed in it shows a real Sign out (a form
   POST to `/auth/signout` that clears the session); when signed out it shows a Sign
   in pill plus a guest banner (progress is local-only) instead of the old hardcoded
-  "Sign out" link that wrongly appeared and only routed to `/login`.
+  "Sign out" link that wrongly appeared and only routed to `/login`. The `/dashboard`
+  "continue" card is now curriculum-driven per ACTIVE track (`getModules(track)`), so
+  C#/TypeScript learners get their own next lesson instead of always being routed to
+  Python (an old hardcoded-stops bug); the "next badge" and review-due copy are also
+  derived from real state now, not static placeholders.
   `src/components/GuidePath.tsx` (global via `SiteChrome`) is a dismissible coach that
   strings Learn -> Practice -> Challenge -> Build for new learners (under 6 completed
   stops) with route-aware tips + one next-step CTA, and hides on dismiss. Home
@@ -144,6 +148,17 @@ self-learners, students, beginners. Community-imported content is a later idea.
   map (a fixed 720-unit coordinate space) now scales uniformly via a measured
   `transform: scale` wrapper so the nodes no longer land off the right edge on
   phones.
+- **Client-walkthrough QA (verified by driving the app):** the lesson editor frame
+  defaulted an unset `lesson.language` to JavaScript, so early Python lessons (which
+  omit the field) showed an "index.js / JAVASCRIPT" chrome and JS syntax highlighting
+  while the runner correctly ran Python; the display now defaults to Python to match
+  the runner (`LessonView`). The home "Two languages, one road" section (which framed
+  C#/TS as "waiting in the catalog") is now "Four languages, one road" with real
+  Python / JavaScript / TypeScript / C# cards (C# tagged READ + QUIZ). Verified live:
+  the Python runner loads Pyodide under the report-only CSP and prints output, the
+  practice predict step grades correctly, and the challenge runner reports test
+  pass/fail. (Note: the `cloud-hopper` challenge intentionally ships pre-solved as the
+  "Try a problem" demo; other challenges use blank stubs.)
 - **Industry section:** `/industry` covers Python, JavaScript, and C#/.NET
   (domains, tools, roles), data in `src/lib/industry.ts`.
 - **Not done (all remaining work; full detail in PLAN.md):**

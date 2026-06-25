@@ -84,8 +84,8 @@ export default function Home() {
               textWrap: "pretty",
             }}
           >
-            Tiny lessons and glowing problems, served all night. Python and JavaScript, one neon
-            mile at a time.
+            Tiny lessons and glowing problems, served all night. Python, JavaScript, C#, and
+            TypeScript, one neon mile at a time.
           </p>
           <div className="flex flex-wrap justify-center" style={{ gap: 14, marginTop: 34 }}>
             <HeroStartCta />
@@ -291,11 +291,11 @@ export default function Home() {
 
           <div className="relative z-5 mx-auto text-center" style={{ maxWidth: 920 }}>
             <h2 className="font-display glow-heading" style={{ fontWeight: 800, fontSize: 40, color: "#ffffff", margin: "0 0 10px" }}>
-              Two languages, one road
+              Four languages, one road
             </h2>
-            <p style={{ fontSize: 16, fontWeight: 700, color: "rgba(255,255,255,.85)", maxWidth: 540, margin: "0 auto 44px", lineHeight: 1.65 }}>
-              Start with Python&apos;s clean lines, cross over to JavaScript&apos;s wild sky - the
-              road runs from your first variable to real projects in both.
+            <p style={{ fontSize: 16, fontWeight: 700, color: "rgba(255,255,255,.85)", maxWidth: 560, margin: "0 auto 44px", lineHeight: 1.65 }}>
+              Four guided tracks on one road. Python, JavaScript and TypeScript run right in your
+              browser; C# is a read and quiz track. From your first variable to real projects.
             </p>
 
             <div className="grid grid-cols-1 text-left md:grid-cols-2" style={{ gap: 18 }}>
@@ -336,7 +336,7 @@ export default function Home() {
                 </div>
                 <p style={{ fontSize: 14, fontWeight: 600, color: "rgba(255,255,255,.9)", lineHeight: 1.65, margin: "10px 0 16px" }}>
                   The language the web dreams in. A full guided track, from your first function to
-                  closures, async and the DOM - plus C# and TypeScript tracks waiting in the catalog.
+                  closures, async, and the DOM.
                 </p>
                 <div className="font-mono" style={{ background: "rgba(8,18,46,.8)", borderRadius: 14, padding: "14px 18px", fontSize: 13, lineHeight: 1.9 }}>
                   <div>
@@ -352,6 +352,57 @@ export default function Home() {
                     <span style={{ color: "#dbe9ff" }}>(</span>
                     <span style={{ color: "#9ad1ff" }}>hop</span>
                     <span style={{ color: "#dbe9ff" }}>)</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="glass glow-hover" style={{ borderRadius: 22, padding: "26px 28px", boxShadow: "0 18px 44px rgba(10,8,40,.35)" }}>
+                <div className="flex items-center justify-between">
+                  <div className="font-display" style={{ fontWeight: 800, fontSize: 24, color: "#ffffff" }}>
+                    TypeScript
+                  </div>
+                  <span style={{ background: "#d9f5e6", color: "#0f5c38", fontWeight: 900, fontSize: 11, padding: "5px 12px", borderRadius: 999 }}>
+                    AVAILABLE NOW
+                  </span>
+                </div>
+                <p style={{ fontSize: 14, fontWeight: 600, color: "rgba(255,255,255,.9)", lineHeight: 1.65, margin: "10px 0 16px" }}>
+                  JavaScript with a type safety net. Real type checking in the editor catches
+                  mistakes before your code ever runs.
+                </p>
+                <div className="font-mono" style={{ background: "rgba(8,18,46,.8)", borderRadius: 14, padding: "14px 18px", fontSize: 13, lineHeight: 1.9 }}>
+                  <div>
+                    <span style={{ color: "#ff9ecf" }}>let</span>
+                    <span style={{ color: "#dbe9ff" }}> stars</span>
+                    <span style={{ color: "#ff9ecf" }}>:</span>
+                    <span style={{ color: "#9ad1ff" }}> number</span>
+                    <span style={{ color: "#dbe9ff" }}> = </span>
+                    <span style={{ color: "#ffd9a0" }}>100</span>
+                    <span style={{ color: "#dbe9ff" }}>;</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="glass glow-hover" style={{ borderRadius: 22, padding: "26px 28px", boxShadow: "0 18px 44px rgba(10,8,40,.35)" }}>
+                <div className="flex items-center justify-between">
+                  <div className="font-display" style={{ fontWeight: 800, fontSize: 24, color: "#ffffff" }}>
+                    C#
+                  </div>
+                  <span style={{ background: "#fff3c9", color: "#7a5410", fontWeight: 900, fontSize: 11, padding: "5px 12px", borderRadius: 999 }}>
+                    READ + QUIZ
+                  </span>
+                </div>
+                <p style={{ fontSize: 14, fontWeight: 600, color: "rgba(255,255,255,.9)", lineHeight: 1.65, margin: "10px 0 16px" }}>
+                  Typed and everywhere, from games to enterprise. Learn the .NET essentials through
+                  worked examples and quizzes, with runnable code on the way.
+                </p>
+                <div className="font-mono" style={{ background: "rgba(8,18,46,.8)", borderRadius: 14, padding: "14px 18px", fontSize: 13, lineHeight: 1.9 }}>
+                  <div>
+                    <span style={{ color: "#9ad1ff" }}>Console</span>
+                    <span style={{ color: "#dbe9ff" }}>.</span>
+                    <span style={{ color: "#9ad1ff" }}>WriteLine</span>
+                    <span style={{ color: "#dbe9ff" }}>(</span>
+                    <span style={{ color: "#ffd9a0" }}>&quot;hello, sky&quot;</span>
+                    <span style={{ color: "#dbe9ff" }}>);</span>
                   </div>
                 </div>
               </div>

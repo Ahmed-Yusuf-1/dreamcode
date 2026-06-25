@@ -25,9 +25,17 @@ single-char ellipsis, no decorative emoji); runtime DB access stays RLS-scoped (
 ORM on a direct connection, no service-role key in the app). Product name stays
 **dreamcode** (domain is dreamcoder.dev; no rename).
 
-> The product is feature-complete for an MVP. Everything below is either an OWNER
-> action (external dashboards / secrets), a pre-launch hardening pass, or a
-> deliberately deferred / backlog item. Nothing here blocks day-to-day use.
+> The product is feature-complete for an MVP and has had a production-readiness /
+> UX audit AND a hands-on client walkthrough (auth flow, dashboard "continue" per
+> track, honest home copy for all four tracks, lesson editor language labels, the
+> Python runner / practice / challenge flows verified by driving the app, mobile). By
+> owner direction, exactly **two features are intentionally parked until after
+> launch**: (1) the C#/Rust code-execution **sandbox** (section 5), and (2) the
+> **AI mentor** + its **Stripe billing** gate (section 3) - billing is coupled to
+> the AI since it sells that feature. Everything else below is either an OWNER
+> action (external dashboards / secrets / the CSP enforce flip), optional content
+> for Gemini (expert tracks, Rust - specs ready), or deferred backlog. Nothing here
+> blocks day-to-day use.
 
 ---
 

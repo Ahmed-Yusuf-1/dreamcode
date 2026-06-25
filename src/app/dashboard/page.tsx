@@ -7,6 +7,7 @@ import StreakFlame from "@/components/StreakFlame";
 import FlowSteps from "@/components/FlowSteps";
 import BadgeMedallion from "@/components/BadgeMedallion";
 import { badges, reviewCards } from "@/lib/data";
+import { getModules } from "@/lib/curriculum";
 import { cloudOpacity } from "@/lib/theme";
 import { useActiveTrack } from "@/lib/track";
 import { getSRSStates } from "@/lib/srs";
@@ -15,64 +16,43 @@ import { useUserProfile } from "@/lib/profile";
 const DAYS = ["M", "T", "W", "T", "F", "S", "S"];
 const cs = cloudOpacity.dashboard;
 
-const PYTHON_STOPS = [
-  { slug: "variables", title: "Variables", type: "lesson", href: "/lesson/variables", chapter: "Python Basics - Chapter 1" },
-  { slug: "strings", title: "Strings", type: "lesson", href: "/lesson/strings", chapter: "Python Basics - Chapter 1" },
-  { slug: "loops", title: "Loops", type: "lesson", href: "/lesson/loops", chapter: "Python Basics - Chapter 1" },
-  { slug: "functions", title: "Functions", type: "lesson", href: "/lesson/functions", chapter: "Python Basics - Chapter 1" },
-];
-
-const JS_STOPS = [
-  { slug: "js-variables", title: "Let and Const", type: "lesson", href: "/lesson/js-variables", chapter: "JavaScript Climbs - Chapter 1" },
-  { slug: "js-functions", title: "Arrow Functions", type: "lesson", href: "/lesson/js-functions", chapter: "JavaScript Climbs - Chapter 1" },
-  { slug: "cloud-hopper", title: "Cloud Hopper", type: "challenge", href: "/challenge/cloud-hopper", chapter: "JavaScript Climbs - Chapter 1" },
-  { slug: "fog-filter", title: "Fog Filter", type: "challenge", href: "/peaks", chapter: "JavaScript Climbs - Chapter 1" },
-];
-
 export default function DashboardPage() {
   const { profile } = useUserProfile();
   const found = badges.filter((b) => profile.unlockedBadges.includes(b.id)).slice(0, 4);
   // Guard against a zero-activity week (new learner): avoid dividing by 0 -> NaN.
   const maxXp = Math.max(1, ...profile.weekActivity);
   const { track } = useActiveTrack();
-
-  const stops = track === "javascript" ? JS_STOPS : PYTHON_STOPS;
   const completed = profile.completedStops || [];
-  const continueStop = stops.find((s) => !completed.includes(s.slug)) || stops[stops.length - 1];
-  const trackStopSlugs = stops.map(s => s.slug);
-  const completedCountInTrack = trackStopSlugs.filter(slug => completed.includes(slug)).length;
 
-  let continueHref = continueStop.href;
-  let continueTitle = `${continueStop.title} \u00b7 Lesson`;
-  let continueDesc = `${continueStop.chapter} \u00b7 Stop ${stops.indexOf(continueStop) + 1} of ${stops.length}`;
-  let continueProgress = Math.round((completedCountInTrack / stops.length) * 100);
+  // Drive "continue" from the real curriculum for the ACTIVE track, so C# and
+  // TypeScript learners get their own next lesson instead of always being sent
+  // back to Python (the old hardcoded PYTHON_STOPS/JS_STOPS fallback bug).
+  const trackLessons = getModules(track).flatMap((m) => m.lessons);
+  const totalLessons = trackLessons.length;
+  const completedInTrack = trackLessons.filter((l) => completed.includes(l.slug)).length;
+  const nextLesson = trackLessons.find((l) => !completed.includes(l.slug)) ?? null;
+  const allDone = totalLessons > 0 && completedInTrack >= totalLessons;
+  const nextBadge = badges.find((b) => !profile.unlockedBadges.includes(b.id)) ?? null;
+
+  let continueHref = "/lessons";
+  let continueTitle = "Start learning";
+  let continueDesc = "Pick your track and take the first stop.";
+  let continueProgress = 0;
   let currentStepIndex = 0; // Learn
 
-  if (continueStop.type === "lesson") {
-    if (completed.includes(continueStop.slug)) {
-      const hasPractice = ["variables", "strings", "loops"].includes(continueStop.slug);
-      const practiceCompleted = completed.includes(`practice:${continueStop.slug}`);
-      if (hasPractice && !practiceCompleted) {
-        continueHref = `/practice/${continueStop.slug}`;
-        continueTitle = `${continueStop.title} \u00b7 Practice`;
-        continueProgress = Math.max(10, Math.round(((completedCountInTrack - 0.5) / stops.length) * 100));
-        currentStepIndex = 1; // Practice
-      } else {
-        currentStepIndex = 2; // Challenge
-      }
-    } else {
-      currentStepIndex = 0; // Learn
-    }
-  } else if (continueStop.type === "challenge") {
-    currentStepIndex = 2; // Challenge
-  }
-
-  if (completedCountInTrack === stops.length) {
+  if (allDone) {
     continueHref = "/projects";
-    continueTitle = "Chapter 1 Completed!";
-    continueDesc = "Ready for Guided & Independent Projects?";
+    continueTitle = "Track complete!";
+    continueDesc = "Every lesson cleared. Build a project of your own.";
     continueProgress = 100;
     currentStepIndex = 3; // Build
+  } else if (nextLesson) {
+    const stopNum = trackLessons.findIndex((l) => l.slug === nextLesson.slug) + 1;
+    continueHref = `/lesson/${nextLesson.slug}`;
+    continueTitle = nextLesson.catalogTitle;
+    continueDesc = `${nextLesson.module || nextLesson.chapter} \u00b7 Stop ${stopNum} of ${totalLessons}`;
+    continueProgress = Math.round((completedInTrack / totalLessons) * 100);
+    currentStepIndex = 0; // Learn
   }
 
   const [dueCount, setDueCount] = useState(0);
@@ -164,7 +144,7 @@ export default function DashboardPage() {
               Your path
             </div>
             <div style={{ fontSize: 13, fontWeight: 700, color: "rgba(255,255,255,.75)" }}>
-              Same four steps every time. Right now you are on a lesson.
+              {allDone ? "Same four steps every time. All lessons cleared, on to building." : "Same four steps every time. Right now you are on a lesson."}
             </div>
           </div>
           <FlowSteps current={currentStepIndex} compact />
@@ -207,8 +187,9 @@ export default function DashboardPage() {
               {dueCount} {dueCount === 1 ? "memory" : "memories"} due
             </div>
             <div style={{ fontSize: 14, fontWeight: 700, color: "rgba(255,255,255,.88)", lineHeight: 1.6 }}>
-              Variables, strings and two loops drifted back. Two minutes keeps them yours for a
-              week.
+              {dueCount === 0
+                ? "Nothing is due right now. Your memories are holding steady."
+                : "Cards you have learned are drifting back. Two minutes keeps them yours for a week."}
             </div>
             <div className="font-display" style={{ marginTop: 18, fontWeight: 800, fontSize: 15, color: "#d9f2ff" }}>
               Clear the sky {"\u2192"}
@@ -287,8 +268,11 @@ export default function DashboardPage() {
               ))}
             </div>
             <div style={{ marginTop: 14, fontSize: 13.5, fontWeight: 700, color: "rgba(255,255,255,.88)" }}>
-              Next up: <strong style={{ color: "#ffffff" }}>Function Forger</strong> - write 10
-              functions. You&apos;re at 6.
+              {nextBadge ? (
+                <>Next up: <strong style={{ color: "#ffffff" }}>{nextBadge.name}</strong> - {nextBadge.desc}.</>
+              ) : (
+                "Every badge earned. The sky is full."
+              )}
             </div>
           </Link>
         </div>

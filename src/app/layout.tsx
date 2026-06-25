@@ -27,7 +27,7 @@ const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://dreamcoder.dev";
 
 const title = "dreamcode - learn · solve · dream";
 const description =
-  "Tiny lessons and glowing problems, served all night. Python and JavaScript, one neon mile at a time.";
+  "Tiny lessons and glowing problems, served all night. Python, JavaScript, C#, and TypeScript, one neon mile at a time.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),

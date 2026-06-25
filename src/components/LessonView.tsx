@@ -329,7 +329,7 @@ export default function LessonView({
                 {lesson.example}
               </pre>
             ) : (
-              <CodeEditor value={lesson.example} language={lesson.language === "python" ? "python" : lesson.language === "typescript" ? "typescript" : "javascript"} readOnly lineNumbers={false} minHeight="0px" />
+              <CodeEditor value={lesson.example} language={lesson.language === "javascript" ? "javascript" : lesson.language === "typescript" ? "typescript" : "python"} readOnly lineNumbers={false} minHeight="0px" />
             )}
           </div>
 
@@ -368,8 +368,8 @@ export default function LessonView({
           {runnable ? (
           <>
           <EditorFrame
-            filename={lesson.language === "python" ? "main.py" : lesson.language === "typescript" ? "index.ts" : "index.js"}
-            language={lesson.language === "python" ? "PYTHON" : lesson.language === "typescript" ? "TYPESCRIPT" : "JAVASCRIPT"}
+            filename={lesson.language === "javascript" ? "index.js" : lesson.language === "typescript" ? "index.ts" : "main.py"}
+            language={lesson.language === "javascript" ? "JAVASCRIPT" : lesson.language === "typescript" ? "TYPESCRIPT" : "PYTHON"}
             footer={
               <div className="flex items-center justify-between" style={{ padding: "0 18px 16px", gap: 12 }}>
                 <span
@@ -408,7 +408,7 @@ export default function LessonView({
             }
           >
             <div style={{ padding: "10px 8px 6px" }}>
-              <CodeEditor value={code} onChange={setCode} language={lesson.language === "python" ? "python" : lesson.language === "typescript" ? "typescript" : "javascript"} minHeight="180px" />
+              <CodeEditor value={code} onChange={setCode} language={lesson.language === "javascript" ? "javascript" : lesson.language === "typescript" ? "typescript" : "python"} minHeight="180px" />
             </div>
           </EditorFrame>
 
