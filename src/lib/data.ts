@@ -2674,10 +2674,12 @@ function stringifyConfig<T extends object>(config: T): StringifyProperties<T> {
  * challenge is authored; modules without an entry simply show no section challenge.
  */
 export const moduleChallenges: Record<string, string> = {
-  // Python
-  "Python Basics": "py-basics-density",
-  "Conditionals and logic": "py-conditionals-altitude",
-  "Loops and iteration": "rain-counter",
+  // Python. NOTE: graded challenges always test a `functionName`, so a code
+  // challenge inherently requires functions. Python teaches functions in the
+  // "Functions" module, so the earlier modules (Basics, Conditionals, Loops) get
+  // NO section challenge - presenting one there would demand a skill the learner
+  // has not met yet. (Their capstones still exist in `challenges` for later use;
+  // appropriate early-section capstones would be quiz-style, a content follow-up.)
   "Functions": "py-functions-average",
   "Collections": "dict-diver",
   "Comprehensions and data tools": "py-comprehension-sorter",

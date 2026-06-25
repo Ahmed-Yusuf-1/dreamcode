@@ -217,13 +217,13 @@ print("TEST_OUTPUTS:" + json.dumps(results))
 
       <div
         className="pointer-events-none fixed inset-0 z-2"
-        style={{ background: "linear-gradient(180deg, #6E8FC7 0%, #F0AABE 100%)", opacity: gradientOpacity.challenge }}
+        style={{ background: "linear-gradient(180deg, #355a9e 0%, #6E8FC7 36%, #b9a3cf 70%, #F0AABE 100%)", opacity: gradientOpacity.challenge }}
       />
       <div
         className="pointer-events-none fixed inset-0 z-3"
         style={{
           background:
-            "linear-gradient(180deg, rgba(238,245,255,.15) 0%, rgba(238,245,255,.35) 46%, rgba(240,238,255,.55) 100%)",
+            "linear-gradient(180deg, rgba(28,16,56,.32) 0%, rgba(28,16,56,.05) 42%, rgba(28,16,56,.20) 100%)",
         }}
       />
 
@@ -234,17 +234,17 @@ print("TEST_OUTPUTS:" + json.dumps(results))
           top: "var(--nav-h)",
           gap: 12,
           padding: "12px clamp(16px, 4vw, 32px)",
-          background: "rgba(255,255,255,.72)",
-          borderBottom: "1px solid rgba(255,255,255,.6)",
+          background: "rgba(24,20,70,.55)",
+          borderBottom: "1px solid rgba(255,255,255,.18)",
         }}
       >
         <Link
           href="/peaks"
-          className="cursor-pointer transition-colors hover:border-[#2f6fdd]"
+          className="cursor-pointer transition-colors hover:bg-white/30"
           style={{
-            background: "#ffffff",
-            border: "2px solid #d7e6f4",
-            color: "#2f6fdd",
+            background: "rgba(255,255,255,.16)",
+            border: "2px solid rgba(255,255,255,.45)",
+            color: "#ffffff",
             fontWeight: 900,
             fontSize: 13,
             padding: "8px 16px",
@@ -254,7 +254,7 @@ print("TEST_OUTPUTS:" + json.dumps(results))
           {"\u2190"} Back to peaks
         </Link>
         <div className="flex items-center" style={{ gap: 12 }}>
-          <div className="font-display" style={{ fontWeight: 700, fontSize: 17, color: "#13335f" }}>
+          <div className="font-display" style={{ fontWeight: 700, fontSize: 17, color: "#ffffff" }}>
             Problem Peaks {"\u00b7"} {challenge.name}
           </div>
           <span style={{ background: "#d9f5e6", color: "#0f5c38", fontWeight: 900, fontSize: 12, padding: "5px 12px", borderRadius: 999 }}>

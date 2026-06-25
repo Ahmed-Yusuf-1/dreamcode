@@ -22,8 +22,6 @@ export default function Cloud({
   anim = "floaty",
   duration = 13,
   delay = 0,
-  glow = true,
-  neon,
   scale = 1,
   fixed = false,
 }: {
@@ -35,18 +33,14 @@ export default function Cloud({
   anim?: "floaty" | "floatySm";
   duration?: number;
   delay?: number;
+  // glow / neon are accepted for backwards compatibility but no longer applied:
+  // the cyan/magenta neon haze was removed for a cleaner, flatter cloud look.
   glow?: boolean;
   neon?: "magenta" | "cyan";
   scale?: number;
   fixed?: boolean;
 }) {
-  const glowClass = neon
-    ? neon === "magenta"
-      ? "cloud-neon-magenta"
-      : "cloud-neon-cyan"
-    : glow
-      ? "cloud-glow"
-      : undefined;
+  const glowClass = undefined;
 
   const finalOpacity = Math.min(1, opacity * cloudOpacityBoost * scale);
 

@@ -159,6 +159,24 @@ self-learners, students, beginners. Community-imported content is a later idea.
   practice predict step grades correctly, and the challenge runner reports test
   pass/fail. (Note: the `cloud-hopper` challenge intentionally ships pre-solved as the
   "Try a problem" demo; other challenges use blank stubs.)
+- **Learning flow gating (this pass):** a runnable lesson with a practice now shows a
+  SINGLE "Practice this" CTA and is not marked learned (and shows no Next) until the
+  practice is passed; finishing the practice marks the owning lesson learned (+ its
+  XP) and reveals Next, so the journey unlock also waits for practice. Lessons without
+  a practice still complete on Next. **Section-challenge appropriateness:** graded
+  challenges always test a `functionName`, so they require functions. Python teaches
+  functions in module 4, so the pre-functions modules (Basics, Conditionals, Loops)
+  no longer map a section challenge (`moduleChallenges`) - presenting `py-basics-density`
+  on the strings lesson asked for a skill not yet taught. The first Python section
+  challenge is now the Functions capstone. (Proper early-section capstones would be
+  quiz-style, since you cannot grade code before functions - a content follow-up.)
+- **Theme pass (this pass):** the floating-cloud cyan/magenta neon glow is removed
+  globally (`Cloud.tsx` no longer applies a glow class) for a cleaner, flatter look;
+  per-page cloud opacity was raised so clouds read across more pages. The challenge
+  pages now use the projects-style gradient (`#355a9e -> #6E8FC7 -> #b9a3cf -> #F0AABE`)
+  with a dark vignette instead of the old white wash, and a dark-glass top bar (white
+  title) instead of the white bar. The home story background now warms to `#F0AABE`
+  at the bottom (matching the projects page) instead of fading back to navy.
 - **Industry section:** `/industry` covers Python, JavaScript, and C#/.NET
   (domains, tools, roles), data in `src/lib/industry.ts`.
 - **Not done (all remaining work; full detail in PLAN.md):**

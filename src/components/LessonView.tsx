@@ -10,7 +10,7 @@ import { usePyodide } from "@/lib/usePyodide";
 import { cloudOpacity } from "@/lib/theme";
 import { lessons, type Lesson, type LessonLink, type QuizQuestion } from "@/lib/curriculum";
 import { practiceDatasets, getModuleChallenge } from "@/lib/data";
-import { addXP, completeStop } from "@/lib/profile";
+import { addXP, completeStop, useUserProfile } from "@/lib/profile";
 import { playChime } from "@/lib/sound";
 import { track } from "@/lib/telemetry";
 
@@ -74,6 +74,16 @@ export default function LessonView({
     .sort((a, b) => a.order - b.order);
   const isLastOfModule = moduleLessons[moduleLessons.length - 1]?.slug === lesson.slug;
   const sectionChallenge = runnable && isLastOfModule ? getModuleChallenge(moduleName) : null;
+
+  // Flow gating: a learner must PASS the practice before moving on. While the
+  // lesson has an unfinished practice, the only forward CTA is "Practice this",
+  // and the lesson is only marked learned once practice is completed (the practice
+  // page records both `practice:<slug>` and the lesson slug).
+  const { profile } = useUserProfile();
+  const completedStops = profile.completedStops || [];
+  const hasPractice = !!(lesson.practiceSlug && practiceDatasets[lesson.practiceSlug]);
+  const practiceDone = !hasPractice || completedStops.includes(`practice:${lesson.practiceSlug}`);
+  const lessonLearned = completedStops.includes(lesson.slug);
 
   const [quizDone, setQuizDone] = useState(false);
   const completeFromQuiz = () => {
@@ -418,70 +428,75 @@ export default function LessonView({
             <QuizPanel quiz={lesson.quiz ?? []} onPass={completeFromQuiz} done={quizDone} />
           )}
 
-          <div className="flex flex-wrap justify-end" style={{ gap: 12 }}>
-            {lesson.practiceSlug && practiceDatasets[lesson.practiceSlug] && (
+          <div className="flex flex-wrap items-center justify-end" style={{ gap: 12 }}>
+            {runnable && hasPractice && !practiceDone ? (
+              // Practice is required before moving on, so it is the ONLY forward
+              // action here. The Next button appears once practice is passed (the
+              // practice page marks both the practice and the lesson complete).
               <Link
                 href={`/practice/${lesson.practiceSlug}`}
-                className="font-display cursor-pointer backdrop-blur-sm transition-colors hover:bg-[rgba(110,230,255,.22)]"
+                className="font-display cursor-pointer transition-transform hover:-translate-y-0.5"
                 style={{
-                  background: "rgba(24,22,60,.4)",
-                  border: "2px solid rgba(150,245,255,.85)",
-                  color: "#eefcff",
-                  fontWeight: 700,
+                  border: "none",
+                  background: "linear-gradient(135deg, #ff7ad9, #ff4fb0)",
+                  color: "#ffffff",
+                  fontWeight: 800,
                   fontSize: 16,
-                  padding: "12px 24px",
+                  padding: "12px 28px",
                   borderRadius: 999,
-                  boxShadow: "0 0 16px rgba(110,230,255,.35)",
+                  boxShadow: "0 0 24px rgba(255,100,200,.55), 0 14px 30px rgba(20,10,50,.45)",
                 }}
               >
                 Practice this {"\u2192"}
               </Link>
+            ) : (
+              <>
+                {sectionChallenge && !completedStops.includes(sectionChallenge.slug) && (
+                  <Link
+                    href={`/challenge/${sectionChallenge.slug}`}
+                    className="font-display cursor-pointer backdrop-blur-sm transition-colors hover:bg-[rgba(255,200,90,.22)]"
+                    style={{
+                      background: "rgba(60,44,20,.4)",
+                      border: "2px solid rgba(255,216,120,.9)",
+                      color: "#fff6df",
+                      fontWeight: 700,
+                      fontSize: 16,
+                      padding: "12px 24px",
+                      borderRadius: 999,
+                    }}
+                  >
+                    {"\u2605"} Section challenge {"\u2192"}
+                  </Link>
+                )}
+                <Link
+                  href={next ? `/lesson/${next.slug}` : "/journey"}
+                  onClick={() => {
+                    if (runnable && !lessonLearned) {
+                      addXP(15);
+                      completeStop(lesson.slug);
+                      track("lesson_completed", {
+                        slug: lesson.slug,
+                        language: lesson.language || "python",
+                        module: lesson.module || lesson.chapter || "Basics",
+                      });
+                    }
+                  }}
+                  className="font-display cursor-pointer transition-transform hover:-translate-y-0.5"
+                  style={{
+                    border: "none",
+                    background: "linear-gradient(135deg, #ff7ad9, #ff4fb0)",
+                    color: "#ffffff",
+                    fontWeight: 800,
+                    fontSize: 16,
+                    padding: "12px 26px",
+                    borderRadius: 999,
+                    boxShadow: "0 0 24px rgba(255,100,200,.55), 0 14px 30px rgba(20,10,50,.45)",
+                  }}
+                >
+                  {next ? `Next: ${next.title} \u2192` : "Finish chapter \u2192"}
+                </Link>
+              </>
             )}
-            {sectionChallenge && (
-              <Link
-                href={`/challenge/${sectionChallenge.slug}`}
-                className="font-display cursor-pointer backdrop-blur-sm transition-colors hover:bg-[rgba(255,200,90,.22)]"
-                style={{
-                  background: "rgba(60,44,20,.4)",
-                  border: "2px solid rgba(255,216,120,.9)",
-                  color: "#fff6df",
-                  fontWeight: 700,
-                  fontSize: 16,
-                  padding: "12px 24px",
-                  borderRadius: 999,
-                  boxShadow: "0 0 16px rgba(255,200,90,.35)",
-                }}
-              >
-                {"\u2605"} Section challenge {"\u2192"}
-              </Link>
-            )}
-            <Link
-              href={next ? `/lesson/${next.slug}` : "/journey"}
-              onClick={() => {
-                if (runnable) {
-                  addXP(15);
-                  completeStop(lesson.slug);
-                  track("lesson_completed", {
-                    slug: lesson.slug,
-                    language: lesson.language || "python",
-                    module: lesson.module || lesson.chapter || "Basics",
-                  });
-                }
-              }}
-              className="font-display cursor-pointer transition-transform hover:-translate-y-0.5"
-              style={{
-                border: "none",
-                background: "linear-gradient(135deg, #ff7ad9, #ff4fb0)",
-                color: "#ffffff",
-                fontWeight: 800,
-                fontSize: 16,
-                padding: "12px 26px",
-                borderRadius: 999,
-                boxShadow: "0 0 24px rgba(255,100,200,.55), 0 14px 30px rgba(20,10,50,.45)",
-              }}
-            >
-              {next ? `Next: ${next.title} \u2192` : "Finish chapter \u2192"}
-            </Link>
           </div>
         </div>
       </div>

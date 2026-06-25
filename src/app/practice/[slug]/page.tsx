@@ -436,6 +436,13 @@ function DoneStep({ slug }: { slug: string }) {
     addXP(20);
     completeStop(`practice:${slug}`);
     unlockBadge("first-loop");
+    // Finishing practice also marks the owning lesson learned (and awards its XP),
+    // because in the new flow the lesson is only completed once practice is passed.
+    const owner = getLesson(slug);
+    if (owner) {
+      addXP(15);
+      completeStop(owner.slug);
+    }
     track("practice_completed", { slug });
     playChime("success");
   }, [slug]);
