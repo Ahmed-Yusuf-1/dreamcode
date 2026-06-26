@@ -449,6 +449,13 @@ function DoneStep({ slug }: { slug: string }) {
 
   const lesson = getLesson(slug);
   const nextLesson = getAdjacent(slug).next;
+  // Chapter checkpoint: if the next lesson begins a new module, guide a quick
+  // night review before the next chapter - a sprinkled, structured review beat
+  // so the learner is led through the loop instead of choosing where to go.
+  const nextFull = nextLesson ? getLesson(nextLesson.slug) : null;
+  const ownerModule = lesson?.module || lesson?.chapter;
+  const nextModule = nextFull?.module || nextFull?.chapter;
+  const isChapterEnd = !!(ownerModule && nextModule && ownerModule !== nextModule);
   let nextHref = "/peaks";
   let nextLabel = "Climb a peak \u2192";
 
@@ -476,9 +483,10 @@ function DoneStep({ slug }: { slug: string }) {
       <h2 className="font-display neon-title" style={{ fontWeight: 800, fontSize: 36, color: "#fff6fb", margin: "20px 0 8px" }}>
         Practice complete!
       </h2>
-      <p style={{ fontSize: 16, fontWeight: 700, color: "rgba(255,255,255,.9)", maxWidth: 420, margin: "0 auto", lineHeight: 1.65, textShadow: "0 2px 12px rgba(10,8,40,.6)" }}>
-        You read it, you arranged it, you finished it - that&apos;s the whole loop, three different
-        ways. It&apos;ll come back in your reviews in a few days.
+      <p style={{ fontSize: 16, fontWeight: 700, color: "rgba(255,255,255,.9)", maxWidth: 440, margin: "0 auto", lineHeight: 1.65, textShadow: "0 2px 12px rgba(10,8,40,.6)" }}>
+        {isChapterEnd
+          ? "That wraps the chapter. A quick night review locks it in before you move on to the next one."
+          : "You read it, you arranged it, you finished it - that's the whole loop, three different ways. It comes back in your reviews in a few days."}
       </p>
       <div
         className="inline-block"
@@ -486,25 +494,11 @@ function DoneStep({ slug }: { slug: string }) {
       >
         +20 XP · review scheduled
       </div>
-      <div className="flex justify-center" style={{ gap: 12, marginTop: 28 }}>
+      <div className="flex flex-wrap justify-center" style={{ gap: 12, marginTop: 28 }}>
+        {/* The guided next step is always the primary (pink) button; at a chapter
+            boundary that primary step is the night review. */}
         <Link
-          href={nextHref}
-          className="font-display cursor-pointer backdrop-blur-sm transition-colors hover:bg-[rgba(110,230,255,.22)]"
-          style={{
-            background: "rgba(24,22,60,.4)",
-            border: "2px solid rgba(150,245,255,.85)",
-            color: "#eefcff",
-            fontWeight: 700,
-            fontSize: 16,
-            padding: "12px 24px",
-            borderRadius: 999,
-            boxShadow: "0 0 16px rgba(110,230,255,.35)",
-          }}
-        >
-          {nextLabel}
-        </Link>
-        <Link
-          href="/journey"
+          href={isChapterEnd ? "/review" : nextHref}
           className="font-display cursor-pointer transition-transform hover:-translate-y-0.5"
           style={{
             background: "linear-gradient(135deg, #ff7ad9, #ff4fb0)",
@@ -516,7 +510,22 @@ function DoneStep({ slug }: { slug: string }) {
             boxShadow: "0 0 24px rgba(255,100,200,.55), 0 14px 30px rgba(20,10,50,.45)",
           }}
         >
-          Back to the map
+          {isChapterEnd ? "Night review →" : nextLabel}
+        </Link>
+        <Link
+          href={isChapterEnd ? nextHref : "/journey"}
+          className="font-display cursor-pointer backdrop-blur-sm transition-colors hover:bg-[rgba(110,230,255,.22)]"
+          style={{
+            background: "rgba(24,22,60,.4)",
+            border: "2px solid rgba(150,245,255,.85)",
+            color: "#eefcff",
+            fontWeight: 700,
+            fontSize: 16,
+            padding: "12px 24px",
+            borderRadius: 999,
+          }}
+        >
+          {isChapterEnd ? nextLabel : "Back to the map"}
         </Link>
       </div>
     </div>

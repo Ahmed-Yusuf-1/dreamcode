@@ -78,7 +78,7 @@ export default function ProfilePage() {
       className="relative overflow-hidden"
       style={{
         minHeight: "100vh",
-        background: "linear-gradient(180deg, #2b2c63 0%, #4c4096 45%, #8E95CE 100%)",
+        background: "linear-gradient(180deg, #355a9e 0%, #6E8FC7 36%, #b9a3cf 70%, #F0AABE 100%)",
       }}
     >
       <Cloud src="/assets/clouds-sunset/cutout-cloud-sunset-13.webp" speed={0.07} pos={{ right: "-5%", top: "10%" }} width="min(400px, 32vw)" opacity={0.62} duration={13} neon="magenta" scale={cs} />

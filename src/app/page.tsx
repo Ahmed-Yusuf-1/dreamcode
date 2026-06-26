@@ -9,13 +9,13 @@ import { gradientOpacity, cloudOpacity } from "@/lib/theme";
 // as a single sky instead of stitched bands. It holds the hero's bottom colour
 // (#191643) at the very top and bottom so the seams disappear.
 const STORY_GRADIENT =
-  "linear-gradient(180deg, #322a64 0%, #3a3470 8%, #4c4096 26%, #6e5fae 44%, #8E95CE 60%, #b58fc6 72%, #c79fce 82%, #e1a6c4 92%, #F0AABE 100%)";
+  "linear-gradient(180deg, #463f80 0%, #463f80 5%, #564a92 16%, #6e5fae 38%, #8E95CE 58%, #b58fc6 72%, #c79fce 82%, #e1a6c4 92%, #F0AABE 100%)";
 
 const cs = cloudOpacity.home;
 
 export default function Home() {
   return (
-    <div style={{ background: "#322a64", overflowX: "clip" }}>
+    <div style={{ background: "#463f80", overflowX: "clip" }}>
       {/* ============ HERO - NEON DUSK ============ */}
       <section
         className="relative overflow-hidden"
@@ -44,7 +44,7 @@ export default function Home() {
           className="pointer-events-none absolute inset-0 z-3"
           style={{
             background:
-              "linear-gradient(180deg, rgba(34,32,82,.22) 0%, rgba(34,32,82,0) 24%, rgba(43,36,90,0) 50%, rgba(43,36,90,.34) 76%, rgba(50,42,100,.58) 100%)",
+              "linear-gradient(180deg, rgba(34,32,82,.2) 0%, rgba(34,32,82,0) 28%, rgba(54,48,104,0) 50%, rgba(62,56,118,.5) 76%, rgba(70,63,128,.88) 90%, rgba(70,63,128,1) 100%)",
           }}
         />
 
