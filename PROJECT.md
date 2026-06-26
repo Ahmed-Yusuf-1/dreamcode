@@ -176,7 +176,17 @@ self-learners, students, beginners. Community-imported content is a later idea.
   pages now use the projects-style gradient (`#355a9e -> #6E8FC7 -> #b9a3cf -> #F0AABE`)
   with a dark vignette instead of the old white wash, and a dark-glass top bar (white
   title) instead of the white bar. The home story background now warms to `#F0AABE`
-  at the bottom (matching the projects page) instead of fading back to navy.
+  at the bottom (matching the projects page) instead of fading back to navy. The
+  hero/story seam was then blended (both sides meet at `#463f80`, so no hard line),
+  and the projects-style blended gradient (`#355a9e -> #6E8FC7 -> ... -> #F0AABE`
+  pink, or `... -> #F2A968` orange) was applied across the content pages: lessons /
+  badges / profile (pink), dashboard / industry / review (orange).
+- **Guided chapter checkpoint:** finishing the practice for a module's LAST lesson now
+  routes the learner to a night review as the primary action ("Night review ->"),
+  with the next chapter as the secondary - a sprinkled, structured review beat at each
+  chapter boundary. Mid-chapter, the next lesson is the primary CTA (the path is led,
+  not chosen). NOTE: reviews are FSRS time-based, so a just-learned chapter may have
+  nothing due yet; a fuller "review this chapter now" mode would be a follow-up.
 - **Industry section:** `/industry` covers Python, JavaScript, and C#/.NET
   (domains, tools, roles), data in `src/lib/industry.ts`.
 - **Not done (all remaining work; full detail in PLAN.md):**

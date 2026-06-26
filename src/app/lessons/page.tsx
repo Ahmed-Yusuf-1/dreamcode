@@ -48,7 +48,7 @@ export default function LessonsPage() {
 
       <div
         className="pointer-events-none absolute inset-0 z-2"
-        style={{ background: "linear-gradient(180deg, #6E8FC7 0%, #F0AABE 100%)", opacity: gradientOpacity.lessons }}
+        style={{ background: "linear-gradient(180deg, #355a9e 0%, #6E8FC7 36%, #b9a3cf 70%, #F0AABE 100%)", opacity: gradientOpacity.lessons }}
       />
 
       <SceneTopBar

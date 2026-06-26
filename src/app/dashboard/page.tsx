@@ -78,7 +78,7 @@ export default function DashboardPage() {
       className="relative overflow-hidden"
       style={{
         minHeight: "100vh",
-        background: "linear-gradient(180deg, #2b2c63 0%, #4c4096 38%, #8E95CE 72%, #d9b9d6 100%)",
+        background: "linear-gradient(180deg, #355a9e 0%, #6E8FC7 38%, #c9a39e 70%, #F2A968 100%)",
       }}
     >
       <Cloud src="/assets/clouds-sunset/cutout-cloud-sunset-11.webp" speed={0.05} pos={{ left: "-7%", top: "8%" }} width="min(460px, 36vw)" opacity={0.8} duration={15} scale={cs} neon="magenta" />
