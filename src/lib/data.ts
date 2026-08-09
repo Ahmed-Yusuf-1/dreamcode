@@ -46,15 +46,15 @@ export interface Badge {
 
 export const badges: Badge[] = [
   { id: "first-loop", name: "First Loop", desc: "Run your first for loop", icon: "loop", accent: "#38e1ff", found: true },
-  { id: "bug-catcher", name: "Bug Catcher", desc: "Fix a broken program", icon: "bug", accent: "#7cff9b", found: true },
+  { id: "bug-catcher", name: "Bug Catcher", desc: "Pass after a failed attempt", icon: "bug", accent: "#7cff9b", found: true },
   { id: "cloud-hopper", name: "Cloud Hopper", desc: "Pass every test on a peak", icon: "peak", accent: "#6ea8ff", found: true },
   { id: "streak-keeper", name: "Streak Keeper", desc: "Code 7 days in a row", icon: "flame", accent: "#ff9f45", found: true },
   { id: "sky-builder", name: "Sky Builder", desc: "Finish a chapter project", icon: "blocks", accent: "#b98cff", found: true },
   { id: "night-owl", name: "Night Owl", desc: "Finish a lesson after midnight", icon: "moon", accent: "#7c8cff", found: false },
-  { id: "list-wrangler", name: "List Wrangler", desc: "Master lists & indexes", icon: "list", accent: "#43e6c9", found: false },
-  { id: "dict-diver", name: "Dict Diver", desc: "Look up 50 keys", icon: "key", accent: "#ffd45e", found: false },
-  { id: "function-forger", name: "Function Forger", desc: "Write 10 functions", icon: "function", accent: "#ff7ad9", found: false },
-  { id: "test-tamer", name: "Test Tamer", desc: "Write your first failing test", icon: "flask", accent: "#ff6b7d", found: false },
+  { id: "list-wrangler", name: "List Wrangler", desc: "Complete a lists or arrays lesson", icon: "list", accent: "#43e6c9", found: false },
+  { id: "dict-diver", name: "Dict Diver", desc: "Complete a dictionaries lesson", icon: "key", accent: "#ffd45e", found: false },
+  { id: "function-forger", name: "Function Forger", desc: "Complete a functions lesson", icon: "function", accent: "#ff7ad9", found: false },
+  { id: "test-tamer", name: "Test Tamer", desc: "Learn from your first failed test run", icon: "flask", accent: "#ff6b7d", found: false },
 ];
 
 export interface LessonStop {

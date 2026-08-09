@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
-import { spendXP, useIsSignedIn } from "@/lib/profile";
+import { spendXP, useIsSignedIn, useUserProfile } from "@/lib/profile";
 import { track } from "@/lib/telemetry";
 
 /** What the learner is currently working on, passed in by each page. */
@@ -35,6 +35,7 @@ export default function DreamGuide({
   getCode?: () => string;
 }) {
   const signedIn = useIsSignedIn();
+  const { profile } = useUserProfile();
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
@@ -160,6 +161,8 @@ export default function DreamGuide({
       setLoading(false);
     }
   };
+
+  if (!profile.guideEnabled) return null;
 
   const showChat = signedIn && !upgradeNeeded;
 

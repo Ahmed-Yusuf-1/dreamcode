@@ -7,7 +7,7 @@ import Cloud from "@/components/Cloud";
 import { cloudOpacity } from "@/lib/theme";
 import DreamGuide from "@/components/DreamGuide";
 import { practiceDatasets, PracticeDataset } from "@/lib/data";
-import { addXP, unlockBadge, completeStop } from "@/lib/profile";
+import { completeActivity } from "@/lib/profile";
 import { playChime } from "@/lib/sound";
 import { getAdjacent, getLesson } from "@/lib/curriculum";
 import { track } from "@/lib/telemetry";
@@ -433,15 +433,12 @@ function FadedStep({ data, onDone }: { data: PracticeDataset; onDone: () => void
 
 function DoneStep({ slug }: { slug: string }) {
   useEffect(() => {
-    addXP(20);
-    completeStop(`practice:${slug}`);
-    unlockBadge("first-loop");
+    completeActivity(`practice:${slug}`);
     // Finishing practice also marks the owning lesson learned (and awards its XP),
     // because in the new flow the lesson is only completed once practice is passed.
     const owner = getLesson(slug);
     if (owner) {
-      addXP(15);
-      completeStop(owner.slug);
+      completeActivity(owner.slug);
     }
     track("practice_completed", { slug });
     playChime("success");

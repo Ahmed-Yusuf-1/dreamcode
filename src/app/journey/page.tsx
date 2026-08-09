@@ -702,7 +702,7 @@ function MapNode({
     return (
       <Link
         href={href}
-        className="absolute flex cursor-pointer flex-col items-center transition-transform duration-200 hover:scale-105"
+        className="dc-journey-node absolute flex cursor-pointer flex-col items-center transition-transform duration-200 hover:scale-105"
         style={baseStyle}
       >
         {inner}

@@ -322,3 +322,238 @@ summary:focus-visible,
   box-shadow: 0 0 0 6px rgba(47, 111, 221, 0.6);
   border-radius: 8px;
 }
+
+/* --------------------------------------------------------------------------
+   Production appearance system
+
+   Sunset Arcade is the light sky; Midnight Focus is the dark sky. The
+   selection is applied before hydration in layout.tsx and maintained by the
+   appearance controller. Importantly, depth is opt-in: styling every link as a
+   box created the rectangular Journey artifact visible in the design review.
+   -------------------------------------------------------------------------- */
+
+html[data-theme="light"] {
+  --dc-page-sky: radial-gradient(circle at 18% 20%, rgba(255, 220, 125, 0.26), transparent 30%), linear-gradient(180deg, #58365f 0%, #9b526a 42%, #d87974 70%, #f3a35f 100%);
+  --dc-glass-bg: rgba(255, 244, 233, 0.17);
+  --dc-glass-border: rgba(255, 246, 226, 0.68);
+  --dc-depth-edge: rgba(97, 44, 61, 0.48);
+  --dc-depth-shadow: rgba(73, 27, 47, 0.3);
+  --dc-accent: linear-gradient(135deg, #ff8a62, #ff5f78);
+}
+
+html[data-theme="dark"] {
+  --dc-page-sky: radial-gradient(circle at 72% 12%, rgba(141, 124, 255, 0.17), transparent 34%), linear-gradient(180deg, #090d26 0%, #121b3f 48%, #243c61 76%, #41697b 100%);
+  --dc-glass-bg: rgba(10, 17, 45, 0.72);
+  --dc-glass-border: rgba(136, 227, 218, 0.34);
+  --dc-depth-edge: rgba(4, 7, 25, 0.74);
+  --dc-depth-shadow: rgba(2, 4, 18, 0.48);
+  --dc-accent: linear-gradient(135deg, #8d7cff, #526fd1);
+}
+
+html[data-theme] body {
+  background: var(--dc-page-sky);
+}
+
+/* Every full-page route currently has a direct div root with an authored
+   background. This override gives all routes one coherent day/night sky. */
+html[data-theme] main > div[style*="background"]:not(.dc-home) {
+  background: var(--dc-page-sky) !important;
+}
+
+html[data-theme] main .glass,
+html[data-theme] main .glass-strong {
+  background: var(--dc-glass-bg);
+  border-color: var(--dc-glass-border);
+  color: #eefcff;
+}
+
+html[data-theme="dark"] main .glass,
+html[data-theme="dark"] main .glass-strong {
+  box-shadow: 0 20px 48px rgba(2, 4, 18, 0.42), inset 0 1px 0 rgba(255, 255, 255, 0.09);
+}
+
+html[data-theme] main :is(button, a)[style*="#ff7ad9" i] {
+  background: var(--dc-accent) !important;
+}
+
+html[data-theme="light"] :is(.neon-title, .neon-wordmark, .glow-heading) {
+  text-shadow: 0 0 7px rgba(255, 255, 255, 0.92), 0 0 20px rgba(255, 138, 98, 0.9), 0 0 46px rgba(255, 95, 120, 0.72) !important;
+}
+
+html[data-theme="dark"] :is(.neon-title, .neon-wordmark, .glow-heading) {
+  text-shadow: 0 0 6px rgba(255, 255, 255, 0.82), 0 0 18px rgba(141, 124, 255, 0.72), 0 0 38px rgba(70, 216, 200, 0.42) !important;
+}
+
+/* Home uses a background image and nested story sky instead of a normal page
+   root, so it receives explicit overlays in both appearances. */
+.dc-home-hero::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+
+html[data-theme="light"] .dc-home-hero::after {
+  background: linear-gradient(180deg, rgba(79, 42, 91, 0.04), rgba(242, 140, 91, 0.34));
+}
+
+html[data-theme="dark"] .dc-home-hero::after {
+  background: linear-gradient(180deg, rgba(2, 5, 26, 0.58), rgba(8, 12, 40, 0.8));
+}
+
+html[data-theme="light"] .dc-home-story {
+  background: linear-gradient(180deg, #623b65 0%, #99546e 32%, #d57d7e 67%, #f1a56a 100%) !important;
+}
+
+html[data-theme="dark"] .dc-home-story {
+  background: linear-gradient(180deg, #090d26 0%, #151b43 40%, #283659 72%, #3f5a70 100%) !important;
+}
+
+/* Tactile controls preserve their authored border on all four sides. The old
+   border-bottom override is intentionally gone, fixing the broken cyan ring.
+
+   This selector deliberately covers real page buttons plus links that already
+   present themselves as rounded CTAs. It does not target ordinary text links,
+   lesson cards, dashboard cards, or Journey nodes, so depth stays consistent
+   without recreating the rectangular cloud-node regression. */
+:is(
+  .dc-pressable,
+  main button:not(:disabled):not(.dc-no-depth):not([aria-label^="Close"]):not([aria-label^="Dismiss"]):not(.appearance-picker__option),
+  main a.font-display.cursor-pointer:not(.dc-no-depth):not(.dc-journey-node),
+  main a.cursor-pointer[style*="border-radius"]:not(.dc-no-depth):not(.dc-journey-node),
+  header #nav-btn-signup
+) {
+  --dc-button-edge: var(--dc-depth-edge);
+  box-shadow: 0 7px 0 var(--dc-button-edge), 0 14px 26px var(--dc-depth-shadow), inset 0 1px 0 rgba(255, 255, 255, 0.25) !important;
+  transform: translateY(-3px);
+  transition: transform 150ms ease, box-shadow 150ms ease, filter 150ms ease !important;
+}
+
+:is(
+  .dc-pressable,
+  main button:not(:disabled):not(.dc-no-depth):not([aria-label^="Close"]):not([aria-label^="Dismiss"]):not(.appearance-picker__option),
+  main a.font-display.cursor-pointer:not(.dc-no-depth):not(.dc-journey-node),
+  main a.cursor-pointer[style*="border-radius"]:not(.dc-no-depth):not(.dc-journey-node),
+  header #nav-btn-signup
+):hover {
+  filter: brightness(1.06) saturate(1.04);
+  transform: translateY(-5px);
+}
+
+:is(
+  .dc-pressable,
+  main button:not(:disabled):not(.dc-no-depth):not([aria-label^="Close"]):not([aria-label^="Dismiss"]):not(.appearance-picker__option),
+  main a.font-display.cursor-pointer:not(.dc-no-depth):not(.dc-journey-node),
+  main a.cursor-pointer[style*="border-radius"]:not(.dc-no-depth):not(.dc-journey-node),
+  header #nav-btn-signup
+):active {
+  box-shadow: 0 2px 0 var(--dc-button-edge), 0 6px 12px var(--dc-depth-shadow), inset 0 2px 5px rgba(15, 8, 40, 0.2) !important;
+  transform: translateY(2px);
+}
+
+/* Display-font CTAs get the more pronounced arcade travel from the original
+   study; small utility buttons keep the quieter seven-pixel edge above. */
+:is(
+  main :is(button, a).font-display.cursor-pointer:not(.dc-no-depth):not(.dc-journey-node),
+  header #nav-btn-signup
+) {
+  box-shadow: 0 10px 0 var(--dc-button-edge), 0 19px 34px var(--dc-depth-shadow), inset 0 2px 0 rgba(255, 255, 255, 0.28) !important;
+  transform: translateY(-5px);
+}
+
+:is(
+  main :is(button, a).font-display.cursor-pointer:not(.dc-no-depth):not(.dc-journey-node),
+  header #nav-btn-signup
+):hover {
+  box-shadow: 0 12px 0 var(--dc-button-edge), 0 23px 38px var(--dc-depth-shadow), inset 0 2px 0 rgba(255, 255, 255, 0.32) !important;
+  transform: translateY(-7px);
+}
+
+:is(
+  main :is(button, a).font-display.cursor-pointer:not(.dc-no-depth):not(.dc-journey-node),
+  header #nav-btn-signup
+):active {
+  box-shadow: 0 2px 0 var(--dc-button-edge), 0 7px 14px var(--dc-depth-shadow), inset 0 3px 6px rgba(15, 8, 40, 0.24) !important;
+  transform: translateY(3px);
+}
+
+.dc-pressable--outline {
+  --dc-button-edge: rgba(19, 24, 66, 0.66);
+}
+
+.dc-track-option[aria-pressed="true"] {
+  --dc-button-edge: color-mix(in srgb, var(--dc-depth-edge) 82%, #ffffff 18%);
+  filter: brightness(1.03);
+}
+
+/* Dashboard cards hold a quiet base layer and rise further on navigation. */
+.dc-depth-card {
+  box-shadow: 0 7px 0 var(--dc-depth-edge), 0 22px 46px var(--dc-depth-shadow), inset 0 1px 0 rgba(255, 255, 255, 0.18) !important;
+  transition: transform 180ms ease, box-shadow 180ms ease, filter 180ms ease !important;
+}
+
+.dc-depth-card--interactive:hover,
+.dc-depth-card--interactive:focus-visible {
+  box-shadow: 0 11px 0 var(--dc-depth-edge), 0 30px 58px var(--dc-depth-shadow), inset 0 1px 0 rgba(255, 255, 255, 0.24) !important;
+  filter: brightness(1.04);
+  transform: translateY(-5px);
+}
+
+.dc-depth-card--interactive:active {
+  box-shadow: 0 3px 0 var(--dc-depth-edge), 0 10px 22px var(--dc-depth-shadow), inset 0 2px 5px rgba(15, 8, 40, 0.2) !important;
+  transform: translateY(2px);
+}
+
+/* Journey nodes stay silhouette-shaped. Only the small label gains depth. */
+.dc-journey-node > .glass {
+  box-shadow: 0 5px 0 var(--dc-depth-edge), 0 14px 27px var(--dc-depth-shadow), inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
+  transition: transform 180ms ease, box-shadow 180ms ease;
+}
+
+.dc-journey-node:hover > .glass,
+.dc-journey-node:focus-visible > .glass {
+  box-shadow: 0 9px 0 var(--dc-depth-edge), 0 22px 38px var(--dc-depth-shadow), inset 0 1px 0 rgba(255, 255, 255, 0.25) !important;
+  transform: translateY(-4px);
+}
+
+.appearance-picker {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 9px;
+  margin-top: 12px;
+}
+
+.appearance-picker__option {
+  min-height: 42px;
+  cursor: pointer;
+  border: 2px solid rgba(255, 255, 255, 0.38);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.82);
+  font-weight: 900;
+}
+
+.appearance-picker__option[data-active="true"] {
+  border-color: #ffffff;
+  background: var(--dc-accent);
+  color: #ffffff;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dc-pressable,
+  main button:not(.dc-no-depth),
+  main a.font-display.cursor-pointer:not(.dc-no-depth),
+  main a.cursor-pointer[style*="border-radius"]:not(.dc-no-depth),
+  header #nav-btn-signup,
+  .dc-depth-card,
+  .dc-journey-node > .glass {
+    transform: none !important;
+  }
+}
+
+@media (max-width: 520px) {
+  .appearance-picker {
+    grid-template-columns: 1fr;
+  }
+}

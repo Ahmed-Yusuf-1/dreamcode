@@ -181,6 +181,18 @@ self-learners, students, beginners. Community-imported content is a later idea.
   and the projects-style blended gradient (`#355a9e -> #6E8FC7 -> ... -> #F0AABE`
   pink, or `... -> #F2A968` orange) was applied across the content pages: lessons /
   badges / profile (pink), dashboard / industry / review (orange).
+- **Day/night appearance system (2026-07-13):** Sunset Arcade is the production
+  light sky and Midnight Focus is the production dark sky across every route,
+  including the Home hero/story. Profile offers Automatic, Light, and Dark;
+  Automatic resolves to Sunset from 07:00-19:00 local time and Midnight otherwise,
+  updates while the app stays open, persists in `localStorage`, and applies before
+  hydration to avoid a theme flash. Every real page button and rounded CTA link now
+  shares the tactile two-level press system (deeper travel for major display-font
+  actions), including navigation Start free, Home CTAs, language selectors, lesson
+  actions, and flow controls. Switches, text links, cards, and whole Journey nodes are
+  excluded; Journey label plates retain their own depth and the outlined Home CTA
+  keeps its full cyan border. The temporary five-study switcher was removed after
+  owner selection.
 - **Guided chapter checkpoint:** finishing the practice for a module's LAST lesson now
   routes the learner to a night review as the primary action ("Night review ->"),
   with the next chapter as the secondary - a sprinkled, structured review beat at each
@@ -190,6 +202,12 @@ self-learners, students, beginners. Community-imported content is a later idea.
 - **Industry section:** `/industry` covers Python, JavaScript, and C#/.NET
   (domains, tools, roles), data in `src/lib/industry.ts`.
 - **Not done (all remaining work; full detail in PLAN.md):**
+  - *Production audit remainder:* the 2026-07-13 implementation pass fixed replay
+    rewards, client-authored XP, track reviews/placement, badge/profile truthfulness,
+    main-thread JS/TS execution, CI and failure/metadata routes. PLAN.md section 0 now
+    lists the narrower remaining work: a database transaction for cross-device award
+    concurrency, guest-progress merge, persisted placement starts, authenticated
+    browser CI, and authored TypeScript/C# projects.
   - *Owner actions (no code):* setup is DONE (domain live, `.env.local` + migrations
     in place, redirect URLs set, OAuth sign-in works end to end). Only an optional
     cross-device persistence spot-check remains (see PLAN.md item 1).
@@ -199,7 +217,9 @@ self-learners, students, beginners. Community-imported content is a later idea.
     `/api/events` per-event props size cap. Remaining are owner follow-ups: walk the
     app with the console open then flip the CSP from report-only to enforcing; back
     the rate limiter with a durable store (Upstash/KV) for cross-instance limits; the
-    postcss audit advisory waits on a patched Next (`16.2.9` is already latest).
+    postcss audit advisory waits on a patched dependency. Next 16.2.10 is now the
+    current stable patch; the project remains on 16.2.9 pending an approved dependency
+    update and full verification. The patch alone does not clear the PostCSS advisory.
   - *Final / deferred externals:* the AI provider key; Stripe billing (flip
     `GUIDE_REQUIRE_PRO`); a server-side code-execution sandbox so C# AND Rust can run
     (Py/JS/TS run client-side, C#/Rust cannot). The sandbox is prolonged into its own
@@ -332,8 +352,8 @@ Supabase Auth (step 5 above), the Google + GitHub OAuth apps, and the Spotify ap
 
 ## Gotchas
 
-- Build/lint are green (`tsc` clean, `npm run build` ok, `eslint` 0 errors, a few
-  warnings). Keep it that way.
+- Build/lint are green (`tsc` clean, `npm run build` ok, `eslint` 0 errors and 13
+  warnings). The warning cleanup is now tracked in PLAN.md section 0.
 - `npm audit` reports 2 MODERATE issues from `postcss` bundled inside Next (CSS
   stringify XSS); the audit "fix" downgrades Next, so do NOT run `--force` - clear it
   by bumping Next when a patched release ships. Low real-world risk (no untrusted CSS).

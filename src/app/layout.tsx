@@ -58,7 +58,15 @@ export default function RootLayout({
     <html
       lang="en"
       className={`${baloo.variable} ${nunito.variable} ${jetbrains.variable} h-full antialiased`}
+      suppressHydrationWarning
     >
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var p=localStorage.getItem('dc_appearance');if(p!=='light'&&p!=='dark'&&p!=='automatic')p='automatic';var h=new Date().getHours();var t=p==='automatic'?(h>=7&&h<19?'light':'dark'):p;document.documentElement.dataset.appearance=p;document.documentElement.dataset.theme=t;document.documentElement.style.colorScheme=t}catch(e){document.documentElement.dataset.appearance='automatic';document.documentElement.dataset.theme='dark'}})()`,
+          }}
+        />
+      </head>
       <body className="min-h-full flex flex-col">
         <SiteChrome>{children}</SiteChrome>
       </body>

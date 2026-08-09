@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import Cloud from "@/components/Cloud";
 import StreakFlame from "@/components/StreakFlame";
 import FlowSteps from "@/components/FlowSteps";
 import BadgeMedallion from "@/components/BadgeMedallion";
-import { badges, reviewCards } from "@/lib/data";
+import { badges } from "@/lib/data";
+import { getReviewCards } from "@/lib/review";
 import { getModules } from "@/lib/curriculum";
 import { cloudOpacity } from "@/lib/theme";
 import { useActiveTrack } from "@/lib/track";
@@ -22,7 +23,7 @@ export default function DashboardPage() {
   // Guard against a zero-activity week (new learner): avoid dividing by 0 -> NaN.
   const maxXp = Math.max(1, ...profile.weekActivity);
   const { track } = useActiveTrack();
-  const completed = profile.completedStops || [];
+  const completed = useMemo(() => profile.completedStops || [], [profile.completedStops]);
 
   // Drive "continue" from the real curriculum for the ACTIVE track, so C# and
   // TypeScript learners get their own next lesson instead of always being sent
@@ -61,13 +62,14 @@ export default function DashboardPage() {
     const updateDueCount = () => {
       const states = getSRSStates();
       const now = Date.now();
-      const count = reviewCards.filter((c) => (states[c.id] ?? 0) <= now).length;
+      const cards = getReviewCards(track, completed);
+      const count = cards.filter((c) => (states[c.id] ?? 0) <= now).length;
       setDueCount(count);
     };
     updateDueCount();
     window.addEventListener("dc_srs_change", updateDueCount);
     return () => window.removeEventListener("dc_srs_change", updateDueCount);
-  }, []);
+  }, [completed, track]);
 
   useEffect(() => {
     document.title = "Dashboard - dreamcode";
@@ -136,7 +138,7 @@ export default function DashboardPage() {
 
         {/* the path - always visible so the next move is obvious */}
         <div
-          className="glass"
+          className="glass dc-depth-card"
           style={{ borderRadius: 22, padding: "22px 24px 20px", marginBottom: 24, boxShadow: "0 16px 40px rgba(15,12,50,.3)" }}
         >
           <div className="flex items-center justify-between" style={{ marginBottom: 16, gap: 12, flexWrap: "wrap" }}>
@@ -154,7 +156,7 @@ export default function DashboardPage() {
           {/* continue */}
           <Link
             href={continueHref}
-            className="glass glow-hover block transition-transform hover:-translate-y-1"
+            className="glass dc-depth-card dc-depth-card--interactive glow-hover block"
             style={{ borderRadius: 24, padding: "26px 28px", boxShadow: "0 18px 44px rgba(20,16,60,.3)" }}
           >
             <div style={{ fontSize: 11, fontWeight: 900, letterSpacing: 1.2, color: "#ffd9ef", textShadow: "0 0 10px rgba(255,138,222,.7)" }}>
@@ -177,7 +179,7 @@ export default function DashboardPage() {
           {/* reviews due */}
           <Link
             href="/review"
-            className="glass glow-hover block transition-transform hover:-translate-y-1"
+            className="glass dc-depth-card dc-depth-card--interactive glow-hover block"
             style={{ borderRadius: 24, padding: "26px 28px", boxShadow: "0 18px 44px rgba(20,16,60,.3)" }}
           >
             <div style={{ fontSize: 11, fontWeight: 900, letterSpacing: 1.2, color: "#cdeaff", textShadow: "0 0 10px rgba(110,230,255,.7)" }}>
@@ -197,7 +199,7 @@ export default function DashboardPage() {
           </Link>
 
           {/* level / XP */}
-          <div className="glass" style={{ borderRadius: 24, padding: "26px 28px", boxShadow: "0 18px 44px rgba(20,16,60,.3)" }}>
+          <div className="glass dc-depth-card" style={{ borderRadius: 24, padding: "26px 28px", boxShadow: "0 18px 44px rgba(20,16,60,.3)" }}>
             <div style={{ fontSize: 11, fontWeight: 900, letterSpacing: 1.2, color: "rgba(255,255,255,.8)" }}>
               LEVEL {profile.level}
             </div>
@@ -245,7 +247,7 @@ export default function DashboardPage() {
           {/* badges */}
           <Link
             href="/badges"
-            className="glass glow-hover block transition-transform hover:-translate-y-1"
+            className="glass dc-depth-card dc-depth-card--interactive glow-hover block"
             style={{ borderRadius: 24, padding: "26px 28px", boxShadow: "0 18px 44px rgba(20,16,60,.3)" }}
           >
             <div className="flex items-center justify-between">
@@ -288,7 +290,7 @@ export default function DashboardPage() {
             <Link
               key={href}
               href={href}
-              className="cursor-pointer backdrop-blur-md transition-colors hover:bg-white/30"
+              className="dc-pressable cursor-pointer backdrop-blur-md transition-colors hover:bg-white/30"
               style={{
                 background: "rgba(255,255,255,.16)",
                 border: "2px solid rgba(255,255,255,.55)",

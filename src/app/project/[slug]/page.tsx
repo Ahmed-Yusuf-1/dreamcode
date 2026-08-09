@@ -8,11 +8,12 @@ import CodeEditor from "@/components/CodeEditor";
 import EditorFrame from "@/components/EditorFrame";
 import DreamGuide from "@/components/DreamGuide";
 import { gradientOpacity, cloudOpacity } from "@/lib/theme";
-import { addXP, completeStop, recordSubmission } from "@/lib/profile";
+import { completeActivity, recordSubmission } from "@/lib/profile";
 import { playChime } from "@/lib/sound";
 import { projects } from "@/lib/data";
 import { usePyodide } from "@/lib/usePyodide";
 import { track } from "@/lib/telemetry";
+import { testJavaScript } from "@/lib/javascriptRunner";
 
 type TestState = "idle" | "pass" | "fail";
 
@@ -89,17 +90,9 @@ export default function DynamicProjectPage({ params }: { params: Promise<{ slug:
 
     if (project.language === "JavaScript") {
       try {
-        const fn = new Function(`${code}; return ${project.functionName};`)();
-        if (typeof fn !== "function") throw new Error(`${project.functionName} is not defined`);
-
-        const next = project.testCases!.map((t) => {
-          try {
-            const res = fn(...t.args);
-            return JSON.stringify(res) === JSON.stringify(t.expected) ? "pass" : "fail";
-          } catch {
-            return "fail";
-          }
-        }) as TestState[];
+        const execution = await testJavaScript(code, project.functionName!, project.testCases!);
+        if (!execution.ok) throw new Error(execution.error || "Execution failed.");
+        const next = (execution.passes || []).map((passed) => passed ? "pass" : "fail") as TestState[];
 
         setResults(next);
         const allPassed = next.every((r) => r === "pass");
@@ -107,8 +100,7 @@ export default function DynamicProjectPage({ params }: { params: Promise<{ slug:
         if (allPassed) {
           track("project_completed", { slug: project.id });
           setWon(true);
-          addXP(project.xp);
-          completeStop(project.id);
+          completeActivity(project.id);
           playChime("success");
         }
       } catch (e) {
@@ -150,8 +142,7 @@ print("TEST_OUTPUTS:" + json.dumps(results))
             if (allPassed) {
               track("project_completed", { slug: project.id });
               setWon(true);
-              addXP(project.xp);
-              completeStop(project.id);
+              completeActivity(project.id);
               playChime("success");
             }
           } else {

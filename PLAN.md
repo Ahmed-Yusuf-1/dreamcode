@@ -37,6 +37,255 @@ ORM on a direct connection, no service-role key in the app). Product name stays
 > for Gemini (expert tracks, Rust - specs ready), or deferred backlog. Nothing here
 > blocks day-to-day use.
 
+## 0. Production audit follow-ups (implementation status)
+
+Audit date: 2026-07-13. Owner approval was received and the production pass landed
+the following changes:
+
+- [x] Idempotent, server-catalogued activity rewards. Replays no longer grant XP;
+  the profile API no longer accepts XP/streak values, and signed-in award requests
+  are serialized while the unique completion key acts as the database gate.
+- [x] Curriculum-linked, active-track review cards for all four languages. A new
+  learner has no unrelated cards; completed lessons become FSRS review material.
+- [x] Per-track placement question banks and destinations, with one placement
+  reward per track and no unrelated `bug-catcher` award.
+- [x] Truthful badge triggers/descriptions, Guide setting behavior, disabled
+  reminder copy, and removal of the fake member-since date.
+- [x] JavaScript and emitted TypeScript now execute in a fresh Web Worker with a
+  five-second hard timeout; the same runner grades JS/TS challenges and projects.
+- [x] The unused service-role placeholder was removed and `.env.local.example` is
+  intentionally committed.
+- [x] Content integrity tests, zero-warning lint, PR CI, branded error/404 UI,
+  robots, sitemap, and generated Open Graph artwork.
+
+Remaining follow-ups (the only still-open parts of the audit):
+
+- [ ] Move signed-in XP/streak/badge updates into one Postgres transaction/RPC so
+  two different devices completing different activities at the exact same moment
+  cannot lose an increment. The current unique insert prevents duplicate rewards,
+  but the profile increment itself is still a read/update sequence.
+- [ ] Add an explicit guest-to-account merge choice and an auth hydration gate for
+  the first signed-in mutation.
+- [ ] Persist the placement recommendation separately and make Dashboard/Journey
+  honor it without marking skipped lessons complete.
+- [ ] Add browser smoke tests to CI for signed-in Supabase behavior. The current
+  local in-app walkthrough covers theme switching, the JS worker, navigation, and
+  infinite-loop termination; CI currently covers types, lint, content, and build.
+- [ ] Author real TypeScript and C# project catalogs. The Projects page now filters
+  honestly by track and shows a clear authored-content message instead of routing
+  those learners into another language.
+
+The detailed findings and acceptance criteria below are retained as the audit
+record. Items above marked complete supersede their original “recommended change”
+wording; only the remaining checklist is forward work.
+
+### P0 - make rewards and progress atomic and idempotent
+
+The current optimistic client functions save completion and XP separately. A
+practice completion calls `addXP(20)` and `addXP(15)` back to back, producing two
+fire-and-forget absolute-XP PATCH requests. Those requests can arrive out of order
+and leave the server with the smaller total. Replaying a completed practice,
+challenge, project, read-and-quiz lesson, or placement quiz also awards XP again
+because `completeStop()` is idempotent but `addXP()` is called before the code knows
+whether the completion was new. The API also accepts arbitrary client-supplied XP,
+streak, badge, completion, and pass state, so production progression is not an
+authoritative server record.
+
+Recommended change:
+
+- Add one authenticated server operation for an achievement, for example
+  `POST /api/complete`, with a known activity kind and slug. In one Postgres
+  transaction, validate the slug against a server-owned reward catalog, insert a
+  unique completion row, increment XP only when the insert is new, derive level,
+  evaluate badge rules, and return the canonical profile.
+- Store the achievement kind separately or namespace every completion key so a
+  lesson, practice, challenge, and project can never collide.
+- Keep guest mode local, but make its award helper idempotent by checking the
+  completion key before adding XP. On sign-in, explicitly offer to merge guest
+  progress into the account instead of silently replacing the local cache with the
+  server's fresh profile.
+- Make streak dates and badge criteria server-derived for signed-in users. Do not
+  accept arbitrary `passed`, badge IDs, XP totals, or streak values as truth from
+  the browser.
+- Remove the race between `getSession()` startup and an early user action by
+  exposing a resolved auth/profile hydration state before signed-in mutations.
+
+Acceptance criteria:
+
+- Repeating any completed activity never awards XP or emits a second completion.
+- Practice completion awards its intended combined reward exactly once on both
+  local and Supabase state, even under deliberately reordered network responses.
+- Two tabs completing the same activity concurrently produce one reward.
+- A guest who signs up can keep progress through an explicit, tested merge path.
+- The browser cannot award itself XP, badges, or a passing submission through a
+  direct API request.
+
+### P0 - connect review scheduling to the curriculum
+
+The FSRS math and persistence work, but the review product is currently eight
+static cards in `data.ts`. The initial scheduler explicitly seeds only `r1` through
+`r4`; missing cards are treated as due immediately. Reviews are not created from a
+completed lesson or practice, are not filtered to the active track, and JavaScript
+has no cards. The UI claim that a finished practice was "review scheduled" is
+therefore not generally true.
+
+Recommended change:
+
+- Give every reviewable lesson one or more stable concept-card IDs and author a
+  small recall prompt for each supported track.
+- Enroll those cards when the owning lesson/practice is first completed, using the
+  same atomic completion operation above.
+- Filter the review queue by enrolled cards and active track, with an optional
+  mixed-track mode for learners who choose it.
+- Use the chapter checkpoint as a separate immediate retrieval session. Do not
+  rely on time-based `dueAt` values to make newly learned material appear there.
+- Award the 7-day `streak-keeper` badge from actual streak state, not from finishing
+  one review session.
+
+Acceptance criteria:
+
+- A new learner has no unrelated due cards.
+- Completing a lesson enrolls only its authored review concepts.
+- Python, JavaScript, TypeScript, and C# queues never leak into one another unless
+  mixed review is enabled.
+- Chapter review always has relevant just-learned material, while normal Night
+  Review continues to follow FSRS due dates.
+
+### P1 - make placement genuinely track-aware
+
+`/placement` reads the selected track only for telemetry. Its three questions,
+recommendation, and destination are always Python, so JavaScript, TypeScript, and
+C# learners are sent to Python Loops. Retrying also grants another 50 XP. The
+screen currently recommends a start point but does not persist a placement result
+that the dashboard or journey can use.
+
+Recommended change:
+
+- Build a short question bank and recommendation thresholds for each track, or
+  relabel the existing page as a Python readiness check until those banks exist.
+- Persist a separate `recommendedStartSlug` or placement record. Do not mark
+  skipped lessons complete and do not grant their XP.
+- Make Journey, Dashboard, and Continue Learning honor the recommendation while
+  still letting the learner choose "start from the beginning."
+- Award the placement reward once, and do not use `bug-catcher` for placement. Its
+  current description is "Fix a broken program."
+
+### P1 - implement the badge rules the UI promises
+
+Only a few badges have triggers, and several are wired to unrelated actions. Any
+practice unlocks `first-loop`, placement unlocks `bug-catcher`, one review unlocks
+`streak-keeper`, and most of the other badge descriptions have no implementation.
+The dashboard presents the first locked badge as "Next up" even if no rule can
+ever unlock it.
+
+Recommended change:
+
+- Define a typed rule for all ten badges and evaluate rules from canonical events
+  or server state.
+- Align descriptions, reveal behavior, and telemetry with the real criteria.
+- Show a real progress measure for the next achievable badge, not array order.
+
+### P1 - make profile controls truthful
+
+`soundsEnabled` works. `guideEnabled` is saved but `DreamGuide` never reads it, so
+turning the guide off does nothing. `remindersEnabled` is also saved but there is no
+notification, email, service worker, or reminder scheduler. The signed-in profile
+also says "night driver since June 2026" for every account.
+
+Recommended change:
+
+- Hide or disable the Dream Guide launcher when `guideEnabled` is false, while
+  keeping a clear way to turn it back on from Profile.
+- Either implement reminder delivery with explicit permission and timezone rules,
+  or label the control "Coming later" and disable it until that system exists.
+- Use the real account/profile creation date or remove the hardcoded member-since
+  copy.
+
+### P1 - isolate the JavaScript runner
+
+Python already runs in a worker with a 12-second timeout. JavaScript and emitted
+TypeScript run through `new Function` on the main UI thread. An accidental infinite
+loop freezes the entire tab, and learner code can touch the app's same-origin DOM
+and local storage.
+
+Recommended change:
+
+- Move JavaScript/TypeScript lesson execution and challenge grading to a dedicated
+  Web Worker with a hard timeout and a fresh worker/realm per run.
+- Use a small structured message protocol for console output and test results.
+- Keep browser APIs in explicitly labeled Web API lessons only, using a separate
+  constrained preview surface when DOM access is part of the objective.
+
+### P1 - remove the unused service-role secret from setup
+
+The runtime correctly uses only the Supabase anon key plus the user's session, but
+`.env.local.example` and the setup section in `PROJECT.md` still ask the owner to
+copy `SUPABASE_SERVICE_ROLE_KEY`. No application code reads that value. Keeping an
+unneeded database-admin secret on developer and deployment machines expands the
+impact of an environment leak. The example file is also swallowed by the broad
+`.env*` gitignore rule, so a clean clone does not receive the documented template.
+
+Recommended change:
+
+- Remove `SUPABASE_SERVICE_ROLE_KEY` from the local template and setup instructions.
+- Add `!.env.local.example` after the `.env*` rule and commit a placeholder-only
+  example containing exactly the variables the app reads.
+- Remove the unused service-role value from deployed and local environments after
+  confirming no external job relies on it. Keep service-role SQL in the Supabase
+  dashboard or a separately secured admin workflow, never in this web app.
+- Add startup/deploy validation for required production variables without logging
+  their values.
+
+### P1 - add production regression coverage and failure UI
+
+The repository has no automated test files or CI workflow. Production build,
+TypeScript, and ESLint pass locally, but the highest-risk flows have no repeatable
+regression checks. Next's production guidance also recommends application-owned
+error and not-found experiences; the app currently falls back to the framework
+default. Metadata has no Open Graph image, sitemap, or robots file.
+
+Recommended change:
+
+- Add unit tests for curriculum graph integrity, XP/level/streak math, FSRS, track
+  adjacency, badge rules, TypeScript checking, and API schemas.
+- Add Playwright smoke tests for guest and signed-in completion, repeat-award
+  prevention, practice gating, placement routing, track switching, and one runner
+  per supported runtime.
+- Run typecheck, ESLint, tests, and `next build` in CI on every pull request.
+- Add branded `error.tsx`, `global-error.tsx`, and `not-found.tsx`, then add
+  `robots.ts`, `sitemap.ts`, and an Open Graph image.
+- Clean the 13 existing ESLint warnings, especially the three Spotify hook
+  dependency warnings, so warnings do not hide new regressions.
+
+### P2 - align the project catalog and documentation
+
+The project catalog imports `useActiveTrack` but does not use it. It currently has
+Python and JavaScript projects only, while Journey labels a chapter project for
+every track. TypeScript can run now and should have a real typed project; C# should
+show an honest read-and-design alternative until its sandbox exists. `README.md`
+still describes the app as frontend-only with mocked auth and runners, which is no
+longer accurate. The file header in `data.ts` has the same stale claim.
+
+Recommended change:
+
+- Filter or group projects by active track and add at least one gradeable
+  TypeScript project using the existing transpile/type-check path.
+- Make C# project copy explicitly non-runnable until the parked sandbox ships.
+- Rewrite `README.md` from the current `PROJECT.md` state and remove stale mock
+  comments.
+- Patch Next from 16.2.9 to the current stable 16.2.10 after reading its bundled
+  migration/release guidance and re-running the full verification suite. This
+  patch does not clear the nested PostCSS advisory by itself.
+
+### Design-study validation still due
+
+Desktop production-build walkthrough passed for Original plus the four new design
+studies, including cycling, local persistence, alternative CTA palettes, tactile
+button depth, and navigation between Home and Lessons. The browser blocked the
+separate 375px reload, so a hands-on mobile check remains required before choosing
+one of the studies for promotion. Original remains the default and has no study
+style overrides.
+
 ---
 
 ## 1. Owner actions (no code; only the owner can do these)

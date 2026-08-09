@@ -16,8 +16,6 @@ import {
  * embeds for Free accounts or if SDK playback fails.
  */
 
-const PLAYLIST_ID = "37i9dQZF1DWWQRwui0ExPn"; // Lo-Fi Beats
-const EMBED_SRC = `https://open.spotify.com/embed/playlist/${PLAYLIST_ID}?utm_source=generator&theme=0`;
 const STORAGE_KEY = "dc_spotify_connected";
 const STORAGE_STYLE_KEY = "dc_spotify_btn_style";
 const STORAGE_FALLBACK_KEY = "dc_spotify_use_embed";
@@ -409,6 +407,10 @@ export default function SpotifyPlayer() {
         activePlayer.disconnect();
       }
     };
+  // Player creation is intentionally tied to connection identity, not live
+  // volume/player state; adding those values would disconnect and recreate the
+  // SDK instance during normal playback.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [connected, clientId, useEmbedFallback, isPremium]);
 
   // Close the panel when clicking outside it
@@ -426,6 +428,9 @@ export default function SpotifyPlayer() {
     if (connected && open && playlistTab === "my-playlists" && myPlaylists.length === 0) {
       fetchMyPlaylists();
     }
+  // fetchMyPlaylists reads the current token at call time; depending on its
+  // render-local function identity would refetch on every render.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [connected, open, playlistTab, myPlaylists.length]);
 
   // Tick track progress locally while playing
@@ -448,6 +453,9 @@ export default function SpotifyPlayer() {
     fetchDevices();
     const interval = setInterval(fetchDevices, 8000);
     return () => clearInterval(interval);
+  // fetchDevices likewise obtains a fresh token per poll and is intentionally
+  // excluded to keep one stable interval per open panel.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, connected, clientId, useEmbedFallback, isPremium]);
 
   async function fetchDevices() {
@@ -690,31 +698,6 @@ export default function SpotifyPlayer() {
       player.previousTrack().catch(console.error);
     }
   };
-
-  // Render SVG icons for player controls
-  const playIcon = (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-      <path d="M8 5v14l11-7z" />
-    </svg>
-  );
-
-  const pauseIcon = (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-      <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
-    </svg>
-  );
-
-  const prevIcon = (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-      <path d="M6 6h2v12H6zm3.5 6l8.5 6V6z" />
-    </svg>
-  );
-
-  const nextIcon = (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-      <path d="M6 18l8.5-6L6 6zm9-12h2v12h-2z" />
-    </svg>
-  );
 
   const volumeIcon = (
     <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">

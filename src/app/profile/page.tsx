@@ -8,12 +8,16 @@ import SceneTopBar, { GlassPill } from "@/components/SceneTopBar";
 import StreakFlame from "@/components/StreakFlame";
 import { useUserProfile, useIsSignedIn } from "@/lib/profile";
 import { useActiveTrack } from "@/lib/track";
+import { useAppearance, type AppearancePreference } from "@/lib/appearance";
 
 function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void }) {
   return (
     <button
       onClick={() => onChange(!on)}
-      className="cursor-pointer"
+      type="button"
+      role="switch"
+      aria-checked={on}
+      className="dc-no-depth cursor-pointer"
       style={{
         width: 52,
         height: 30,
@@ -47,6 +51,7 @@ export default function ProfilePage() {
   const { profile, updateProfile } = useUserProfile();
   const { track, setTrack } = useActiveTrack();
   const signedIn = useIsSignedIn();
+  const { preference, resolvedTheme, setPreference } = useAppearance();
   const [events, setEvents] = useState<TelemetryEvent[]>([]);
   const [loadingEvents, setLoadingEvents] = useState(true);
 
@@ -165,7 +170,7 @@ export default function ProfilePage() {
             {profile.name}
           </h1>
           <div style={{ fontSize: 14, fontWeight: 700, color: "rgba(255,255,255,.85)", marginTop: 2 }}>
-            Level {profile.level} {"\u00b7"} {signedIn ? "night driver since June 2026" : "browsing as a guest"}
+            Level {profile.level} {"\u00b7"} {signedIn ? "signed-in night driver" : "browsing as a guest"}
           </div>
           <div className="flex justify-center" style={{ gap: 12, marginTop: 18 }}>
             <div className="flex items-center" style={{ gap: 7, background: "rgba(255,255,255,.92)", padding: "7px 14px", borderRadius: 999 }}>
@@ -187,6 +192,34 @@ export default function ProfilePage() {
             How you fly
           </div>
 
+          <div style={{ marginBottom: 22 }}>
+            <div style={{ fontWeight: 900, fontSize: 15, color: "#ffffff" }}>Sky appearance</div>
+            <div style={{ fontSize: 13, fontWeight: 600, color: "rgba(255,255,255,.8)", lineHeight: 1.5, marginTop: 2 }}>
+              Automatic uses Sunset Arcade from 7:00 a.m. to 7:00 p.m. and Midnight Focus overnight.
+              Right now it resolves to {resolvedTheme === "light" ? "Sunset Arcade" : "Midnight Focus"}.
+            </div>
+            <div className="appearance-picker" role="radiogroup" aria-label="Sky appearance">
+              {([
+                ["automatic", "Automatic"],
+                ["light", "Light"],
+                ["dark", "Dark"],
+              ] as const).map(([value, label]) => (
+                <button
+                  key={value}
+                  type="button"
+                  role="radio"
+                  aria-checked={preference === value}
+                  onClick={() => setPreference(value as AppearancePreference)}
+                  className="dc-pressable appearance-picker__option"
+                  data-appearance-choice={value}
+                  data-active={preference === value ? "true" : "false"}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+
           <div className="flex items-center justify-between" style={{ gap: 16, marginBottom: 18 }}>
             <div>
               <div style={{ fontWeight: 900, fontSize: 15, color: "#ffffff" }}>Dream Guide (AI mentor)</div>
@@ -202,10 +235,12 @@ export default function ProfilePage() {
             <div>
               <div style={{ fontWeight: 900, fontSize: 15, color: "#ffffff" }}>Night review reminders</div>
               <div style={{ fontSize: 13, fontWeight: 600, color: "rgba(255,255,255,.8)", lineHeight: 1.5, marginTop: 2 }}>
-                A gentle nudge when memories drift back and your streak is at risk.
+                Browser notifications are not available in this build yet. Due reviews remain visible on your dashboard.
               </div>
             </div>
-            <Toggle on={profile.remindersEnabled} onChange={(v) => updateProfile({ remindersEnabled: v })} />
+            <span style={{ flexShrink: 0, border: "1px solid rgba(255,255,255,.35)", borderRadius: 999, padding: "6px 10px", color: "rgba(255,255,255,.7)", fontSize: 11, fontWeight: 900 }}>
+              COMING SOON
+            </span>
           </div>
 
           <div className="flex items-center justify-between" style={{ gap: 16 }}>
@@ -227,6 +262,10 @@ export default function ProfilePage() {
           <div className="flex flex-wrap" style={{ gap: 10 }}>
             <button
               onClick={() => setTrack("python")}
+              type="button"
+              aria-pressed={track === "python"}
+              className="dc-track-option"
+              data-track-choice="python"
               style={{
                 background: track === "python" ? "#ffffff" : "rgba(255,255,255,.12)",
                 border: track === "python" ? "2px solid #ffffff" : "2px solid rgba(255,255,255,.3)",
@@ -243,6 +282,10 @@ export default function ProfilePage() {
             </button>
             <button
               onClick={() => setTrack("javascript")}
+              type="button"
+              aria-pressed={track === "javascript"}
+              className="dc-track-option"
+              data-track-choice="javascript"
               style={{
                 background: track === "javascript" ? "#ffffff" : "rgba(255,255,255,.12)",
                 border: track === "javascript" ? "2px solid #ffffff" : "2px solid rgba(255,255,255,.3)",
@@ -259,6 +302,10 @@ export default function ProfilePage() {
             </button>
             <button
               onClick={() => setTrack("csharp")}
+              type="button"
+              aria-pressed={track === "csharp"}
+              className="dc-track-option"
+              data-track-choice="csharp"
               style={{
                 background: track === "csharp" ? "#ffffff" : "rgba(255,255,255,.12)",
                 border: track === "csharp" ? "2px solid #ffffff" : "2px solid rgba(255,255,255,.3)",
@@ -275,6 +322,10 @@ export default function ProfilePage() {
             </button>
             <button
               onClick={() => setTrack("typescript")}
+              type="button"
+              aria-pressed={track === "typescript"}
+              className="dc-track-option"
+              data-track-choice="typescript"
               style={{
                 background: track === "typescript" ? "#ffffff" : "rgba(255,255,255,.12)",
                 border: track === "typescript" ? "2px solid #ffffff" : "2px solid rgba(255,255,255,.3)",

@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
+import { getActivityReward } from "@/lib/rewards";
 
 export interface UserProfile {
   name: string;
@@ -38,7 +39,7 @@ const DEFAULT_PROFILE: UserProfile = {
   weekActivity: [0, 0, 0, 0, 0, 0, 0],
   soundsEnabled: true,
   guideEnabled: true,
-  remindersEnabled: true,
+  remindersEnabled: false,
   completedStops: [],
   activeTrack: "python",
   tier: "free",
@@ -46,6 +47,7 @@ const DEFAULT_PROFILE: UserProfile = {
 
 let isUserSignedIn = false;
 let supabase: ReturnType<typeof createClient> | null = null;
+let activitySyncQueue: Promise<void> = Promise.resolve();
 
 /** Updates the cached sign-in flag and notifies listeners when it changes. */
 function setSignedIn(value: boolean) {
@@ -102,7 +104,7 @@ async function syncProfileFromApi() {
           weekActivity: settings.weekActivity || profile.weekActivity,
           soundsEnabled: settings.soundsEnabled !== false,
           guideEnabled: settings.guideEnabled !== false,
-          remindersEnabled: settings.remindersEnabled !== false,
+          remindersEnabled: settings.remindersEnabled === true,
           completedStops: serverProfile.completedStops || [],
           activeTrack: settings.activeTrack || "python",
           tier: serverProfile.tier === "pro" ? "pro" : "free",
@@ -234,10 +236,10 @@ export function spendXP(amount: number): UserProfile {
   saveUserProfile(profile);
 
   if (isUserSignedIn && isSupabaseConfigured()) {
-    fetch("/api/profile", {
-      method: "PATCH",
+    fetch("/api/spend-xp", {
+      method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ xp: totalXp }),
+      body: JSON.stringify({ amount: cost }),
     }).catch((err) => console.error("Failed to sync XP spend", err));
   }
 
@@ -282,6 +284,57 @@ export function completeStop(slug: string): UserProfile {
       }).catch((err) => console.error("Failed to sync progress to API", err));
     }
   }
+  return profile;
+}
+
+/**
+ * Completes and rewards an authored activity as one idempotent client action.
+ * Replaying an already-completed lesson/challenge/project never grants XP.
+ * The server independently looks up the reward and ignores client-supplied XP.
+ */
+export function completeActivity(activityKey: string): UserProfile {
+  const reward = getActivityReward(activityKey);
+  if (!reward) {
+    console.error(`Unknown reward activity: ${activityKey}`);
+    return getUserProfile();
+  }
+
+  const profile = getUserProfile();
+  if ((profile.completedStops || []).includes(activityKey)) return profile;
+
+  profile.completedStops = [...(profile.completedStops || []), activityKey];
+  const totalXp = (profile.level - 1) * 800 + profile.xp + reward.xp;
+  profile.level = Math.floor(totalXp / 800) + 1;
+  profile.xp = totalXp % 800;
+  const day = new Date().getDay() === 0 ? 6 : new Date().getDay() - 1;
+  const activity = [...profile.weekActivity];
+  activity[day] = (activity[day] || 0) + reward.xp;
+  profile.weekActivity = activity;
+  profile.unlockedBadges = Array.from(new Set([...profile.unlockedBadges, ...reward.badgeIds]));
+  updateStreakInPlace(profile);
+  if (reward.xp === 15 && !activityKey.includes(":") && new Date().getHours() < 5) {
+    profile.unlockedBadges = Array.from(new Set([...profile.unlockedBadges, "night-owl"]));
+  }
+  if (profile.streak >= 7) {
+    profile.unlockedBadges = Array.from(new Set([...profile.unlockedBadges, "streak-keeper"]));
+  }
+  saveUserProfile(profile);
+
+  if (isUserSignedIn && isSupabaseConfigured()) {
+    activitySyncQueue = activitySyncQueue.then(async () => {
+      try {
+        await fetch("/api/complete-activity", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ activityKey }),
+        });
+        await syncProfileFromApi();
+      } catch (error) {
+        console.error("Failed to sync completed activity", error);
+      }
+    });
+  }
+
   return profile;
 }
 
@@ -341,14 +394,6 @@ export function updateProfile(updates: Partial<UserProfile>): UserProfile {
       };
     } = {};
     if (updates.name !== undefined) patchBody.name = updates.name;
-    if (updates.xp !== undefined || updates.level !== undefined) {
-      const targetLevel = updates.level !== undefined ? updates.level : updated.level;
-      const targetXp = updates.xp !== undefined ? updates.xp : updated.xp;
-      patchBody.xp = (targetLevel - 1) * 800 + targetXp;
-    }
-    if (updates.streak !== undefined) patchBody.streak = updates.streak;
-    if (updates.lastActiveDate !== undefined) patchBody.lastActiveDate = updates.lastActiveDate;
-    
     patchBody.settings = {
       soundsEnabled: updated.soundsEnabled,
       guideEnabled: updated.guideEnabled,
@@ -371,7 +416,24 @@ export function updateProfile(updates: Partial<UserProfile>): UserProfile {
  * Records a code submission to the database.
  */
 export function recordSubmission(slug: string, code: string, passed: boolean) {
-  if (typeof window === "undefined" || !isSupabaseConfigured()) return;
+  if (typeof window === "undefined") return;
+
+  const profile = getUserProfile();
+  const failureKey = `dc_failed:${slug}`;
+  let failedBefore = false;
+  try {
+    failedBefore = localStorage.getItem(failureKey) === "1";
+    if (!passed) localStorage.setItem(failureKey, "1");
+  } catch {
+    // Signed-in badge evaluation still happens on the server.
+  }
+  const badgeId = !passed ? "test-tamer" : failedBefore ? "bug-catcher" : null;
+  if (badgeId && !profile.unlockedBadges.includes(badgeId)) {
+    profile.unlockedBadges = [...profile.unlockedBadges, badgeId];
+    saveUserProfile(profile);
+  }
+
+  if (!isSupabaseConfigured()) return;
 
   if (isUserSignedIn) {
     fetch("/api/submissions", {

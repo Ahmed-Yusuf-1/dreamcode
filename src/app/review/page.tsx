@@ -4,14 +4,17 @@ import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import Cloud from "@/components/Cloud";
 import { cloudOpacity } from "@/lib/theme";
-import { reviewCards } from "@/lib/data";
+import { getReviewCards } from "@/lib/review";
 import { getSRSStates, saveSRSState } from "@/lib/srs";
-import { addXP, unlockBadge } from "@/lib/profile";
+import { completeActivity, useUserProfile } from "@/lib/profile";
+import { useActiveTrack } from "@/lib/track";
 import { playChime } from "@/lib/sound";
 import { track } from "@/lib/telemetry";
 
 const cs = cloudOpacity.review;
 export default function ReviewPage() {
+  const { track: activeTrack } = useActiveTrack();
+  const { profile } = useUserProfile();
   const [srsStates, setSrsStates] = useState<Record<string, number>>({});
   const [now, setNow] = useState<number>(0);
   const [idx, setIdx] = useState(0);
@@ -27,20 +30,23 @@ export default function ReviewPage() {
     document.title = "Night review - dreamcode";
   }, []);
 
+  const reviewCards = getReviewCards(activeTrack, profile.completedStops || []);
   const dueCards = now === 0 ? [] : reviewCards.filter((c) => (srsStates[c.id] ?? 0) <= now);
   const done = idx >= dueCards.length;
   const card = dueCards[idx];
 
   useEffect(() => {
     if (done && dueCards.length > 0 && !xpAwarded) {
-      addXP(20);
-      unlockBadge("streak-keeper");
+      const now = new Date();
+      const offset = now.getTimezoneOffset();
+      const today = new Date(now.getTime() - offset * 60_000).toISOString().slice(0, 10);
+      completeActivity(`review:${today}:${activeTrack}`);
       playChime("success");
       setTimeout(() => {
         setXpAwarded(true);
       }, 0);
     }
-  }, [done, dueCards.length, xpAwarded]);
+  }, [activeTrack, done, dueCards.length, xpAwarded]);
 
   const grade = useCallback((rating: "again" | "good" | "easy") => {
     if (!card) return;

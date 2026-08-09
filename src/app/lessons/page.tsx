@@ -86,7 +86,7 @@ export default function LessonsPage() {
             + flex-wrap let it wrap to two rows on phones so every track stays
             reachable (it used to overflow off-screen and hide C# / TypeScript). */}
         <div
-          className="mx-auto flex flex-wrap justify-center"
+          className="dc-track-picker mx-auto flex flex-wrap justify-center"
           style={{
             gap: 8,
             marginBottom: 38,
@@ -101,6 +101,10 @@ export default function LessonsPage() {
         >
           <button
             onClick={() => setTrack("python")}
+            type="button"
+            aria-pressed={track === "python"}
+            className="dc-track-option"
+            data-track-choice="python"
             style={{
               background: track === "python" ? "#ffffff" : "transparent",
               color: track === "python" ? "#13335f" : "rgba(255,255,255,.85)",
@@ -118,6 +122,10 @@ export default function LessonsPage() {
           </button>
           <button
             onClick={() => setTrack("javascript")}
+            type="button"
+            aria-pressed={track === "javascript"}
+            className="dc-track-option"
+            data-track-choice="javascript"
             style={{
               background: track === "javascript" ? "#ffffff" : "transparent",
               color: track === "javascript" ? "#13335f" : "rgba(255,255,255,.85)",
@@ -135,6 +143,10 @@ export default function LessonsPage() {
           </button>
           <button
             onClick={() => setTrack("csharp")}
+            type="button"
+            aria-pressed={track === "csharp"}
+            className="dc-track-option"
+            data-track-choice="csharp"
             style={{
               background: track === "csharp" ? "#ffffff" : "transparent",
               color: track === "csharp" ? "#13335f" : "rgba(255,255,255,.85)",
@@ -152,6 +164,10 @@ export default function LessonsPage() {
           </button>
           <button
             onClick={() => setTrack("typescript")}
+            type="button"
+            aria-pressed={track === "typescript"}
+            className="dc-track-option"
+            data-track-choice="typescript"
             style={{
               background: track === "typescript" ? "#ffffff" : "transparent",
               color: track === "typescript" ? "#13335f" : "rgba(255,255,255,.85)",

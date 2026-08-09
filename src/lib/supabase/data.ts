@@ -1,4 +1,5 @@
 import { createClient, getUser } from "./server";
+import type { ActivityReward } from "@/lib/rewards";
 
 /**
  * Server-side data access. Every function runs through the user's RLS-scoped
@@ -94,6 +95,100 @@ export async function completeStop(slug: string): Promise<boolean> {
   return !error;
 }
 
+/** Decreases XP for an in-product purchase. This endpoint can never mint XP. */
+export async function spendXp(amount: number): Promise<ServerProfile | null> {
+  const user = await getUser();
+  if (!user) return null;
+  const supabase = await createClient();
+  const { data } = await supabase.from("profiles").select("xp").eq("id", user.id).single();
+  if (!data) return null;
+  const xp = Math.max(0, data.xp - Math.max(0, Math.floor(amount)));
+  await supabase
+    .from("profiles")
+    .update({ xp, level: Math.floor(xp / XP_PER_LEVEL) + 1 })
+    .eq("id", user.id);
+  return getFullProfile();
+}
+
+/**
+ * Awards a catalog-validated activity once. The unique completed_stops key is
+ * the idempotency gate: only the request that inserts the row may add XP and
+ * badges. Client requests are also serialized, preventing stale absolute XP
+ * writes when a practice awards its practice and owning-lesson activities.
+ */
+export async function awardActivity(
+  activityKey: string,
+  reward: ActivityReward,
+): Promise<boolean> {
+  const user = await getUser();
+  if (!user) return false;
+  const supabase = await createClient();
+
+  const { data: inserted, error: insertError } = await supabase
+    .from("completed_stops")
+    .upsert(
+      { user_id: user.id, slug: activityKey },
+      { onConflict: "user_id,slug", ignoreDuplicates: true },
+    )
+    .select("slug");
+
+  if (insertError || !inserted || inserted.length === 0) return false;
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("xp, streak, last_active_date, settings")
+    .eq("id", user.id)
+    .single();
+  if (!profile) return false;
+
+  const now = new Date();
+  const today = now.toISOString().slice(0, 10);
+  const yesterday = new Date(now);
+  yesterday.setUTCDate(yesterday.getUTCDate() - 1);
+  const yesterdayString = yesterday.toISOString().slice(0, 10);
+  const last = profile.last_active_date as string | null;
+  const streak = last === today
+    ? profile.streak
+    : last === yesterdayString
+      ? profile.streak + 1
+      : 1;
+  const xp = profile.xp + reward.xp;
+  const settings = { ...(profile.settings ?? {}) } as Record<string, unknown>;
+  const activity = Array.isArray(settings.weekActivity)
+    ? [...(settings.weekActivity as number[])]
+    : [0, 0, 0, 0, 0, 0, 0];
+  const day = now.getDay() === 0 ? 6 : now.getDay() - 1;
+  activity[day] = (activity[day] || 0) + reward.xp;
+  settings.weekActivity = activity;
+
+  await supabase
+    .from("profiles")
+    .update({
+      xp,
+      level: Math.floor(xp / XP_PER_LEVEL) + 1,
+      streak,
+      last_active_date: today,
+      settings,
+    })
+    .eq("id", user.id);
+
+  if (reward.badgeIds.length > 0) {
+    await supabase.from("unlocked_badges").upsert(
+      reward.badgeIds.map((badgeId) => ({ user_id: user.id, badge_id: badgeId })),
+      { onConflict: "user_id,badge_id", ignoreDuplicates: true },
+    );
+  }
+
+  if (streak >= 7) {
+    await supabase.from("unlocked_badges").upsert(
+      { user_id: user.id, badge_id: "streak-keeper" },
+      { onConflict: "user_id,badge_id", ignoreDuplicates: true },
+    );
+  }
+
+  return true;
+}
+
 /** Records a code submission and whether it passed. */
 export async function recordSubmission(
   slug: string,
@@ -103,9 +198,29 @@ export async function recordSubmission(
   const user = await getUser();
   if (!user) return false;
   const supabase = await createClient();
+  const { data: priorFailures } = passed
+    ? await supabase
+        .from("submissions")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("slug", slug)
+        .eq("passed", false)
+        .limit(1)
+    : { data: [] };
   const { error } = await supabase
     .from("submissions")
     .insert({ user_id: user.id, slug, code, passed });
+  const badgeId = !passed
+    ? "test-tamer"
+    : priorFailures && priorFailures.length > 0
+      ? "bug-catcher"
+      : null;
+  if (!error && badgeId) {
+    await supabase.from("unlocked_badges").upsert(
+      { user_id: user.id, badge_id: badgeId },
+      { onConflict: "user_id,badge_id", ignoreDuplicates: true },
+    );
+  }
   return !error;
 }
 

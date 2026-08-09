@@ -8,11 +8,12 @@ import CodeEditor from "@/components/CodeEditor";
 import EditorFrame from "@/components/EditorFrame";
 import DreamGuide from "@/components/DreamGuide";
 import { gradientOpacity, cloudOpacity } from "@/lib/theme";
-import { addXP, unlockBadge, completeStop, recordSubmission } from "@/lib/profile";
+import { completeActivity, recordSubmission } from "@/lib/profile";
 import { playChime } from "@/lib/sound";
 import { challenges } from "@/lib/data";
 import { usePyodide } from "@/lib/usePyodide";
 import { track } from "@/lib/telemetry";
+import { testJavaScript } from "@/lib/javascriptRunner";
 
 type TestState = "idle" | "pass" | "fail";
 
@@ -109,17 +110,9 @@ export default function DynamicChallengePage({ params }: { params: Promise<{ slu
           }
           runnableCode = tdata.js || "";
         }
-        const fn = new Function(`${runnableCode}; return ${challenge.functionName};`)();
-        if (typeof fn !== "function") throw new Error(`${challenge.functionName} is not defined`);
-
-        const next = challenge.testCases.map((t) => {
-          try {
-            const res = fn(...t.args);
-            return JSON.stringify(res) === JSON.stringify(t.expected) ? "pass" : "fail";
-          } catch {
-            return "fail";
-          }
-        }) as TestState[];
+        const execution = await testJavaScript(runnableCode, challenge.functionName, challenge.testCases);
+        if (!execution.ok) throw new Error(execution.error || "Execution failed.");
+        const next = (execution.passes || []).map((passed) => passed ? "pass" : "fail") as TestState[];
 
         setResults(next);
         const allPassed = next.every((r) => r === "pass");
@@ -131,9 +124,7 @@ export default function DynamicChallengePage({ params }: { params: Promise<{ slu
             language: challenge.language,
           });
           setWon(true);
-          addXP(challenge.xp);
-          if (challenge.badge) unlockBadge(challenge.badge);
-          completeStop(challenge.slug);
+          completeActivity(challenge.slug);
           playChime("badge");
         }
       } catch (e) {
@@ -179,9 +170,7 @@ print("TEST_OUTPUTS:" + json.dumps(results))
                 language: challenge.language,
               });
               setWon(true);
-              addXP(challenge.xp);
-              if (challenge.badge) unlockBadge(challenge.badge);
-              completeStop(challenge.slug);
+              completeActivity(challenge.slug);
               playChime("badge");
             }
           } else {

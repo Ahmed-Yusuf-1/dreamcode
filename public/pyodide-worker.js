@@ -21,7 +21,6 @@ let pyodide = null;
 
 async function load() {
   importScripts(`https://cdn.jsdelivr.net/pyodide/v${PYODIDE_VERSION}/full/pyodide.js`);
-  // eslint-disable-next-line no-undef
   pyodide = await loadPyodide();
   return pyodide;
 }
@@ -77,14 +76,14 @@ self.onmessage = async (event) => {
       if (namespace) {
         try {
           namespace.destroy();
-        } catch (e) {
+        } catch {
           /* ignore */
         }
       }
       try {
         pyodide.setStdout({});
         pyodide.setStderr({});
-      } catch (e) {
+      } catch {
         /* ignore */
       }
     }

@@ -10,9 +10,10 @@ import { usePyodide } from "@/lib/usePyodide";
 import { cloudOpacity } from "@/lib/theme";
 import { lessons, type Lesson, type LessonLink, type QuizQuestion } from "@/lib/curriculum";
 import { practiceDatasets, getModuleChallenge } from "@/lib/data";
-import { addXP, completeStop, useUserProfile } from "@/lib/profile";
+import { completeActivity, useUserProfile } from "@/lib/profile";
 import { playChime } from "@/lib/sound";
 import { track } from "@/lib/telemetry";
+import { runJavaScript } from "@/lib/javascriptRunner";
 
 const cs = cloudOpacity.lesson;
 
@@ -89,8 +90,7 @@ export default function LessonView({
   const completeFromQuiz = () => {
     if (quizDone) return;
     setQuizDone(true);
-    addXP(15);
-    completeStop(lesson.slug);
+    completeActivity(lesson.slug);
     track("lesson_completed", {
       slug: lesson.slug,
       language: lesson.language || "python",
@@ -102,39 +102,16 @@ export default function LessonView({
   // Runs a string of JavaScript in-browser, capturing console.log. Used directly
   // for the JS track and for the transpiled output of the TypeScript track.
   const executeJs = async (jsCode: string, lang: string) => {
-    const logs: string[] = [];
-    const originalLog = console.log;
-    console.log = (...args) => {
-      logs.push(args.map(arg => typeof arg === 'object' ? JSON.stringify(arg) : String(arg)).join(" "));
-    };
-
-    // Drain the microtask queue and any pending 0ms timers so async/await and
-    // event-loop lessons capture the output their callbacks log after the
-    // synchronous pass finishes.
-    const flushAsync = async () => {
-      for (let i = 0; i < 3; i++) {
-        await new Promise<void>((resolve) => setTimeout(resolve, 0));
-      }
-    };
-
-    try {
-      // Wrap in an async IIFE so top-level await works and we can await the
-      // returned promise, then flush deferred callbacks before reading logs.
-      const fn = new Function("return (async () => {\n" + jsCode + "\n})();");
-      await fn();
-      await flushAsync();
-      setOutput([...logs]);
-      setNote({ text: logs.length ? "Done." : "Finished, with no output to show.", ok: true });
-      track("code_run", { slug: lesson.slug, language: lang, ok: true });
-    } catch (err) {
-      setOutput([...logs]);
-      const msg = err instanceof Error ? err.message : String(err);
-      setNote({ text: msg, ok: false });
-      track("code_run", { slug: lesson.slug, language: lang, ok: false });
-    } finally {
-      console.log = originalLog;
-      setRunning(false);
-    }
+    const result = await runJavaScript(jsCode);
+    setOutput(result.logs);
+    setNote({
+      text: result.ok
+        ? result.logs.length ? "Done." : "Finished, with no output to show."
+        : result.error || "Execution failed.",
+      ok: result.ok,
+    });
+    track("code_run", { slug: lesson.slug, language: lang, ok: result.ok });
+    setRunning(false);
   };
 
   const run = async () => {
@@ -472,8 +449,7 @@ export default function LessonView({
                   href={next ? `/lesson/${next.slug}` : "/journey"}
                   onClick={() => {
                     if (runnable && !lessonLearned) {
-                      addXP(15);
-                      completeStop(lesson.slug);
+                      completeActivity(lesson.slug);
                       track("lesson_completed", {
                         slug: lesson.slug,
                         language: lesson.language || "python",

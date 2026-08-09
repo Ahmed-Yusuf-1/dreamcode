@@ -15,10 +15,10 @@ const cs = cloudOpacity.home;
 
 export default function Home() {
   return (
-    <div style={{ background: "#463f80", overflowX: "clip" }}>
+    <div className="dc-home" style={{ background: "#463f80", overflowX: "clip" }}>
       {/* ============ HERO - NEON DUSK ============ */}
       <section
-        className="relative overflow-hidden"
+        className="dc-home-hero relative overflow-hidden"
         style={{ minHeight: "max(100vh, 880px)", background: "#4c4096" }}
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -91,7 +91,7 @@ export default function Home() {
             <HeroStartCta />
             <Link
               href="/challenge/cloud-hopper"
-              className="font-display cursor-pointer backdrop-blur-sm transition-colors hover:bg-[rgba(110,230,255,.22)]"
+              className="dc-pressable dc-pressable--outline font-display cursor-pointer backdrop-blur-sm transition-colors hover:bg-[rgba(110,230,255,.22)]"
               style={{
                 background: "rgba(24,22,60,.35)",
                 border: "2px solid rgba(150,245,255,.85)",
@@ -178,7 +178,7 @@ export default function Home() {
       </section>
 
       {/* ============ THE STORY - one continuous sky ============ */}
-      <div className="relative" style={{ background: STORY_GRADIENT }}>
+      <div className="dc-home-story relative" style={{ background: STORY_GRADIENT }}>
         {/* WHY DREAMCODE */}
         <section className="relative" style={{ padding: "90px 28px 60px" }}>
           <Cloud src="/assets/clouds-sunset/cutout-cloud-sunset-13.webp" speed={0.06} pos={{ right: "-6%", top: "8%" }} width="min(420px, 32vw)" opacity={0.75} duration={14} neon="cyan" scale={cs} />

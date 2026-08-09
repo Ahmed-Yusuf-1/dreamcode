@@ -12,11 +12,8 @@ export async function GET() {
 
 const PatchSchema = z.object({
   name: z.string().min(1).max(60).optional(),
-  xp: z.number().int().min(0).optional(),
-  streak: z.number().int().min(0).optional(),
-  lastActiveDate: z.string().max(20).optional(),
   settings: z.record(z.string(), z.unknown()).optional(),
-});
+}).strict();
 
 export async function PATCH(request: Request) {
   if (!(await getUser())) {

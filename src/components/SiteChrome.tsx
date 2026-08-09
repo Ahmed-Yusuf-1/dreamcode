@@ -3,6 +3,7 @@
 import { usePathname } from "next/navigation";
 import NavBar from "./NavBar";
 import GuidePath from "./GuidePath";
+import { AppearanceController } from "@/lib/appearance";
 
 // Focused, full-screen flows that should not show the global nav.
 const HIDE_NAV = new Set(["/login", "/signup", "/start"]);
@@ -35,6 +36,7 @@ export default function SiteChrome({ children }: { children: React.ReactNode }) 
         {children}
       </main>
       <GuidePath />
+      <AppearanceController />
     </>
   );
 }

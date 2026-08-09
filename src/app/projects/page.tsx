@@ -19,13 +19,16 @@ const TIERS = [
 const cs = cloudOpacity.projects;
 export default function ProjectsPage() {
   const { profile } = useUserProfile();
+  const { track } = useActiveTrack();
   const completed = profile.completedStops || [];
+  const projectLanguage = track === "python" ? "Python" : track === "javascript" ? "JavaScript" : null;
+  const trackProjects = projectLanguage ? projects.filter((project) => project.language === projectLanguage) : [];
 
   useEffect(() => {
     document.title = "Projects - dreamcode";
   }, []);
 
-  const getProjectState = (id: string, lang: string): "done" | "current" | "locked" => {
+  const getProjectState = (id: string): "done" | "current" | "locked" => {
     if (completed.includes(id)) return "done";
     
     if (id === "sky-house") {
@@ -86,8 +89,20 @@ export default function ProjectsPage() {
           </p>
         </div>
 
+        {!projectLanguage && (
+          <div className="glass dc-depth-card text-center" style={{ borderRadius: 22, padding: "24px 26px", marginBottom: 34 }}>
+            <div className="font-display" style={{ color: "#ffffff", fontSize: 20, fontWeight: 800 }}>
+              {track === "csharp" ? "C#" : "TypeScript"} projects are being authored
+            </div>
+            <p style={{ color: "rgba(255,255,255,.82)", fontWeight: 700, marginTop: 6 }}>
+              We will not send you into a project written for another language. Your lessons and challenges remain available now.
+            </p>
+          </div>
+        )}
+
         {TIERS.map((tier) => {
-          const tierProjects = projects.filter((p) => p.tier === tier.name);
+          const tierProjects = trackProjects.filter((p) => p.tier === tier.name);
+          if (tierProjects.length === 0) return null;
           return (
             <div key={tier.name} style={{ marginBottom: 40 }}>
               <div className="flex items-baseline" style={{ gap: 14, marginBottom: 6 }}>
@@ -101,7 +116,7 @@ export default function ProjectsPage() {
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2" style={{ gap: 16, marginTop: 14 }}>
                 {tierProjects.map((p) => {
-                  const state = getProjectState(p.id, p.language);
+                  const state = getProjectState(p.id);
                   const locked = state === "locked";
                   const card = (
                     <div

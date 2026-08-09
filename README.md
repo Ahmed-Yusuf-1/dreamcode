@@ -1,37 +1,47 @@
-# dreamcode — frontend
+# dreamcode
 
-The dreamy cloud-themed programming-learning platform. **Frontend only for now** — all data is mocked in `src/lib/data.ts`; the backend (auth, Postgres, FSRS scheduling, real code sandboxes) comes later per the project plan.
+A dreamy, cloud-themed programming-learning platform built with Next.js 16,
+React 19, Supabase, CodeMirror, Pyodide, and an FSRS-style review scheduler.
+
+The app includes 104 lessons across Python, JavaScript, TypeScript, and C#;
+practice flows; tested challenges and projects; guest and Supabase-backed
+progress; idempotent XP/badges; Spotify playback; and an optional server-backed
+Socratic Dream Guide.
+
+## Local setup
 
 ```bash
 npm install
-npm run dev   # http://localhost:3000
+copy .env.local.example .env.local
+npm run dev
 ```
 
-## Pages
+Open `http://localhost:3000`. Supabase and AI provider values are optional for a
+guest-only local walkthrough; see `.env.local.example` for every supported value.
 
-| Route | What it is |
-|---|---|
-| `/` | Home — Neon Dusk hero (from the Claude Design handoff) |
-| `/lessons` | Lessons overview — Sunset Stops |
-| `/badges` | Badge collection (found + locked) |
-| `/journey` | Journey map — node road with HUD (streak, XP, level) |
-| `/peaks` | Problem Peaks — standalone challenge library |
-| `/lesson/loops` | Lesson player — teaching card + live CodeMirror editor + mock run |
-| `/practice/loops` | PRIMM practice flow — Predict MCQ → Parsons puzzle → faded example |
-| `/challenge/cloud-hopper` | Challenge — real in-browser JS test runner + badge reward |
-| `/review` | Night review — spaced-recall card session |
-| `/dashboard` | Logged-in hub — continue, due reviews, XP/week chart, badges |
-| `/projects` | Projects — Guided / Independent / Capstone tiers |
-| `/login`, `/signup` | Auth UI (mock — routes to dashboard) |
-| `/profile` | Profile & settings incl. the Dream Guide (AI mentor) opt-in toggle |
+## Quality gates
 
-The **Dream Guide** (`src/components/DreamGuide.tsx`) is the opt-in Socratic AI mentor — scripted UI demo of the 5-phase hint flow (it asks questions, never writes code).
+```bash
+npm run typecheck
+npm run lint
+npm test
+npm run build
+```
 
-## Design source
+CI runs all four commands on pull requests and pushes to `main`. The content test
+checks curriculum identity, required lesson copy, practice links, and challenge /
+project test cases.
 
-The visual design comes from `../Code-handoff/code/project/Dreamcode.dc.html` (Claude Design export). Theme notes:
+## Runtime notes
 
-- Fonts: Baloo 2 (display), Nunito (body), JetBrains Mono (code) via `next/font`
-- Cloud assets in `public/assets/` (copied from the handoff bundle)
-- **`src/lib/theme.ts` is the theme control panel**: per-page gradient opacity (`gradientOpacity.home`, `.lessons`, `.badges`, `.challenge`, `.auth`) and a global `cloudOpacityBoost` multiplier for all floating clouds
-- Shared keyframes/glow/glass utilities live in `src/app/globals.css` (`.neon-title`, `.neon-wordmark`, `.neon-outline`, `.glow-hover`, `.glass`, `.cloud-glow`)
+- Python runs in a disposable Pyodide worker with a timeout.
+- JavaScript and transpiled TypeScript run in a fresh dedicated Web Worker with a
+  five-second timeout; learner code cannot block the React UI thread.
+- C# is currently a read-and-quiz track until its separate sandbox is built.
+- Sunset Arcade is the light appearance and Midnight Focus is dark. Profile offers
+  Automatic (light 07:00-19:00 local time), Light, and Dark.
+- Signed-in database access uses the Supabase anon key plus the user session and
+  Row-Level Security. The web app does not use a service-role key.
+
+Read `PROJECT.md` for the complete implementation map and `PLAN.md` for the small
+remaining production/deferred backlog.
