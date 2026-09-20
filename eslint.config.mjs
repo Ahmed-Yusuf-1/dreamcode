@@ -13,6 +13,8 @@ const eslintConfig = defineConfig([
     "build/**",
     "next-env.d.ts",
     "Extra/**",
+    // Reference solutions are executed by the grading harness, not imported.
+    "scripts/fixtures/**",
   ]),
 ]);
 
