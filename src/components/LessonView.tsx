@@ -1,475 +1,246 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import Cloud from "@/components/Cloud";
-import CodeEditor from "@/components/CodeEditor";
-import EditorFrame, { ConsolePanel } from "@/components/EditorFrame";
+import CodeEditor, { type EditorLanguage } from "@/components/CodeEditor";
+import EditorFrame, { ConsolePanel, EditorToolButton, type ConsoleNote } from "@/components/EditorFrame";
 import DreamGuide from "@/components/DreamGuide";
-import { usePyodide } from "@/lib/usePyodide";
+import DomPreview, { type DomPreviewHandle } from "@/components/DomPreview";
+import RichText from "@/components/ui/RichText";
+import Prose from "@/components/ui/Prose";
+import FlowBar from "@/components/ui/FlowBar";
+import Scene from "@/components/ui/Scene";
 import { cloudOpacity } from "@/lib/theme";
-import { lessons, type Lesson, type LessonLink, type QuizQuestion } from "@/lib/curriculum";
-import { practiceDatasets, getModuleChallenge } from "@/lib/data";
+import type { Lesson, LessonLink, QuizQuestion } from "@/lib/curriculum";
 import { completeActivity, useUserProfile } from "@/lib/profile";
 import { playChime } from "@/lib/sound";
 import { track } from "@/lib/telemetry";
-import { runJavaScript } from "@/lib/javascriptRunner";
+import { useCodeRunner, type RunOutcome } from "@/lib/useCodeRunner";
+import { useDraft } from "@/lib/useDraft";
+import { checkTask } from "@/lib/lessonTask";
+import { optionOrder } from "@/lib/optionOrder";
+import { setActiveTrackSilently } from "@/lib/track";
 
-const cs = cloudOpacity.lesson;
-
-/** Renders text with a tiny **bold** syntax. */
-function Emphasis({ text }: { text: string }) {
-  const parts = text.split(/\*\*(.+?)\*\*/g);
-  return (
-    <>
-      {parts.map((part, i) =>
-        i % 2 === 1 ? (
-          <strong key={i} style={{ color: "#13335f" }}>
-            {part}
-          </strong>
-        ) : (
-          <span key={i}>{part}</span>
-        ),
-      )}
-    </>
-  );
+export interface LessonPosition {
+  index: number;
+  total: number;
+  chapter: number;
+  moduleName: string;
 }
+
+export interface SectionChallengeLink {
+  slug: string;
+  name: string;
+  level: string;
+}
+
+const FILENAMES: Record<EditorLanguage, string> = { python: "main.py", javascript: "index.js", typescript: "index.ts" };
+const RUNTIME_LABEL: Record<EditorLanguage, string> = {
+  python: "real Python, runs in your browser",
+  javascript: "real JavaScript, runs in your browser",
+  typescript: "type-checked, then run in your browser",
+};
 
 export default function LessonView({
   lesson,
-  total,
+  position,
   next,
+  sectionChallenge,
+  hasPractice,
 }: {
   lesson: Lesson;
-  total: number;
+  position: LessonPosition;
   next: LessonLink | null;
+  sectionChallenge: SectionChallengeLink | null;
+  hasPractice: boolean;
 }) {
-  const [code, setCode] = useState(lesson.starter);
-  const [output, setOutput] = useState<string[]>([]);
-  const [note, setNote] = useState<{ text: string; ok: boolean } | undefined>();
-  const [running, setRunning] = useState(false);
-  const py = usePyodide();
+  const trackId = lesson.language || "python";
+  const runnable = lesson.runnable !== false;
+  const language: EditorLanguage = trackId === "javascript" ? "javascript" : trackId === "typescript" ? "typescript" : "python";
+  const { profile, ready } = useUserProfile();
+  const completed = profile.completedStops || [];
+  const lessonLearned = completed.includes(lesson.slug);
+  const practiceDone = !hasPractice || completed.includes(`practice:${lesson.practiceSlug}`);
+  const [quizPassed, setQuizPassed] = useState(false);
 
   useEffect(() => {
-    track("lesson_started", {
-      slug: lesson.slug,
-      language: lesson.language || "python",
-      module: lesson.module || lesson.chapter || "Basics",
-      tier: lesson.tier || "beginner",
-    });
-  }, [lesson.slug, lesson.language, lesson.module, lesson.chapter, lesson.tier]);
+    // Opening a lesson from another track makes that track the active one, so
+    // the map, dashboard and "continue" links follow the learner.
+    setActiveTrackSilently(trackId);
+    track("lesson_started", { slug: lesson.slug, language: trackId, module: position.moduleName, tier: lesson.tier || "beginner" });
+  }, [lesson.slug, trackId, position.moduleName, lesson.tier]);
 
-  // Read + quiz lessons (e.g. C#) have no client-side runtime: no editor/Run.
-  const runnable = lesson.runnable !== false;
+  const completeLesson = useCallback(() => {
+    const result = completeActivity(lesson.slug);
+    if (result.isNew) {
+      track("lesson_completed", { slug: lesson.slug, language: trackId, module: position.moduleName });
+    }
+  }, [lesson.slug, trackId, position.moduleName]);
 
-  // Section challenge: a difficulty-matched capstone surfaced as a CTA on a
-  // module's last lesson (mirrors the /journey "Section challenge" node). Only
-  // runnable modules with a mapped challenge get one.
-  const moduleName = lesson.module || lesson.chapter || "Basics";
-  const moduleLessons = lessons
-    .filter(
-      (l) =>
-        (l.language || "python") === (lesson.language || "python") &&
-        (l.module || l.chapter || "Basics") === moduleName,
-    )
-    .sort((a, b) => a.order - b.order);
-  const isLastOfModule = moduleLessons[moduleLessons.length - 1]?.slug === lesson.slug;
-  const sectionChallenge = runnable && isLastOfModule ? getModuleChallenge(moduleName) : null;
-
-  // Flow gating: a learner must PASS the practice before moving on. While the
-  // lesson has an unfinished practice, the only forward CTA is "Practice this",
-  // and the lesson is only marked learned once practice is completed (the practice
-  // page records both `practice:<slug>` and the lesson slug).
-  const { profile } = useUserProfile();
-  const completedStops = profile.completedStops || [];
-  const hasPractice = !!(lesson.practiceSlug && practiceDatasets[lesson.practiceSlug]);
-  const practiceDone = !hasPractice || completedStops.includes(`practice:${lesson.practiceSlug}`);
-  const lessonLearned = completedStops.includes(lesson.slug);
-
-  const [quizDone, setQuizDone] = useState(false);
-  const completeFromQuiz = () => {
-    if (quizDone) return;
-    setQuizDone(true);
-    completeActivity(lesson.slug);
-    track("lesson_completed", {
-      slug: lesson.slug,
-      language: lesson.language || "python",
-      module: lesson.module || lesson.chapter || "Basics",
-    });
+  const onQuizPass = () => {
+    setQuizPassed(true);
+    completeLesson();
     playChime("success");
   };
 
-  // Runs a string of JavaScript in-browser, capturing console.log. Used directly
-  // for the JS track and for the transpiled output of the TypeScript track.
-  const executeJs = async (jsCode: string, lang: string) => {
-    const result = await runJavaScript(jsCode);
-    setOutput(result.logs);
-    setNote({
-      text: result.ok
-        ? result.logs.length ? "Done." : "Finished, with no output to show."
-        : result.error || "Execution failed.",
-      ok: result.ok,
-    });
-    track("code_run", { slug: lesson.slug, language: lang, ok: result.ok });
-    setRunning(false);
-  };
-
-  const run = async () => {
-    if (running) return;
-    setRunning(true);
-    setOutput([]);
-
-    if (lesson.language === "javascript") {
-      setNote({ text: "Running...", ok: true });
-      await executeJs(code, "javascript");
-      return;
-    }
-
-    if (lesson.language === "typescript") {
-      setNote({ text: "Compiling TypeScript...", ok: true });
-      let js: string;
-      try {
-        const res = await fetch("/api/transpile", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ code }),
-        });
-        if (!res.ok) throw new Error("Could not reach the TypeScript compiler.");
-        const data = await res.json();
-        if (Array.isArray(data.diagnostics) && data.diagnostics.length > 0) {
-          setOutput([]);
-          setNote({ text: data.diagnostics[0], ok: false });
-          track("code_run", { slug: lesson.slug, language: "typescript", ok: false });
-          setRunning(false);
-          return;
-        }
-        js = data.js || "";
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
-        setNote({ text: msg, ok: false });
-        setRunning(false);
-        return;
-      }
-      setNote({ text: "Running...", ok: true });
-      await executeJs(js, "typescript");
-      return;
-    }
-
-    setNote({
-      text: py.status === "ready" ? "Running..." : "Booting Python (first run only)...",
-      ok: true,
-    });
-
-    const res = await py.run(code);
-
-    setOutput(res.stdout);
-    if (res.ok) {
-      setNote({ text: res.stdout.length ? "Done." : "Finished, with no output to show.", ok: true });
-      track("code_run", { slug: lesson.slug, language: lesson.language || "python", ok: true });
-    } else {
-      const summary =
-        (res.error || "").trim().split("\n").filter(Boolean).pop() || "Something went wrong.";
-      setNote({ text: summary, ok: false });
-      track("code_run", { slug: lesson.slug, language: lesson.language || "python", ok: false });
-    }
-    setRunning(false);
-  };
-
-  const runLabel = running
-    ? lesson.language === "javascript" || lesson.language === "typescript"
-      ? "Running..."
-      : py.status === "ready"
-        ? "Running..."
-        : "Booting Python..."
-    : "▶ Run";
+  const canMoveOn = runnable ? practiceDone : lessonLearned || quizPassed;
+  const nextHref = next ? `/lesson/${next.slug}` : "/journey";
+  const showSection = !!sectionChallenge && canMoveOn && !completed.includes(sectionChallenge.slug);
 
   return (
-    <div
-      className="relative"
-      style={{
-        minHeight: "100vh",
-        background: "linear-gradient(180deg, #1a1c52 0%, #2b2c63 26%, #4c4096 62%, #8E95CE 100%)",
-      }}
-    >
-      <Cloud src="/assets/clouds-sunset/cutout-cloud-sunset-14.webp" speed={0.08} pos={{ right: "-3%", top: "2%" }} width="min(420px, 32vw)" opacity={0.8} duration={16} neon="magenta" scale={cs} />
-      <Cloud src="/assets/clouds-sunset/cutout-cloud-sunset-16.webp" speed={0.05} pos={{ left: "-4%", bottom: "4%" }} width="min(380px, 28vw)" opacity={0.75} duration={18} delay={2} scale={cs} />
-      <Cloud src="/assets/clouds-sunset/cutout-cloud-sunset-1-03.webp" speed={0.14} pos={{ left: "8%", top: "12%" }} width="min(260px, 22vw)" opacity={0.7} anim="floatySm" duration={9} delay={0.7} neon="cyan" scale={cs} />
+    <Scene clouds="calm" cloudScale={cloudOpacity.lesson}>
+      <FlowBar
+        back={{ href: "/journey", label: "Map" }}
+        title={lesson.catalogTitle}
+        meta={
+          <>
+            <span className="dc-chip dc-chip--glass">
+              Lesson {position.index} of {position.total}
+            </span>
+            <div className="dc-progress" style={{ width: "clamp(60px, 14vw, 140px)", height: 6 }} aria-hidden="true">
+              <div className="dc-progress__fill" style={{ width: `${Math.round((position.index / Math.max(position.total, 1)) * 100)}%` }} />
+            </div>
+          </>
+        }
+        right={
+          lessonLearned ? (
+            <span className="dc-chip dc-chip--mint">{"✓"} Learned</span>
+          ) : (
+            <span className="dc-chip dc-chip--butter">+15 XP on finish</span>
+          )
+        }
+      />
 
-      {/* lesson top bar - sits just under the global nav */}
-      <div
-        className="sticky z-20 flex flex-wrap items-center justify-between backdrop-blur-lg"
-        style={{
-          top: "var(--nav-h)",
-          gap: 12,
-          padding: "12px clamp(16px, 4vw, 32px)",
-          background: "rgba(24,20,70,.55)",
-          borderBottom: "1px solid rgba(255,255,255,.18)",
-        }}
-      >
-        <Link
-          href="/journey"
-          className="cursor-pointer transition-colors hover:bg-white/30"
-          style={{
-            background: "rgba(255,255,255,.16)",
-            border: "1px solid rgba(255,255,255,.45)",
-            color: "#ffffff",
-            fontWeight: 900,
-            fontSize: 13,
-            padding: "8px 16px",
-            borderRadius: 999,
-          }}
-        >
-          {"\u2190"} Back to map
-        </Link>
-        <div className="flex items-center" style={{ gap: 12, minWidth: 0 }}>
-          <div
-            className="font-display"
-            style={{ fontWeight: 700, fontSize: 16, color: "#ffffff", whiteSpace: "nowrap" }}
-          >
-            {lesson.catalogTitle} {"\u00b7"} Lesson {lesson.order} of {total}
+      <div className="dc-container grid items-start lg:grid-cols-2" style={{ gap: 26, maxWidth: 1200, paddingTop: 30, paddingBottom: 80 }}>
+        <article className="dc-paper" style={{ padding: "clamp(22px, 3.4vw, 36px)" }}>
+          <div className="flex flex-wrap items-center" style={{ gap: 8 }}>
+            <span className="dc-chip dc-chip--mint">{lesson.kicker}</span>
+            <span className="dc-chip dc-chip--lavender">
+              Chapter {position.chapter} {"·"} {position.moduleName}
+            </span>
           </div>
-          {/* Compact progress bar. Scales to any lesson count, so it never blows
-              out the bar on phones the way one dot per lesson did. */}
-          <div
-            aria-hidden="true"
-            style={{
-              position: "relative",
-              width: "clamp(64px, 18vw, 150px)",
-              height: 6,
-              borderRadius: 999,
-              background: "rgba(255,255,255,.22)",
-              overflow: "hidden",
-              flexShrink: 0,
-            }}
-          >
-            <div
-              style={{
-                position: "absolute",
-                top: 0,
-                bottom: 0,
-                left: 0,
-                width: `${Math.round((lesson.order / Math.max(total, 1)) * 100)}%`,
-                background: "linear-gradient(90deg, #ff7ad9, #c8b3ff)",
-                boxShadow: "0 0 8px rgba(255,122,217,.7)",
-              }}
-            />
-          </div>
-        </div>
-        <div
-          style={{
-            background: "#fff3c9",
-            color: "#7a5410",
-            fontWeight: 900,
-            fontSize: 13,
-            padding: "8px 16px",
-            borderRadius: 999,
-          }}
-        >
-          +15 XP on finish
-        </div>
-      </div>
-
-      <div
-        className="relative z-5 mx-auto grid items-start lg:grid-cols-2"
-        style={{ gap: 26, maxWidth: 1180, padding: "38px 32px 80px" }}
-      >
-        {/* left: teaching card */}
-        <div
-          style={{
-            background: "rgba(255,255,255,.93)",
-            backdropFilter: "blur(10px)",
-            border: "1px solid rgba(255,255,255,.8)",
-            borderRadius: 24,
-            boxShadow: "0 0 34px rgba(255,150,220,.18), 0 24px 56px rgba(10,8,40,.45)",
-            padding: "36px 38px",
-          }}
-        >
-          <span
-            style={{
-              background: "#d9f5e6",
-              color: "#0f5c38",
-              fontWeight: 900,
-              fontSize: 12,
-              letterSpacing: 0.8,
-              padding: "6px 14px",
-              borderRadius: 999,
-            }}
-          >
-            {lesson.kicker}
-          </span>
-          <h1 className="font-display" style={{ fontWeight: 800, fontSize: 36, color: "#13335f", margin: "18px 0 12px" }}>
+          <h1 className="font-display dc-ink" style={{ fontWeight: 800, fontSize: "clamp(28px, 3.6vw, 36px)", lineHeight: 1.15, margin: "16px 0 12px" }}>
             {lesson.title}
           </h1>
-          <p style={{ fontSize: 16, lineHeight: 1.7, color: "#41608f", fontWeight: 600, margin: "0 0 22px", textWrap: "pretty" }}>
-            <Emphasis text={lesson.intro} />
+          <p className="dc-prose" style={{ margin: "0 0 22px" }}>
+            <RichText text={lesson.intro} />
           </p>
 
-          {/* worked example, read-only with real highlighting */}
-          <div
-            style={{ background: "#0e2247", borderRadius: 16, padding: "10px 8px", marginBottom: 22 }}
-          >
-            {lesson.language === "csharp" ? (
-              <pre
-                className="font-mono"
-                style={{ color: "#dbe9ff", fontSize: 13.5, lineHeight: 1.9, margin: 0, padding: "6px 10px", whiteSpace: "pre-wrap" }}
-              >
+          <div className="flex items-center justify-between" style={{ marginBottom: 8 }}>
+            <span className="dc-kicker dc-ink-muted" style={{ color: "var(--dc-ink-muted)" }}>
+              Worked example
+            </span>
+          </div>
+          <div className="dc-code" style={{ padding: "8px 6px", marginBottom: 22 }}>
+            {runnable ? (
+              <CodeEditor value={lesson.example} language={language} readOnly lineNumbers={false} minHeight="0px" />
+            ) : (
+              <pre className="font-mono" style={{ fontSize: 13.5, lineHeight: 1.85, margin: 0, padding: "8px 12px", whiteSpace: "pre-wrap", overflowX: "auto" }}>
                 {lesson.example}
               </pre>
-            ) : (
-              <CodeEditor value={lesson.example} language={lesson.language === "javascript" ? "javascript" : lesson.language === "typescript" ? "typescript" : "python"} readOnly lineNumbers={false} minHeight="0px" />
             )}
           </div>
 
-          <div className="font-display" style={{ fontWeight: 700, fontSize: 18, color: "#13335f", marginBottom: 12 }}>
+          <h2 className="font-display dc-ink" style={{ fontWeight: 700, fontSize: 18, margin: "0 0 12px" }}>
             How it reads
-          </div>
-          <div className="flex flex-col" style={{ gap: 12, marginBottom: 24 }}>
+          </h2>
+          <ul className="flex flex-col" style={{ gap: 12, marginBottom: 24, padding: 0, listStyle: "none" }}>
             {lesson.reads.map((row, i) => (
-              <div key={i} className="flex items-start" style={{ gap: 12 }}>
-                <span style={{ flexShrink: 0, width: 10, height: 10, borderRadius: "50%", background: row.dot, marginTop: 6 }} />
-                <span style={{ fontSize: 15, fontWeight: 600, color: "#41608f", lineHeight: 1.6 }}>
-                  <Emphasis text={row.text} />
+              <li key={i} className="flex items-start" style={{ gap: 12 }}>
+                <span aria-hidden="true" style={{ flexShrink: 0, width: 10, height: 10, borderRadius: "50%", background: row.dot, marginTop: 8 }} />
+                <span className="dc-prose" style={{ fontSize: 15 }}>
+                  <RichText text={row.text} />
                 </span>
-              </div>
+              </li>
             ))}
-          </div>
+          </ul>
 
-          <div
-            className="flex items-center"
-            style={{ gap: 14, background: "#fff8e3", borderRadius: 16, padding: "16px 18px" }}
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/assets/clouds-sunset/cutout-cloud-sunset-1-01.webp"
-              alt=""
-              style={{ display: "block", flexShrink: 0, width: 54, height: "auto" }}
-            />
-            <div style={{ fontSize: 14, fontWeight: 700, color: "#7a5410", lineHeight: 1.6 }}>
-              <strong>Cloud tip:</strong> <Emphasis text={lesson.tip} />
+          {lesson.mistakes && lesson.mistakes.length > 0 && (
+            <div className="dc-callout dc-callout--danger" style={{ marginBottom: 18 }}>
+              <div style={{ fontWeight: 900, marginBottom: 6 }}>Common mistakes</div>
+              <ul style={{ margin: 0, paddingLeft: 20, display: "flex", flexDirection: "column", gap: 4, fontWeight: 700 }}>
+                {lesson.mistakes.map((m, i) => (
+                  <li key={i}>
+                    <RichText text={m} />
+                  </li>
+                ))}
+              </ul>
             </div>
-          </div>
-        </div>
-
-        {/* right: editor */}
-        <div className="flex flex-col lg:sticky" style={{ gap: 18, top: "calc(var(--nav-h) + 64px)" }}>
-          {runnable ? (
-          <>
-          <EditorFrame
-            filename={lesson.language === "javascript" ? "index.js" : lesson.language === "typescript" ? "index.ts" : "main.py"}
-            language={lesson.language === "javascript" ? "JAVASCRIPT" : lesson.language === "typescript" ? "TYPESCRIPT" : "PYTHON"}
-            footer={
-              <div className="flex items-center justify-between" style={{ padding: "0 18px 16px", gap: 12 }}>
-                <span
-                  className="font-mono"
-                  style={{ fontSize: 11, fontWeight: 600, color: "#9db8e8", letterSpacing: 0.3 }}
-                >
-                  {lesson.language === "javascript"
-                    ? "real JavaScript, runs in your browser"
-                    : lesson.language === "typescript"
-                      ? "real TypeScript, compiled then run in your browser"
-                      : py.status === "error"
-                        ? "could not load Python"
-                        : "real Python, runs in your browser"}
-                </span>
-                <button
-                  onClick={run}
-                  disabled={running}
-                  className="font-display transition-transform hover:-translate-y-0.5"
-                  style={{
-                    border: "none",
-                    background: running ? "#7fc7a4" : "#a9ecc9",
-                    color: "#0f5c38",
-                    fontWeight: 800,
-                    fontSize: 15,
-                    padding: "10px 26px",
-                    borderRadius: 999,
-                    boxShadow: "0 10px 24px rgba(40,150,90,.35)",
-                    cursor: running ? "wait" : "pointer",
-                    opacity: running ? 0.85 : 1,
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  {runLabel}
-                </button>
-              </div>
-            }
-          >
-            <div style={{ padding: "10px 8px 6px" }}>
-              <CodeEditor value={code} onChange={setCode} language={lesson.language === "javascript" ? "javascript" : lesson.language === "typescript" ? "typescript" : "python"} minHeight="180px" />
-            </div>
-          </EditorFrame>
-
-          <ConsolePanel lines={output} note={note} />
-          </>
-          ) : (
-            <QuizPanel quiz={lesson.quiz ?? []} onPass={completeFromQuiz} done={quizDone} />
           )}
 
-          <div className="flex flex-wrap items-center justify-end" style={{ gap: 12 }}>
+          <div className="dc-callout dc-callout--warn flex items-center" style={{ gap: 14 }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/assets/clouds-sunset/cutout-cloud-sunset-1-01.webp" alt="" style={{ display: "block", flexShrink: 0, width: 50, height: "auto" }} />
+            <div>
+              <strong>Cloud tip:</strong> <RichText text={lesson.tip} />
+            </div>
+          </div>
+
+          {lesson.deeper && lesson.deeper.length > 0 && (
+            <div className="flex flex-col" style={{ gap: 10, marginTop: 20 }}>
+              {lesson.deeper.map((section, i) => (
+                <details key={i} className="dc-inset" style={{ padding: "12px 16px" }}>
+                  <summary className="font-display dc-ink" style={{ fontWeight: 800, fontSize: 16, cursor: "pointer" }}>
+                    Go deeper: {section.title}
+                  </summary>
+                  <div style={{ marginTop: 10 }}>
+                    <Prose text={section.body} fontSize={14.5} />
+                    {section.code && (
+                      <div className="dc-code" style={{ padding: "6px 4px", marginTop: 10 }}>
+                        {runnable ? (
+                          <CodeEditor value={section.code} language={language} readOnly lineNumbers={false} minHeight="0px" ariaLabel={`${section.title} example`} />
+                        ) : (
+                          <pre className="font-mono" style={{ fontSize: 13, lineHeight: 1.8, margin: 0, padding: "8px 12px", whiteSpace: "pre-wrap" }}>
+                            {section.code}
+                          </pre>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </details>
+              ))}
+            </div>
+          )}
+        </article>
+
+        <div className="flex flex-col lg:sticky" style={{ gap: 16, top: "calc(var(--nav-h) + 70px)" }}>
+          {ready && completed.length === 0 && position.index === 1 && (
+            <div className="dc-callout dc-callout--info anim-fade-up">
+              <strong>New here?</strong> Read the idea on the left, press Run, then change something and run it again.
+              {runnable && hasPractice ? " When it clicks, practice it to unlock the next lesson." : ""}
+            </div>
+          )}
+
+          {runnable ? (
+            <Workbench lesson={lesson} language={language} />
+          ) : (
+            <QuizPanel quiz={lesson.quiz ?? []} onPass={onQuizPass} alreadyLearned={lessonLearned} />
+          )}
+
+          <div className="flex flex-wrap items-center justify-end" style={{ gap: 14, marginTop: 4 }}>
             {runnable && hasPractice && !practiceDone ? (
-              // Practice is required before moving on, so it is the ONLY forward
-              // action here. The Next button appears once practice is passed (the
-              // practice page marks both the practice and the lesson complete).
-              <Link
-                href={`/practice/${lesson.practiceSlug}`}
-                className="font-display cursor-pointer transition-transform hover:-translate-y-0.5"
-                style={{
-                  border: "none",
-                  background: "linear-gradient(135deg, #ff7ad9, #ff4fb0)",
-                  color: "#ffffff",
-                  fontWeight: 800,
-                  fontSize: 16,
-                  padding: "12px 28px",
-                  borderRadius: 999,
-                  boxShadow: "0 0 24px rgba(255,100,200,.55), 0 14px 30px rgba(20,10,50,.45)",
-                }}
-              >
-                Practice this {"\u2192"}
+              <Link href={`/practice/${lesson.practiceSlug}`} className="dc-btn dc-btn--primary">
+                Practice this {"→"}
               </Link>
+            ) : !canMoveOn ? (
+              <span style={{ color: "var(--dc-on-sky-soft)", fontWeight: 800, fontSize: 14, textShadow: "var(--dc-sky-text-shadow)" }}>
+                Answer every question to unlock the next lesson.
+              </span>
             ) : (
               <>
-                {sectionChallenge && !completedStops.includes(sectionChallenge.slug) && (
-                  <Link
-                    href={`/challenge/${sectionChallenge.slug}`}
-                    className="font-display cursor-pointer backdrop-blur-sm transition-colors hover:bg-[rgba(255,200,90,.22)]"
-                    style={{
-                      background: "rgba(60,44,20,.4)",
-                      border: "2px solid rgba(255,216,120,.9)",
-                      color: "#fff6df",
-                      fontWeight: 700,
-                      fontSize: 16,
-                      padding: "12px 24px",
-                      borderRadius: 999,
-                    }}
-                  >
-                    {"\u2605"} Section challenge {"\u2192"}
+                {showSection && sectionChallenge && (
+                  <Link href={`/challenge/${sectionChallenge.slug}`} className="dc-btn dc-btn--gold">
+                    {"★"} Section challenge
                   </Link>
                 )}
                 <Link
-                  href={next ? `/lesson/${next.slug}` : "/journey"}
+                  href={nextHref}
                   onClick={() => {
-                    if (runnable && !lessonLearned) {
-                      completeActivity(lesson.slug);
-                      track("lesson_completed", {
-                        slug: lesson.slug,
-                        language: lesson.language || "python",
-                        module: lesson.module || lesson.chapter || "Basics",
-                      });
-                    }
+                    if (runnable && !hasPractice && !lessonLearned) completeLesson();
                   }}
-                  className="font-display cursor-pointer transition-transform hover:-translate-y-0.5"
-                  style={{
-                    border: "none",
-                    background: "linear-gradient(135deg, #ff7ad9, #ff4fb0)",
-                    color: "#ffffff",
-                    fontWeight: 800,
-                    fontSize: 16,
-                    padding: "12px 26px",
-                    borderRadius: 999,
-                    boxShadow: "0 0 24px rgba(255,100,200,.55), 0 14px 30px rgba(20,10,50,.45)",
-                  }}
+                  className="dc-btn dc-btn--primary"
                 >
-                  {next ? `Next: ${next.title} \u2192` : "Finish chapter \u2192"}
+                  {next ? `Next: ${next.title} →` : "Back to the map →"}
                 </Link>
               </>
             )}
@@ -478,142 +249,328 @@ export default function LessonView({
       </div>
 
       <DreamGuide
-        context={{
-          title: lesson.title,
-          instructions: lesson.intro,
-          language: lesson.language,
-          kind: "lesson",
+        context={{ title: lesson.title, instructions: lesson.task?.prompt || lesson.intro, language: trackId, kind: "lesson" }}
+        getCode={() => {
+          try {
+            return localStorage.getItem(`dc_draft:lesson:${lesson.slug}`) ?? lesson.starter;
+          } catch {
+            return lesson.starter;
+          }
         }}
-        getCode={() => code}
       />
-    </div>
+    </Scene>
+  );
+}
+
+/** Editor + Run + console + the optional "Your turn" task. */
+function Workbench({ lesson, language }: { lesson: Lesson; language: EditorLanguage }) {
+  const { value: code, setValue: setCode, reset, restored } = useDraft(`lesson:${lesson.slug}`, lesson.starter);
+  const { run, running: workerRunning, pythonStatus } = useCodeRunner(language);
+  // useCodeRunner starts a Python worker for Python lessons only; DOM lessons are JavaScript.
+  const isDom = !!lesson.html;
+  const previewRef = useRef<DomPreviewHandle>(null);
+  const [domRunning, setDomRunning] = useState(false);
+  const running = workerRunning || domRunning;
+  const [lines, setLines] = useState<string[]>([]);
+  const [errorLines, setErrorLines] = useState<string[]>([]);
+  const [note, setNote] = useState<ConsoleNote | undefined>();
+  const [errorLine, setErrorLine] = useState<number | undefined>();
+  const needsInput = language === "python" && (lesson.stdin !== undefined || /\binput\s*\(/.test(code));
+  const [stdin, setStdin] = useState(lesson.stdin ?? "");
+  const task = lesson.task;
+  const [taskState, setTaskState] = useState<{ ok: boolean; message: string } | null>(null);
+  const [attempts, setAttempts] = useState(0);
+  const [showSolution, setShowSolution] = useState(false);
+  const linesRef = useRef<string[]>([]);
+  const lastRunOk = useRef(false);
+
+  const evaluateTask = useCallback(
+    (output: string[], isNewRun: boolean) => {
+      if (!task) return;
+      const result = checkTask(task, code, output);
+      setTaskState((prev) => {
+        if (result.ok && !prev?.ok) playChime("correct");
+        return result;
+      });
+      if (isNewRun) setAttempts((a) => a + 1);
+    },
+    [task, code],
+  );
+
+  const runDom = useCallback(async (): Promise<RunOutcome> => {
+    setDomRunning(true);
+    try {
+      let compiled: { js?: string; diagnostics?: string[] };
+      try {
+        const res = await fetch("/api/transpile", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ code, language: "javascript", guardLoops: true }),
+        });
+        if (!res.ok) throw new Error(res.status === 429 ? "Too many runs in a row. Wait a few seconds." : "Could not prepare your code.");
+        compiled = await res.json();
+      } catch (e) {
+        return { ok: false, lines: [], errorLines: [], summary: e instanceof Error ? e.message : "Could not prepare your code." };
+      }
+      if (compiled.diagnostics && compiled.diagnostics.length > 0) {
+        const m = compiled.diagnostics[0].match(/^Line (\d+)/);
+        return { ok: false, lines: [], errorLines: compiled.diagnostics, summary: "Fix the syntax error above, then run again.", errorLine: m ? Number(m[1]) : undefined };
+      }
+      const result = await previewRef.current!.run(compiled.js || "");
+      return {
+        ok: result.ok,
+        lines: result.lines,
+        errorLines: result.errorLines,
+        summary: result.ok ? (result.lines.length ? "Done. The page above is live." : "Done. Check the page above.") : "Your code stopped with an error.",
+      };
+    } finally {
+      setDomRunning(false);
+    }
+  }, [code]);
+
+  const doRun = useCallback(async () => {
+    if (running) return;
+    setNote({ text: language === "python" && pythonStatus !== "ready" ? "Starting Python (first run only)..." : language === "typescript" ? "Checking types..." : "Running...", ok: true });
+    setLines([]);
+    setErrorLines([]);
+    setErrorLine(undefined);
+    const outcome = isDom
+      ? await runDom()
+      : await run(code, needsInput ? stdin : undefined, {
+          packages: lesson.packages,
+          onPackages: (names) => setNote({ text: `Downloading ${names.join(" and ")} (first run only)...`, ok: true }),
+        });
+    linesRef.current = outcome.lines;
+    lastRunOk.current = outcome.ok;
+    setLines(outcome.lines);
+    setErrorLines(outcome.errorLines);
+    setErrorLine(outcome.errorLine);
+    setNote({ text: outcome.summary, ok: outcome.ok });
+    track("code_run", { slug: lesson.slug, language, ok: outcome.ok });
+    if (task) {
+      if (!outcome.ok) {
+        setTaskState(null);
+        return;
+      }
+      evaluateTask(outcome.lines, true);
+    }
+  }, [running, language, pythonStatus, isDom, runDom, run, code, needsInput, stdin, lesson.slug, lesson.packages, task, evaluateTask]);
+
+  // Clicks and timers in the preview keep producing output after the run.
+  const onLateOutput = useCallback(
+    (more: string[], errors: string[]) => {
+      if (more.length) {
+        linesRef.current = [...linesRef.current, ...more];
+        setLines(linesRef.current);
+        if (lastRunOk.current) evaluateTask(linesRef.current, false);
+      }
+      if (errors.length) setErrorLines((prev) => [...prev, ...errors]);
+    },
+    [evaluateTask],
+  );
+
+  const changed = code !== lesson.starter;
+
+  return (
+    <>
+      <EditorFrame
+        filename={FILENAMES[language]}
+        language={language.toUpperCase()}
+        toolbar={
+          changed ? (
+            <EditorToolButton
+              onClick={() => {
+                reset();
+                setErrorLine(undefined);
+              }}
+              label="Reset the editor to the starter code"
+            >
+              Reset
+            </EditorToolButton>
+          ) : null
+        }
+        footer={
+          <div className="flex flex-wrap items-center justify-between" style={{ padding: "4px 16px 14px", gap: 10 }}>
+            <span className="font-mono" style={{ fontSize: 11, fontWeight: 600, color: "#9db8e8", letterSpacing: 0.3 }}>
+              {language === "python" && pythonStatus === "error"
+                ? "Python could not load. Check your connection."
+                : isDom
+                  ? "real JavaScript, runs in the live page below"
+                  : RUNTIME_LABEL[language]}
+              {restored ? " · your draft was restored" : ""}
+            </span>
+            <button type="button" onClick={doRun} disabled={running} className="dc-btn dc-btn--run dc-btn--sm" style={{ fontSize: 14, padding: "9px 22px" }} title="Run (Ctrl or Cmd + Enter)">
+              {running ? "Running..." : "▶ Run"}
+            </button>
+          </div>
+        }
+      >
+        <div style={{ padding: "8px 6px 4px" }}>
+          <CodeEditor value={code} onChange={setCode} language={language} minHeight="190px" onRun={doRun} errorLine={errorLine} ariaLabel={`${lesson.title} code editor`} />
+        </div>
+      </EditorFrame>
+
+      {isDom && lesson.html && <DomPreview ref={previewRef} html={lesson.html} onLateOutput={onLateOutput} />}
+
+      {needsInput && (
+        <label className="block">
+          <span className="dc-kicker" style={{ display: "block", marginBottom: 6 }}>
+            Input {"·"} one line per input() call
+          </span>
+          <textarea
+            value={stdin}
+            onChange={(e) => setStdin(e.target.value)}
+            rows={Math.min(5, Math.max(2, stdin.split("\n").length))}
+            className="font-mono"
+            spellCheck={false}
+            style={{
+              width: "100%",
+              background: "var(--dc-console-bg)",
+              color: "#ffe49a",
+              border: "1px solid rgba(255,255,255,.14)",
+              borderRadius: 14,
+              padding: "10px 14px",
+              fontSize: 13,
+              lineHeight: 1.7,
+              outline: "none",
+              resize: "vertical",
+            }}
+          />
+        </label>
+      )}
+
+      <ConsolePanel lines={lines} errorLines={errorLines} note={note} />
+
+      {task && (
+        <section className="dc-paper" style={{ padding: "18px 20px", borderRadius: 20 }} aria-live="polite">
+          <div className="flex items-center justify-between" style={{ gap: 10, marginBottom: 8 }}>
+            <span className="dc-chip dc-chip--pink">YOUR TURN</span>
+            {taskState?.ok && <span className="dc-chip dc-chip--mint">{"✓"} Done</span>}
+          </div>
+          <p className="dc-prose" style={{ fontSize: 15, margin: 0 }}>
+            <RichText text={task.prompt} />
+          </p>
+          {taskState && !taskState.ok && (
+            <div className="dc-callout dc-callout--danger" style={{ marginTop: 12, padding: "10px 14px", fontSize: 13.5 }}>
+              {taskState.message}
+            </div>
+          )}
+          {taskState?.ok && (
+            <div className="dc-callout dc-callout--success" style={{ marginTop: 12, padding: "10px 14px", fontSize: 13.5 }}>
+              Nicely done. That is the idea, working in your own code.
+            </div>
+          )}
+          {!taskState && <div className="dc-ink-muted" style={{ fontSize: 12.5, fontWeight: 700, marginTop: 10 }}>Press Run to check your work.</div>}
+          {task.solution && !taskState?.ok && attempts >= 2 && (
+            <div style={{ marginTop: 12 }}>
+              {!showSolution ? (
+                <button type="button" className="dc-btn dc-btn--quiet dc-btn--sm" onClick={() => setShowSolution(true)}>
+                  Show one way to do it
+                </button>
+              ) : (
+                <div className="dc-code" style={{ padding: "6px 4px" }}>
+                  <CodeEditor value={task.solution} language={language} readOnly lineNumbers={false} minHeight="0px" ariaLabel="One possible solution" />
+                </div>
+              )}
+            </div>
+          )}
+        </section>
+      )}
+    </>
   );
 }
 
 /**
- * Read + quiz assessment for lessons without a client-side runtime (e.g. C#).
- * Replaces the editor: the learner answers multiple-choice questions, and when
- * all are correct the lesson is completed (XP awarded once via `onPass`).
+ * Read + quiz assessment for lessons without a client-side runtime (C#, and the
+ * framework overview lessons). Every question must be answered correctly; wrong
+ * picks explain themselves and can be retried.
  */
-function QuizPanel({
-  quiz,
-  onPass,
-  done,
-}: {
-  quiz: QuizQuestion[];
-  onPass: () => void;
-  done: boolean;
-}) {
+function QuizPanel({ quiz, onPass, alreadyLearned }: { quiz: QuizQuestion[]; onPass: () => void; alreadyLearned: boolean }) {
   const [picked, setPicked] = useState<(number | null)[]>(() => quiz.map(() => null));
+  const [passed, setPassed] = useState(false);
+  const correctCount = useMemo(() => quiz.filter((q, i) => picked[i] === q.answer).length, [quiz, picked]);
 
   if (quiz.length === 0) {
     return (
-      <div className="glass-strong" style={{ borderRadius: 20, padding: "24px 26px", color: "#41608f", fontWeight: 600 }}>
-        This lesson is a read-through. Review the example, then continue.
+      <div className="dc-paper" style={{ padding: "22px 24px" }}>
+        <p className="dc-prose" style={{ margin: 0 }}>
+          This lesson is a read-through. Study the example, then continue.
+        </p>
       </div>
     );
   }
 
-  const allCorrect = quiz.every((q, i) => picked[i] === q.answer);
-
   const choose = (qi: number, oi: number) => {
     const next = picked.map((p, i) => (i === qi ? oi : p));
     setPicked(next);
-    if (quiz.every((q, i) => next[i] === q.answer)) onPass();
+    if (oi === quiz[qi].answer) playChime("correct");
+    if (!passed && quiz.every((q, i) => next[i] === q.answer)) {
+      setPassed(true);
+      onPass();
+    }
   };
 
   return (
-    <div
-      className="glass-strong"
-      style={{ borderRadius: 20, boxShadow: "0 20px 44px rgba(60,80,150,.22)", padding: "24px 26px" }}
-    >
-      <div className="font-display" style={{ fontWeight: 800, fontSize: 18, color: "#13335f", marginBottom: 4 }}>
-        Check your understanding
+    <section className="dc-paper" style={{ padding: "22px 24px" }}>
+      <div className="flex items-center justify-between" style={{ gap: 10 }}>
+        <h2 className="font-display dc-ink" style={{ fontWeight: 800, fontSize: 19, margin: 0 }}>
+          Check your understanding
+        </h2>
+        <span className="dc-chip dc-chip--lavender">
+          {correctCount} / {quiz.length}
+        </span>
       </div>
-      <div style={{ fontSize: 13, fontWeight: 700, color: "#7b93b8", marginBottom: 18 }}>
-        Answer all {quiz.length} to complete this lesson {"·"} +15 XP
-      </div>
+      <p className="dc-ink-muted" style={{ fontSize: 13, fontWeight: 700, margin: "4px 0 18px" }}>
+        {alreadyLearned ? "You have passed this before. Answer again any time to refresh it." : `Answer all ${quiz.length} to complete this lesson and earn 15 XP.`}
+      </p>
 
-      <div className="flex flex-col" style={{ gap: 22 }}>
+      <ol className="flex flex-col" style={{ gap: 22, listStyle: "none", padding: 0, margin: 0 }}>
         {quiz.map((q, qi) => {
           const sel = picked[qi];
           const answered = sel !== null;
           const correct = answered && sel === q.answer;
           return (
-            <div key={qi}>
-              <div style={{ fontSize: 15, fontWeight: 700, color: "#13335f", marginBottom: 10, lineHeight: 1.5 }}>
-                {qi + 1}. {q.prompt}
+            <li key={qi}>
+              <div className="dc-ink" style={{ fontSize: 15, fontWeight: 800, marginBottom: 10, lineHeight: 1.5 }}>
+                {qi + 1}. <RichText text={q.prompt} />
               </div>
-              <div className="flex flex-col" style={{ gap: 8 }}>
-                {q.options.map((opt, oi) => {
+              <div className="flex flex-col" role="radiogroup" aria-label={`Question ${qi + 1}`} style={{ gap: 8 }}>
+                {optionOrder(q.options.length, q.prompt + q.options.join("|")).map((oi) => {
+                  const opt = q.options[oi];
                   const isSel = sel === oi;
-                  const isAnswer = oi === q.answer;
-                  let bg = "#f3f7fc";
-                  let border = "#e2ecf7";
-                  let color = "#2c4a7c";
-                  if (isSel && isAnswer) {
-                    bg = "#effaf3";
-                    border = "#7fd6a4";
-                    color = "#0f5c38";
-                  } else if (isSel && !isAnswer) {
-                    bg = "#fdeff3";
-                    border = "#ffa8c2";
-                    color = "#a13163";
-                  } else if (answered && isAnswer) {
-                    bg = "#f0faf4";
-                    border = "#bfe6cf";
-                  }
+                  const state = isSel ? (oi === q.answer ? "correct" : "wrong") : undefined;
                   return (
                     <button
                       key={oi}
+                      type="button"
+                      role="radio"
+                      aria-checked={isSel}
                       onClick={() => choose(qi, oi)}
                       disabled={correct}
-                      className="text-left transition-colors"
-                      style={{
-                        background: bg,
-                        border: `2px solid ${border}`,
-                        borderRadius: 12,
-                        padding: "11px 14px",
-                        fontSize: 14,
-                        fontWeight: 700,
-                        color,
-                        cursor: correct ? "default" : "pointer",
-                      }}
+                      className="dc-option"
+                      data-state={state}
                     >
-                      {opt}
+                      <RichText text={opt} />
                     </button>
                   );
                 })}
               </div>
               {answered && q.explain && (
-                <div style={{ fontSize: 13, fontWeight: 600, color: correct ? "#0f8a52" : "#a13163", marginTop: 8, lineHeight: 1.5 }}>
-                  {correct ? "✓ " : "✗ "}
+                <div className={`dc-callout ${correct ? "dc-callout--success" : "dc-callout--danger"}`} style={{ marginTop: 8, padding: "9px 12px", fontSize: 13 }}>
+                  {correct ? "✓ " : "Not quite. "}
                   {q.explain}
                 </div>
               )}
-            </div>
+            </li>
           );
         })}
-      </div>
+      </ol>
 
-      {(allCorrect || done) && (
-        <div
-          style={{
-            marginTop: 20,
-            textAlign: "center",
-            fontSize: 13.5,
-            fontWeight: 800,
-            color: "#0f5c38",
-            background: "rgba(169,236,201,.25)",
-            border: "1px solid rgba(127,214,164,.5)",
-            borderRadius: 12,
-            padding: "12px 14px",
-          }}
-        >
-          Lesson complete - you can move on. {"✓"}
+      {passed && (
+        <div className="dc-callout dc-callout--success anim-pop-in" style={{ marginTop: 20, textAlign: "center" }}>
+          Lesson complete. You can move on. {"✓"}
         </div>
       )}
-    </div>
+    </section>
   );
 }
-

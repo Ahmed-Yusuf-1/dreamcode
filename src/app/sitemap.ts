@@ -4,7 +4,7 @@ import { challenges, projects } from "@/lib/data";
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const base = process.env.NEXT_PUBLIC_SITE_URL || "https://dreamcoder.dev";
-  const staticPaths = ["", "/start", "/lessons", "/journey", "/peaks", "/projects"];
+  const staticPaths = ["", "/start", "/lessons", "/journey", "/peaks", "/projects", "/leaderboard", "/placement", "/industry"];
   return [
     ...staticPaths.map((path) => ({ url: `${base}${path}`, changeFrequency: "weekly" as const, priority: path === "" ? 1 : 0.8 })),
     ...lessons.map((lesson) => ({ url: `${base}/lesson/${lesson.slug}`, changeFrequency: "monthly" as const, priority: 0.7 })),
