@@ -1,13 +1,11 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { getUser } from "@/lib/supabase/server";
-import { recordEvents, getEvents } from "@/lib/supabase/data";
+import { getDbContext, getEvents, recordEvents } from "@/lib/supabase/data";
 
 export async function GET() {
-  if (!(await getUser())) {
-    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-  }
-  return NextResponse.json({ events: await getEvents() });
+  const ctx = await getDbContext();
+  if (!ctx) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  return NextResponse.json({ events: await getEvents(ctx) });
 }
 
 // Cap the serialized size of each event's `props` so a client cannot stuff
@@ -31,9 +29,8 @@ const BodySchema = z.object({
 
 /** Append a batch of telemetry events for the current user. */
 export async function POST(request: Request) {
-  if (!(await getUser())) {
-    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-  }
+  const ctx = await getDbContext();
+  if (!ctx) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   let body: unknown;
   try {
     body = await request.json();
@@ -44,6 +41,6 @@ export async function POST(request: Request) {
   if (!parsed.success) {
     return NextResponse.json({ error: "invalid body" }, { status: 400 });
   }
-  const ok = await recordEvents(parsed.data.events);
+  const ok = await recordEvents(ctx, parsed.data.events);
   return NextResponse.json({ ok });
 }

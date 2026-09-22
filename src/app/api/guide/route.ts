@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { getUser } from "@/lib/supabase/server";
-import { getFullProfile } from "@/lib/supabase/data";
+import { getDbContext, getFullProfile } from "@/lib/supabase/data";
 import { isGuideConfigured, buildSystemPrompt, generateHint, GuideError } from "@/lib/ai/guide";
 import { rateLimit, rateLimitHeaders } from "@/lib/rateLimit";
 
@@ -27,10 +26,11 @@ const BodySchema = z.object({
 
 export async function POST(request: Request) {
   // 1. Live gate for now: must be signed in (protects the model key / cost).
-  const user = await getUser();
-  if (!user) {
+  const ctx = await getDbContext();
+  if (!ctx) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
+  const { user } = ctx;
 
   // 1b. Per-user rate limit. Each hint spends real model budget, so cap the
   //     burst rate even for a signed-in user (a stuck learner sends a few
@@ -46,7 +46,7 @@ export async function POST(request: Request) {
   // 2. Parked pro gate. Off by default; set GUIDE_REQUIRE_PRO=true at launch to
   //    sell the guide as the Pro feature. No client change needed to flip it.
   if (process.env.GUIDE_REQUIRE_PRO === "true") {
-    const profile = await getFullProfile();
+    const profile = await getFullProfile(ctx);
     if (!profile || profile.tier !== "pro") {
       return NextResponse.json({ error: "upgrade_required" }, { status: 403 });
     }
