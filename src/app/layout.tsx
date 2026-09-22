@@ -1,7 +1,8 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Baloo_2, Nunito, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import SiteChrome from "@/components/SiteChrome";
+import { buildCatalog } from "@/lib/catalog.server";
 
 const baloo = Baloo_2({
   variable: "--font-baloo",
@@ -27,12 +28,12 @@ const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://dreamcoder.dev";
 
 const title = "dreamcode - learn · solve · dream";
 const description =
-  "Tiny lessons and glowing problems, served all night. Python, JavaScript, C#, and TypeScript, one neon mile at a time.";
+  "Learn to code by writing real code from the first minute. Python, JavaScript and TypeScript run in your browser, with practice drills, graded challenges, projects and spaced review.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   applicationName: "dreamcode",
-  title,
+  title: { default: title, template: "%s - dreamcode" },
   description,
   alternates: { canonical: "/" },
   openGraph: {
@@ -47,6 +48,13 @@ export const metadata: Metadata = {
     title,
     description,
   },
+};
+
+export const viewport: Viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#9b526a" },
+    { media: "(prefers-color-scheme: dark)", color: "#090d26" },
+  ],
 };
 
 export default function RootLayout({
@@ -68,7 +76,7 @@ export default function RootLayout({
         />
       </head>
       <body className="min-h-full flex flex-col">
-        <SiteChrome>{children}</SiteChrome>
+        <SiteChrome catalog={buildCatalog()}>{children}</SiteChrome>
       </body>
     </html>
   );
