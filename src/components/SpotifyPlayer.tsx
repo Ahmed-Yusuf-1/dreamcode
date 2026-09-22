@@ -1214,6 +1214,7 @@ export default function SpotifyPlayer() {
                       max={durationMs || 100}
                       value={progressMs}
                       onChange={handleSeek}
+                      aria-label="Seek within the track"
                       className={`w-full dreamcode-range seek-range ${styleIndex === 0 ? 'wood-range' : ''}`}
                       style={{
                         "--glow-color": theme.textAccent,
@@ -1240,6 +1241,7 @@ export default function SpotifyPlayer() {
                         step="0.05"
                         value={volume}
                         onChange={(e) => changeVolume(parseFloat(e.target.value))}
+                        aria-label="Volume"
                         className={`dreamcode-range ${styleIndex === 0 ? 'wood-range' : ''}`}
                         style={{
                           position: "absolute",

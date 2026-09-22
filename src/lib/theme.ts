@@ -1,37 +1,22 @@
 /**
- * dreamcode theme knobs - tweak freely.
+ * dreamcode theme knobs. Colours for both skies (Sunset Arcade and Midnight
+ * Focus) live as tokens in src/app/globals.css; these are the per-page dials.
  *
- * gradientOpacity: how strongly the pastel gradient (#6E8FC7 → #F0AABE)
- * covers the background photo on each page.
- *   0   = photo fully visible, no tint
- *   0.5 = dreamy haze, photo clearly visible
- *   1   = solid gradient, photo hidden
- *
- * Each page reads its own value, so you can tune them independently.
+ * gradientOpacity: how strongly the pastel wash covers the home hero photo.
+ *   0 = photo fully visible, 1 = solid wash.
  */
 export const gradientOpacity = {
-  home: 0.90, //       / - Neon Dusk hero (photo: bg-dusk-neon-clouds-1)
-  lessons: 0.9, //    /lessons - Sunset Stops (photo: bg-hero-cloudsea-sunset)
-  badges: 0.95, //    /badges - Neon Collection (photo: bg-rainbow-cloud-2)
-  challenge: 0.9, //  /challenge/* - Rainbow Peak (photo: bg-rainbow-cloud-1)
-  auth: 0.9, //       /login + /signup - Doorway (photo: bg-doorway-clouds-1)
+  home: 0.9,
 };
 
 /**
  * cloudOpacityBoost: GLOBAL multiplier for every floating cloud cutout (0-1.5).
- * Raise it to make all drifting clouds across the whole site more visible.
  */
 export const cloudOpacityBoost = 1.15;
 
 /**
- * cloudOpacity: PER-PAGE cloud visibility, on top of the global boost.
- * Every page is here - dial each one independently.
- *   1   = as authored
- *   1.4 = clouds pop much more
- *   0.3 = faint, ghostly clouds
- *
- * Note: on /home this controls only the clouds in the scrollable story
- * below the hero. The hero's own clouds sit with the photo and are left alone.
+ * cloudOpacity: per-page cloud visibility on top of the global boost.
+ *   1 = as authored, 1.4 = clouds pop more, 0.3 = faint and ghostly.
  */
 export const cloudOpacity = {
   home: 0.4,
@@ -44,7 +29,7 @@ export const cloudOpacity = {
   lesson: 0.4,
   practice: 0.65,
   review: 0.42,
-  challenge: 0.85,
+  challenge: 0.6,
   profile: 0.5,
   auth: 0.8,
 };
