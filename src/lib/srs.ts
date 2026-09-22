@@ -3,45 +3,39 @@
 import { createClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 
-export interface ReviewCardState {
-  id: string;
-  dueAt: number; // timestamp in ms
-}
+/**
+ * Spaced repetition with an FSRS-style scheduler (stability, difficulty,
+ * retrievability). Card state lives in localStorage and, when signed in, in the
+ * srs_cards table. A card that has never been rated is due as soon as its lesson
+ * is complete.
+ */
+
+export type Rating = "again" | "good" | "easy";
 
 export interface FSRSCardState {
   cardId: string;
-  dueAt: number;      // timestamp in ms
-  stability: number;  // stability in days
-  difficulty: number; // difficulty 1..10
+  dueAt: number; // timestamp in ms
+  stability: number; // days
+  difficulty: number; // 1..10
   reps: number;
-  updatedAt: number;  // timestamp in ms
+  updatedAt: number; // timestamp in ms
 }
 
-const DEFAULT_DUE = [
-  { id: "r1", offsetHours: 0 },
-  { id: "r2", offsetHours: 0 },
-  { id: "r3", offsetHours: 0 },
-  { id: "r4", offsetHours: 12 }, // due in 12 hours (due today)
-];
+const STORAGE_KEY = "dc_srs_full_states";
+export const SRS_CHANGE_EVENT = "dc_srs_change";
+const DAY = 24 * 3600 * 1000;
 
 let isUserSignedIn = false;
-let supabase: ReturnType<typeof createClient> | null = null;
 
 if (typeof window !== "undefined" && isSupabaseConfigured()) {
-  supabase = createClient();
-  // Check active session on startup
+  const supabase = createClient();
   supabase.auth.getSession().then(({ data }) => {
     isUserSignedIn = !!data.session;
-    if (isUserSignedIn) {
-      syncSrsFromApi();
-    }
+    if (isUserSignedIn) syncSrsFromApi();
   });
-  // Listen to auth status changes
-  supabase.auth.onAuthStateChange((_event, session) => {
+  supabase.auth.onAuthStateChange((event, session) => {
     isUserSignedIn = !!session;
-    if (isUserSignedIn) {
-      syncSrsFromApi();
-    }
+    if (session && event === "SIGNED_IN") syncSrsFromApi();
   });
 }
 
@@ -54,67 +48,58 @@ interface ApiSrsCard {
   updatedAt?: string;
 }
 
-/** Synchronizes the client SRS cache with the database. */
-async function syncSrsFromApi() {
+function readStates(): Record<string, FSRSCardState> {
+  if (typeof window === "undefined") return {};
   try {
-    const res = await fetch("/api/srs");
-    if (res.ok) {
-      const data = await res.json();
-      if (data.cards && Array.isArray(data.cards)) {
-        const fullStates: Record<string, FSRSCardState> = {};
-        data.cards.forEach((card: ApiSrsCard) => {
-          fullStates[card.cardId] = {
-            cardId: card.cardId,
-            dueAt: new Date(card.dueAt).getTime(),
-            stability: card.stability,
-            difficulty: card.difficulty,
-            reps: card.reps,
-            updatedAt: card.updatedAt ? new Date(card.updatedAt).getTime() : Date.now(),
-          };
-        });
-        localStorage.setItem("dc_srs_full_states", JSON.stringify(fullStates));
-        window.dispatchEvent(new Event("dc_srs_change"));
-      }
-    }
-  } catch (e) {
-    console.error("Failed to sync SRS from API", e);
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (!saved) return {};
+    const parsed = JSON.parse(saved) as Record<string, FSRSCardState>;
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch {
+    return {};
   }
 }
 
-/**
-  * Core FSRS scheduler implementation.
-  * Calculates difficulty, stability, and retrievability.
-  */
-function calculateFSRS(
-  rating: "again" | "good" | "easy",
-  currentCard?: FSRSCardState
-): FSRSCardState {
-  const now = Date.now();
-  
-  if (!currentCard || currentCard.reps === 0) {
-    // Initial review (first time seeing the card)
-    let stability = 2.4;
-    let difficulty = 4.93;
-    
-    if (rating === "again") {
-      stability = 0.4;
-      difficulty = 6.81;
-    } else if (rating === "good") {
-      stability = 2.4;
-      difficulty = 4.93;
-    } else if (rating === "easy") {
-      stability = 5.8;
-      difficulty = 3.99;
+function writeStates(states: Record<string, FSRSCardState>) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(states));
+  } catch {
+    /* storage unavailable: schedule lives for this session only */
+  }
+  window.dispatchEvent(new Event(SRS_CHANGE_EVENT));
+}
+
+/** Replaces the local schedule with the account's (server is the source of truth). */
+async function syncSrsFromApi() {
+  try {
+    const res = await fetch("/api/srs");
+    if (!res.ok) return;
+    const data = await res.json();
+    if (!Array.isArray(data.cards)) return;
+    const states: Record<string, FSRSCardState> = {};
+    for (const card of data.cards as ApiSrsCard[]) {
+      states[card.cardId] = {
+        cardId: card.cardId,
+        dueAt: new Date(card.dueAt).getTime(),
+        stability: card.stability,
+        difficulty: card.difficulty,
+        reps: card.reps,
+        updatedAt: card.updatedAt ? new Date(card.updatedAt).getTime() : Date.now(),
+      };
     }
-    
-    // For 'again', we review it in 1 minute in the same session, but set stability S = 0.4 days
-    const dueAt = rating === "again" 
-      ? now + 60 * 1000 
-      : now + stability * 24 * 3600 * 1000;
-      
+    writeStates(states);
+  } catch (e) {
+    console.error("Failed to sync reviews", e);
+  }
+}
+
+/** Core FSRS-style update for one rating. */
+function schedule(rating: Rating, current: FSRSCardState | undefined, now = Date.now()): FSRSCardState {
+  if (!current || current.reps === 0) {
+    const [stability, difficulty] = rating === "again" ? [0.4, 6.81] : rating === "easy" ? [5.8, 3.99] : [2.4, 4.93];
     return {
-      cardId: "",
-      dueAt,
+      cardId: current?.cardId ?? "",
+      dueAt: rating === "again" ? now + 60_000 : now + stability * DAY,
       stability,
       difficulty,
       reps: 1,
@@ -122,158 +107,89 @@ function calculateFSRS(
     };
   }
 
-  // Subsequent review: calculate elapsed time in days
-  const t = Math.max(0.01, (now - currentCard.updatedAt) / (24 * 3600 * 1000));
-  const R = Math.pow(0.9, t / currentCard.stability);
-  
-  let difficulty = currentCard.difficulty;
-  let stability = currentCard.stability;
-  
+  const elapsedDays = Math.max(0.01, (now - current.updatedAt) / DAY);
+  const retrievability = Math.pow(0.9, elapsedDays / current.stability);
+  let difficulty = current.difficulty;
+  let stability = current.stability;
+
   if (rating === "again") {
-    difficulty = Math.max(1, Math.min(10, currentCard.difficulty + 0.86));
-    const Sf = 2.18 * Math.pow(difficulty, -0.05) * (Math.pow(currentCard.stability + 1, 0.34) - 1) * Math.exp(0.34 * (1 - R));
-    stability = Math.max(0.1, Math.min(Sf, currentCard.stability * 0.5, 0.4));
-  } else if (rating === "good") {
-    difficulty = Math.max(1, Math.min(10, currentCard.difficulty));
-    const factor = 1 + Math.exp(1.49) * (11 - difficulty) * Math.pow(currentCard.stability, -0.14) * (Math.exp((1 - R) * 0.94) - 1);
-    stability = currentCard.stability * factor;
-  } else if (rating === "easy") {
-    difficulty = Math.max(1, Math.min(10, currentCard.difficulty - 0.94));
-    const factor = 1 + Math.exp(1.49) * (11 - difficulty) * Math.pow(currentCard.stability, -0.14) * (Math.exp((1 - R) * 0.94) - 1);
-    stability = currentCard.stability * factor * 1.26;
+    difficulty = Math.min(10, current.difficulty + 0.86);
+    const forgetting =
+      2.18 * Math.pow(difficulty, -0.05) * (Math.pow(current.stability + 1, 0.34) - 1) * Math.exp(0.34 * (1 - retrievability));
+    stability = Math.max(0.1, Math.min(forgetting, current.stability * 0.5, 0.4));
+  } else {
+    difficulty = rating === "easy" ? Math.max(1, current.difficulty - 0.94) : Math.max(1, Math.min(10, current.difficulty));
+    const growth =
+      1 + Math.exp(1.49) * (11 - difficulty) * Math.pow(current.stability, -0.14) * (Math.exp((1 - retrievability) * 0.94) - 1);
+    stability = current.stability * Math.max(1.05, growth) * (rating === "easy" ? 1.26 : 1);
   }
-  
-  const dueAt = rating === "again"
-    ? now + 60 * 1000 // due in 1 min
-    : now + stability * 24 * 3600 * 1000;
-    
+
   return {
-    cardId: currentCard.cardId,
-    dueAt,
+    cardId: current.cardId,
+    dueAt: rating === "again" ? now + 60_000 : now + stability * DAY,
     stability,
     difficulty,
-    reps: currentCard.reps + 1,
+    reps: current.reps + 1,
     updatedAt: now,
   };
 }
 
+/** Due time (ms) for every card that has been rated at least once. */
 export function getSRSStates(): Record<string, number> {
-  if (typeof window === "undefined") return {};
-  
-  // 1. Try to load new FSRS states
-  const saved = localStorage.getItem("dc_srs_full_states");
-  if (saved) {
-    try {
-      const parsed = JSON.parse(saved) as Record<string, FSRSCardState>;
-      const result: Record<string, number> = {};
-      Object.keys(parsed).forEach((key) => {
-        result[key] = parsed[key].dueAt;
-      });
-      return result;
-    } catch {
-      // ignore and fall through
-    }
-  }
-
-  // 2. Try to migrate from legacy simple scheduler structure
-  const oldSaved = localStorage.getItem("dc_srs_states");
-  if (oldSaved) {
-    try {
-      const oldParsed = JSON.parse(oldSaved);
-      const migrated: Record<string, FSRSCardState> = {};
-      const now = Date.now();
-      Object.keys(oldParsed).forEach((key) => {
-        migrated[key] = {
-          cardId: key,
-          dueAt: Number(oldParsed[key]),
-          stability: 2.4,
-          difficulty: 4.93,
-          reps: 0,
-          updatedAt: now,
-        };
-      });
-      localStorage.setItem("dc_srs_full_states", JSON.stringify(migrated));
-      localStorage.removeItem("dc_srs_states");
-      
-      const result: Record<string, number> = {};
-      Object.keys(oldParsed).forEach((key) => {
-        result[key] = Number(oldParsed[key]);
-      });
-      return result;
-    } catch {
-      // ignore
-    }
-  }
-
-  // 3. Fallback to initialize defaults
-  const initial: Record<string, FSRSCardState> = {};
-  const now = Date.now();
-  DEFAULT_DUE.forEach(({ id, offsetHours }) => {
-    initial[id] = {
-      cardId: id,
-      dueAt: now + offsetHours * 3600 * 1000,
-      stability: 2.4,
-      difficulty: 4.93,
-      reps: 0,
-      updatedAt: now,
-    };
-  });
-  localStorage.setItem("dc_srs_full_states", JSON.stringify(initial));
-  
+  const states = readStates();
   const result: Record<string, number> = {};
-  DEFAULT_DUE.forEach(({ id, offsetHours }) => {
-    result[id] = now + offsetHours * 3600 * 1000;
-  });
+  for (const [id, state] of Object.entries(states)) result[id] = state.dueAt;
   return result;
 }
 
-/** Saves card review state, calculates new FSRS parameters, and syncs to API in background. */
-export function saveSRSState(id: string, rating: "again" | "good" | "easy"): number {
-  if (typeof window === "undefined") return Date.now();
-  
-  let fullStates: Record<string, FSRSCardState> = {};
-  const saved = localStorage.getItem("dc_srs_full_states");
-  if (saved) {
-    try {
-      fullStates = JSON.parse(saved);
-    } catch {
-      // ignore
-    }
-  }
+/** True when a card is due: never rated, or its due time has passed. */
+export function isDue(dueTimes: Record<string, number>, cardId: string, now = Date.now()) {
+  const due = dueTimes[cardId];
+  return due === undefined || due <= now;
+}
 
-  const currentCard = fullStates[id] || {
-    cardId: id,
-    dueAt: Date.now(),
-    stability: 2.4,
-    difficulty: 4.93,
-    reps: 0,
-    updatedAt: Date.now(),
+/** "10 min", "3 days", "2 weeks": what each rating would schedule next. */
+export function previewIntervals(cardId: string): Record<Rating, string> {
+  const current = readStates()[cardId];
+  const now = Date.now();
+  const label = (ms: number) => {
+    const minutes = Math.round((ms - now) / 60_000);
+    if (minutes < 60) return `${Math.max(1, minutes)} min`;
+    const days = (ms - now) / DAY;
+    if (days < 1.5) return "1 day";
+    if (days < 14) return `${Math.round(days)} days`;
+    if (days < 60) return `${Math.round(days / 7)} weeks`;
+    return `${Math.round(days / 30)} months`;
   };
+  return {
+    again: label(schedule("again", current, now).dueAt),
+    good: label(schedule("good", current, now).dueAt),
+    easy: label(schedule("easy", current, now).dueAt),
+  };
+}
 
-  const newCard = calculateFSRS(rating, currentCard);
-  newCard.cardId = id;
-  fullStates[id] = newCard;
+/** Records a rating, reschedules the card, and syncs it when signed in. */
+export function saveSRSState(id: string, rating: Rating): number {
+  if (typeof window === "undefined") return Date.now();
+  const states = readStates();
+  const next = schedule(rating, states[id] ? { ...states[id], cardId: id } : undefined);
+  next.cardId = id;
+  states[id] = next;
+  writeStates(states);
 
-  localStorage.setItem("dc_srs_full_states", JSON.stringify(fullStates));
-
-  // Dispatch event so dashboard count updates concurrently
-  window.dispatchEvent(new Event("dc_srs_change"));
-
-  // If signed in, sync to backend
   if (isUserSignedIn && isSupabaseConfigured()) {
     fetch("/api/srs", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         cardId: id,
-        dueAt: new Date(newCard.dueAt).toISOString(),
-        stability: newCard.stability,
-        difficulty: newCard.difficulty,
-        reps: newCard.reps,
-        updatedAt: new Date(newCard.updatedAt).toISOString(),
+        dueAt: new Date(next.dueAt).toISOString(),
+        stability: next.stability,
+        difficulty: next.difficulty,
+        reps: next.reps,
+        updatedAt: new Date(next.updatedAt).toISOString(),
       }),
-    }).catch((err) => console.error("Failed to sync SRS card to API", err));
+    }).catch((err) => console.error("Failed to sync review card", err));
   }
-
-  return newCard.dueAt;
+  return next.dueAt;
 }

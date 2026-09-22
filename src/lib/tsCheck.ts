@@ -23,18 +23,34 @@ const GLOBALS = "globals.d.ts";
 // `status`, `location`, and `name`, so a beginner writing `let location = ...`
 // would get a spurious "cannot redeclare" error. The lessons only need `console`
 // for output, so we inject a minimal ambient declaration for it instead.
+// Timers and structuredClone come from the host (browser or Node), not from the
+// ES library, so they are declared here too; lessons about the event loop use them.
 const GLOBALS_SRC = `declare var console: {
   log(...data: unknown[]): void;
   error(...data: unknown[]): void;
   warn(...data: unknown[]): void;
   info(...data: unknown[]): void;
   debug(...data: unknown[]): void;
-};`;
+  table(data: unknown): void;
+  dir(data: unknown): void;
+  group(...label: unknown[]): void;
+  groupEnd(): void;
+  assert(condition?: boolean, ...data: unknown[]): void;
+  count(label?: string): void;
+  time(label?: string): void;
+  timeEnd(label?: string): void;
+};
+declare function setTimeout(handler: (...args: any[]) => void, timeout?: number, ...args: any[]): number;
+declare function clearTimeout(id?: number): void;
+declare function setInterval(handler: (...args: any[]) => void, timeout?: number, ...args: any[]): number;
+declare function clearInterval(id?: number): void;
+declare function queueMicrotask(callback: () => void): void;
+declare function structuredClone<T>(value: T): T;`;
 
 const compilerOptions: ts.CompilerOptions = {
-  target: ts.ScriptTarget.ES2020,
+  target: ts.ScriptTarget.ES2022,
   module: ts.ModuleKind.ESNext,
-  lib: ["lib.es2020.d.ts"],
+  lib: ["lib.es2022.d.ts"],
   noEmit: true,
   strict: false,
   noImplicitAny: false,
@@ -54,9 +70,9 @@ const libCache = new Map<string, ts.SourceFile>();
  */
 export function typeCheckErrors(code: string): string[] {
   try {
-    const sourceFile = ts.createSourceFile(INPUT, code, ts.ScriptTarget.ES2020, true, ts.ScriptKind.TS);
+    const sourceFile = ts.createSourceFile(INPUT, code, ts.ScriptTarget.ES2022, true, ts.ScriptKind.TS);
     if (!globalsFile) {
-      globalsFile = ts.createSourceFile(GLOBALS, GLOBALS_SRC, ts.ScriptTarget.ES2020, true, ts.ScriptKind.TS);
+      globalsFile = ts.createSourceFile(GLOBALS, GLOBALS_SRC, ts.ScriptTarget.ES2022, true, ts.ScriptKind.TS);
     }
     const baseHost = ts.createCompilerHost(compilerOptions);
     const host: ts.CompilerHost = {
@@ -86,7 +102,7 @@ export function typeCheckErrors(code: string): string[] {
   }
 }
 
-function formatDiagnostic(d: ts.Diagnostic): string {
+export function formatDiagnostic(d: ts.Diagnostic): string {
   const msg = ts.flattenDiagnosticMessageText(d.messageText, "\n");
   if (d.file && typeof d.start === "number") {
     const { line } = d.file.getLineAndCharacterOfPosition(d.start);

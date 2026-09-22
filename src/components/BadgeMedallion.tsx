@@ -79,6 +79,68 @@ const GLYPHS: Record<BadgeIcon, React.ReactNode> = {
       <path d="M7.3 14.5h9.4" />
     </>
   ),
+  star: <path d="M12 3.2l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17.2l-5.4 2.9 1-6.1L3.2 9.7l6.1-.9z" />,
+  sunrise: (
+    <>
+      <path d="M3 19h18" />
+      <path d="M7.2 15a4.8 4.8 0 0 1 9.6 0" />
+      <path d="M12 3v3M4.8 7.2l2.1 2.1M19.2 7.2l-2.1 2.1" />
+    </>
+  ),
+  bolt: <path d="M13.4 2.5 6 13.2h5.1L10.6 21.5 18 10.8h-5.1z" />,
+  target: (
+    <>
+      <circle cx="12" cy="12" r="8.2" />
+      <circle cx="12" cy="12" r="3.4" />
+      <circle cx="12" cy="12" r="0.6" fill="currentColor" stroke="none" />
+    </>
+  ),
+  calendar: (
+    <>
+      <rect x="3.6" y="5.4" width="16.8" height="14.6" rx="2.4" />
+      <path d="M8 3v4.4M16 3v4.4M3.6 10.4h16.8" />
+    </>
+  ),
+  crown: (
+    <>
+      <path d="M4 8.4l3.6 3.1L12 5l4.4 6.5L20 8.4 18.4 19H5.6z" />
+      <path d="M5.6 19h12.8" />
+    </>
+  ),
+  snake: (
+    <>
+      <path d="M6.6 6.4h5.6a3.1 3.1 0 0 1 0 6.2H8.4a3.1 3.1 0 0 0 0 6.2h7.8" />
+      <circle cx="17.4" cy="18.8" r="0.9" fill="currentColor" stroke="none" />
+    </>
+  ),
+  braces: (
+    <>
+      <path d="M9.6 3.6c-2.6 0-2.6 3-2.6 4.2S6.6 11 4.8 12c1.8 1 2.2 2.9 2.2 4.2s0 4.2 2.6 4.2" />
+      <path d="M14.4 3.6c2.6 0 2.6 3 2.6 4.2s.4 3.2 2.2 4.2c-1.8 1-2.2 2.9-2.2 4.2s0 4.2-2.6 4.2" />
+    </>
+  ),
+  shield: <path d="M12 3.2l7.2 3v5.9c0 4.2-3 7.4-7.2 9.3-4.2-1.9-7.2-5.1-7.2-9.3V6.2z" />,
+  hash: <path d="M5.8 9.2h12.4M5.8 15.2h12.4M10.4 3.4 8.6 20.6M16 3.4l-1.8 17.2" />,
+  globe: (
+    <>
+      <circle cx="12" cy="12" r="8.6" />
+      <path d="M3.6 9.6h16.8M3.6 14.4h16.8" />
+      <path d="M12 3.4c2.6 3.2 2.6 14 0 17.2M12 3.4c-2.6 3.2-2.6 14 0 17.2" />
+    </>
+  ),
+  trophy: (
+    <>
+      <path d="M7.4 3.8h9.2v5.1a4.6 4.6 0 1 1-9.2 0z" />
+      <path d="M7.4 6.2H4.6v1.6a3.2 3.2 0 0 0 3 3.2M16.6 6.2h2.8v1.6a3.2 3.2 0 0 1-3 3.2" />
+      <path d="M12 13.6v4.2M9 20.2h6" />
+    </>
+  ),
+  compass: (
+    <>
+      <circle cx="12" cy="12" r="8.6" />
+      <path d="M15.4 8.6l-2.1 4.7-4.7 2.1 2.1-4.7z" />
+    </>
+  ),
 };
 
 const LockGlyph = (
@@ -92,12 +154,15 @@ export default function BadgeMedallion({
   icon,
   accent,
   found,
+  ring,
   className,
   style,
 }: {
   icon: BadgeIcon;
   accent: string;
   found: boolean;
+  /** Rarity ring drawn around a found badge (src/lib/badges.ts RARITY). */
+  ring?: string;
   className?: string;
   style?: React.CSSProperties;
 }) {
@@ -107,7 +172,9 @@ export default function BadgeMedallion({
         backgroundImage:
           "radial-gradient(circle at 32% 26%, rgba(255,255,255,.62), rgba(255,255,255,0) 44%), radial-gradient(circle at 72% 82%, rgba(0,0,0,.34), rgba(0,0,0,0) 54%)",
         boxShadow: `0 0 22px ${accent}77, 0 0 46px ${accent}3a, inset 0 2px 6px rgba(255,255,255,.5), inset 0 -7px 15px rgba(0,0,0,.28), 0 12px 26px rgba(20,16,60,.4)`,
-        border: "1.5px solid rgba(255,255,255,.55)",
+        border: ring ? `2.5px solid ${ring}` : "1.5px solid rgba(255,255,255,.55)",
+        outline: ring ? `1px solid ${ring}55` : undefined,
+        outlineOffset: ring ? 3 : undefined,
       }
     : {
         backgroundColor: "#5b5d77",

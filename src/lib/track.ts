@@ -1,58 +1,70 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { updateProfile } from "@/lib/profile";
 import { track as telemetryTrack } from "@/lib/telemetry";
+import { isTrackId, type TrackId } from "@/lib/catalog";
 
-export type Track = "python" | "javascript" | "csharp" | "typescript";
+export type Track = TrackId;
 
-const TRACKS: Track[] = ["python", "javascript", "csharp", "typescript"];
-const isTrack = (v: unknown): v is Track => TRACKS.includes(v as Track);
+const STORAGE_KEY = "dc_active_track";
+const CHANGE_EVENT = "dc_track_change";
+
+function readTrack(): Track {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    return isTrackId(saved) ? saved : "python";
+  } catch {
+    return "python";
+  }
+}
 
 /**
- * Persists and synchronizes the active curriculum track (Python vs JavaScript)
- * across the frontend client using localStorage and custom event triggers.
- * Syncs the selection to the database user settings when logged in.
+ * The active curriculum track, persisted in localStorage, shared by every
+ * component through a window event, and synced to the account when signed in.
+ * `ready` turns true once the saved choice has been read on the client.
  */
 export function useActiveTrack() {
-  const [track, setTrack] = useState<Track>("python");
+  const [state, setState] = useState<{ track: Track; ready: boolean }>({ track: "python", ready: false });
 
   useEffect(() => {
-    const saved = localStorage.getItem("dc_active_track");
-    if (isTrack(saved)) {
-      setTimeout(() => {
-        setTrack(saved);
-      }, 0);
-    }
-  }, []);
-
-  const changeTrack = (newTrack: Track) => {
-    setTrack(newTrack);
-    localStorage.setItem("dc_active_track", newTrack);
-    // Dispatch global event so all components update concurrently
-    window.dispatchEvent(new Event("dc_track_change"));
-
-    // Sync with the backend user profile settings
-    try {
-      updateProfile({
-        activeTrack: newTrack,
-      });
-    } catch (e) {
-      console.error("Failed to sync track selection to backend", e);
-    }
-    telemetryTrack("track_switched", { track: newTrack });
-  };
-
-  useEffect(() => {
-    const handleEvent = () => {
-      const saved = localStorage.getItem("dc_active_track");
-      if (isTrack(saved)) {
-        setTrack(saved);
-      }
+    const apply = () => setState({ track: readTrack(), ready: true });
+    const t = setTimeout(apply, 0);
+    window.addEventListener(CHANGE_EVENT, apply);
+    window.addEventListener("storage", apply);
+    return () => {
+      clearTimeout(t);
+      window.removeEventListener(CHANGE_EVENT, apply);
+      window.removeEventListener("storage", apply);
     };
-    window.addEventListener("dc_track_change", handleEvent);
-    return () => window.removeEventListener("dc_track_change", handleEvent);
   }, []);
 
-  return { track, setTrack: changeTrack };
+  const setTrack = useCallback((next: Track) => {
+    if (readTrack() === next) {
+      setState({ track: next, ready: true });
+      return;
+    }
+    try {
+      localStorage.setItem(STORAGE_KEY, next);
+    } catch {
+      /* storage unavailable: still switch for this page */
+    }
+    setState({ track: next, ready: true });
+    window.dispatchEvent(new Event(CHANGE_EVENT));
+    updateProfile({ activeTrack: next });
+    telemetryTrack("track_switched", { track: next });
+  }, []);
+
+  return { track: state.track, ready: state.ready, setTrack };
+}
+
+/** Switches the track without a hook (e.g. when opening a lesson from another track). */
+export function setActiveTrackSilently(next: Track) {
+  try {
+    if (localStorage.getItem(STORAGE_KEY) === next) return;
+    localStorage.setItem(STORAGE_KEY, next);
+  } catch {
+    return;
+  }
+  window.dispatchEvent(new Event(CHANGE_EVENT));
 }

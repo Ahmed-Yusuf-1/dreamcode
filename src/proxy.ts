@@ -36,8 +36,9 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  // Run on everything except static assets, images, and the Pyodide worker.
+  // Run on everything except static assets, images, the code-runner workers,
+  // and the public TypeScript compiler (hit on every TS run; it needs no session).
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|assets/|pyodide-worker.js|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|assets/|pyodide-worker.js|javascript-worker.js|api/transpile|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|txt|xml)$).*)",
   ],
 };

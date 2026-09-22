@@ -1,66 +1,58 @@
-import { getModules } from "@/lib/curriculum";
-import { challenges, practiceDatasets, projects } from "@/lib/data";
-import type { Track } from "@/lib/track";
+/**
+ * XP for every activity a learner can complete. The same rules run on the
+ * client (optimistic guest progress) and on the server (the authoritative award
+ * for signed-in learners), each against its own catalog, so the browser can
+ * never invent an activity or choose its own XP.
+ *
+ * Badges are not listed here: they are earned by rule from the learner's whole
+ * history (src/lib/badges.ts), not handed out per activity.
+ */
+import type { Catalog } from "@/lib/catalog";
 
 export interface ActivityReward {
   xp: number;
-  badgeIds: string[];
 }
 
-const TRACKS: Track[] = ["python", "javascript", "csharp", "typescript"];
+export const LESSON_XP = 15;
+export const PRACTICE_XP = 20;
+export const PLACEMENT_XP = 50;
+export const REVIEW_XP = 20;
 
-function buildRewardCatalog() {
-  const catalog = new Map<string, ActivityReward>();
+const REVIEW_KEY = /^review:\d{4}-\d{2}-\d{2}:(python|javascript|csharp|typescript)$/;
+const PLACEMENT_KEY = /^placement:(python|javascript|csharp|typescript)$/;
 
-  for (const track of TRACKS) {
-    for (const lesson of getModules(track).flatMap((module) => module.lessons)) {
-      catalog.set(lesson.slug, {
-        xp: 15,
-        badgeIds: [
-          ...(lesson.slug.includes("loops") ? ["first-loop"] : []),
-          ...(lesson.slug.includes("lists") || lesson.slug.includes("arrays") ? ["list-wrangler"] : []),
-          ...(lesson.slug.includes("dictionaries") ? ["dict-diver"] : []),
-          ...(lesson.slug.includes("functions") ? ["function-forger"] : []),
-        ],
-      });
-    }
-  }
+export type ActivityKind = "lesson" | "practice" | "challenge" | "project" | "placement" | "review";
 
-  for (const slug of Object.keys(practiceDatasets)) {
-    catalog.set(`practice:${slug}`, {
-      xp: 20,
-      badgeIds: slug.includes("loops") ? ["first-loop"] : [],
-    });
-  }
-
-  for (const challenge of Object.values(challenges)) {
-    catalog.set(challenge.slug, {
-      xp: challenge.xp,
-      badgeIds: challenge.badge ? [challenge.badge] : [],
-    });
-  }
-
-  for (const project of projects) {
-    catalog.set(project.id, { xp: project.xp, badgeIds: ["sky-builder"] });
-  }
-
-  for (const track of TRACKS) {
-    catalog.set(`placement:${track}`, { xp: 50, badgeIds: [] });
-  }
-
-  return catalog;
-}
-
-const REWARD_CATALOG = buildRewardCatalog();
-
-export function getActivityReward(activityKey: string): ActivityReward | null {
-  const fixed = REWARD_CATALOG.get(activityKey);
-  if (fixed) return fixed;
-
-  // A review session is repeatable over time, but only once per local calendar
-  // day and track. The route additionally verifies that the date is today.
-  if (/^review:\d{4}-\d{2}-\d{2}:(python|javascript|csharp|typescript)$/.test(activityKey)) {
-    return { xp: 20, badgeIds: [] };
-  }
+export function activityKind(activityKey: string): ActivityKind | null {
+  if (activityKey.startsWith("practice:")) return "practice";
+  if (PLACEMENT_KEY.test(activityKey)) return "placement";
+  if (REVIEW_KEY.test(activityKey)) return "review";
   return null;
+}
+
+export function getActivityReward(activityKey: string, catalog: Catalog): ActivityReward | null {
+  if (activityKey.startsWith("practice:")) {
+    const slug = activityKey.slice("practice:".length);
+    return catalog.lessons.some((l) => l.practiceSlug === slug) ? { xp: PRACTICE_XP } : null;
+  }
+  if (PLACEMENT_KEY.test(activityKey)) return { xp: PLACEMENT_XP };
+  // A review session is repeatable over time, but only once per local calendar
+  // day and track. The server additionally checks that the date is current.
+  if (REVIEW_KEY.test(activityKey)) return { xp: REVIEW_XP };
+
+  const lesson = catalog.lessons.find((l) => l.slug === activityKey);
+  if (lesson) return { xp: LESSON_XP };
+
+  const challenge = catalog.challenges.find((c) => c.slug === activityKey);
+  if (challenge) return { xp: challenge.xp };
+
+  const project = catalog.projects.find((p) => p.id === activityKey);
+  if (project) return { xp: project.xp };
+
+  return null;
+}
+
+/** True when the activity is a lesson (the night-owl badge counts lessons only). */
+export function isLessonActivity(activityKey: string, catalog: Catalog) {
+  return catalog.lessons.some((l) => l.slug === activityKey);
 }

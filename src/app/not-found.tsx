@@ -1,14 +1,28 @@
 import Link from "next/link";
+import Scene from "@/components/ui/Scene";
 
 export default function NotFound() {
   return (
-    <div className="flex min-h-screen items-center justify-center px-6" style={{ background: "var(--dc-page-sky)" }}>
-      <div className="glass dc-depth-card max-w-lg text-center" style={{ borderRadius: 28, padding: "38px 32px" }}>
-        <div className="font-display text-6xl text-white">404</div>
-        <h1 className="font-display mt-2 text-2xl text-white">That stop is not on this map</h1>
-        <p className="mt-3 font-bold text-white/80">Head back to your journey and choose another cloud.</p>
-        <Link href="/journey" className="dc-pressable mt-6 inline-block rounded-full bg-white px-6 py-3 font-black text-[#24335d]">Open journey map</Link>
+    <Scene clouds="calm" className="flex items-center justify-center" style={{ padding: "40px 16px" }}>
+      <div className="dc-glass dc-depth-card relative z-5 text-center" style={{ maxWidth: 480, padding: "38px 32px", borderRadius: 28 }}>
+        <div className="font-display neon-title" style={{ fontSize: 64, fontWeight: 800, lineHeight: 1 }}>
+          404
+        </div>
+        <h1 className="font-display" style={{ fontSize: 24, fontWeight: 800, margin: "12px 0 0" }}>
+          That stop is not on this map
+        </h1>
+        <p style={{ fontWeight: 700, color: "var(--dc-on-sky-soft)", margin: "10px 0 0", lineHeight: 1.6 }}>
+          The page moved or never existed. Your progress is safe.
+        </p>
+        <div className="flex flex-wrap justify-center" style={{ gap: 12, marginTop: 24 }}>
+          <Link href="/journey" className="dc-btn dc-btn--primary dc-btn--sm">
+            Open the journey map
+          </Link>
+          <Link href="/" className="dc-btn dc-btn--secondary dc-btn--sm">
+            Home
+          </Link>
+        </div>
       </div>
-    </div>
+    </Scene>
   );
 }

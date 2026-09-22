@@ -2,14 +2,16 @@ import type { NextConfig } from "next";
 
 const isDev = process.env.NODE_ENV !== "production";
 
+/** Flip to true once a full walkthrough shows no legitimate violations. */
+const ENFORCE_CSP = false;
+
 /**
  * Content-Security-Policy.
  *
  * Shipped REPORT-ONLY first (per PLAN.md): the browser reports violations to the
  * console without blocking anything, so we can watch a full walkthrough (JS +
  * Python lessons, Spotify connect, auth) and confirm zero legitimate violations
- * before flipping it to enforcing. To enforce, change the header key below from
- * `Content-Security-Policy-Report-Only` to `Content-Security-Policy`.
+ * before flipping it to enforcing. To enforce, set ENFORCE_CSP to true.
  *
  * Why this app cannot use a "strict" (nonce) CSP:
  *  - The JavaScript track runs the learner's code in-browser via `new Function`,
@@ -47,8 +49,9 @@ const csp = [
   "form-action 'self'",
   "frame-ancestors 'none'",
   // Only meaningful (and only safe) in production over HTTPS; on http://localhost
-  // it would try to upgrade same-origin dev assets. Report-only ignores it anyway.
-  ...(isDev ? [] : ["upgrade-insecure-requests"]),
+  // it would try to upgrade same-origin dev assets. Browsers reject it inside a
+  // report-only policy (with a console error), so it is only sent when enforcing.
+  ...(ENFORCE_CSP && !isDev ? ["upgrade-insecure-requests"] : []),
 ].join("; ");
 
 const nextConfig: NextConfig = {
@@ -89,9 +92,8 @@ const nextConfig: NextConfig = {
             key: "Permissions-Policy",
             value: "camera=(), microphone=(), geolocation=()",
           },
-          // Report-only for now; watch the console, then flip the key to
-          // "Content-Security-Policy" to enforce (see the note above).
-          { key: "Content-Security-Policy-Report-Only", value: csp },
+          // Report-only for now; watch the console, then set ENFORCE_CSP.
+          { key: ENFORCE_CSP ? "Content-Security-Policy" : "Content-Security-Policy-Report-Only", value: csp },
         ],
       },
     ];

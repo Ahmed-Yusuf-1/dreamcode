@@ -169,40 +169,36 @@ export default function DreamGuide({
   return (
     <>
       {/* launcher */}
-      <button
-        ref={launcherRef}
-        onClick={() => setOpen(true)}
-        className="fixed cursor-pointer transition-transform hover:-translate-y-0.5"
-        style={{
-          bottom: 22,
-          right: 22,
-          zIndex: 60,
-          border: "none",
-          background: "linear-gradient(135deg, #cdb9f7, #9678BE)",
-          color: "#ffffff",
-          fontWeight: 900,
-          fontSize: 14,
-          padding: "12px 20px",
-          borderRadius: 999,
-          boxShadow: "0 0 24px rgba(189,128,255,.55), 0 14px 30px rgba(30,16,60,.4)",
-        }}
-      >
-        Stuck? Ask the Dream Guide
-      </button>
+      {!open && (
+        <button
+          ref={launcherRef}
+          type="button"
+          onClick={() => setOpen(true)}
+          aria-haspopup="dialog"
+          className="dc-pill fixed"
+          style={{ bottom: 16, right: 16, zIndex: 60, background: "var(--dc-menu-bg)", borderColor: "rgba(205,185,247,.6)", padding: "9px 16px" }}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/assets/clouds-neon/cutout-cloud-neon-1-05.webp" alt="" style={{ width: 22, height: "auto" }} />
+          Stuck? Ask the guide
+        </button>
+      )}
 
       {open && (
         <div
           ref={panelRef}
+          role="dialog"
+          aria-label="Dream Guide"
           className="fixed anim-pop-in flex flex-col"
           style={{
-            bottom: 22,
-            right: 22,
+            bottom: 16,
+            right: 16,
             zIndex: 70,
             width: "min(380px, calc(100vw - 44px))",
             maxHeight: "min(560px, calc(100vh - 44px))",
-            background: "rgba(14,34,71,.96)",
+            background: "var(--dc-menu-bg)",
             backdropFilter: "blur(14px)",
-            border: "1px solid rgba(189,160,255,.4)",
+            border: "1px solid rgba(205,185,247,.45)",
             borderRadius: 22,
             boxShadow: "0 0 34px rgba(189,128,255,.35), 0 28px 60px rgba(8,20,50,.6)",
             overflow: "hidden",
@@ -253,19 +249,7 @@ export default function DreamGuide({
                 The Dream Guide is a signed-in feature. Sign in and it will sit beside you on every
                 problem, asking the questions that get you unstuck without spoiling the answer.
               </p>
-              <Link
-                href="/login"
-                className="font-display inline-block cursor-pointer transition-transform hover:-translate-y-0.5"
-                style={{
-                  border: "none",
-                  background: "linear-gradient(135deg, #cdb9f7, #a78ae8)",
-                  color: "#241a4a",
-                  fontWeight: 900,
-                  fontSize: 14,
-                  padding: "11px 22px",
-                  borderRadius: 999,
-                }}
-              >
+              <Link href="/login" className="dc-btn dc-btn--primary dc-btn--sm">
                 Sign in to continue
               </Link>
             </div>
@@ -275,24 +259,9 @@ export default function DreamGuide({
           {signedIn && upgradeNeeded && (
             <div style={{ padding: "26px 22px" }}>
               <p style={{ fontSize: 14, fontWeight: 600, color: "#e8eeff", lineHeight: 1.7, margin: "0 0 18px" }}>
-                The Dream Guide is part of dreamcode Pro. Upgrade to unlock graduated, Socratic hints
-                on every challenge.
+                The Dream Guide is part of dreamcode Pro, which is not open for sign-ups yet. Everything
+                else stays free: lessons, drills, peaks, projects and reviews.
               </p>
-              <Link
-                href="/profile"
-                className="font-display inline-block cursor-pointer transition-transform hover:-translate-y-0.5"
-                style={{
-                  border: "none",
-                  background: "linear-gradient(135deg, #ffd66e, #ff9f43)",
-                  color: "#3a2606",
-                  fontWeight: 900,
-                  fontSize: 14,
-                  padding: "11px 22px",
-                  borderRadius: 999,
-                }}
-              >
-                See Pro
-              </Link>
             </div>
           )}
 
@@ -338,6 +307,7 @@ export default function DreamGuide({
                     }}
                     rows={1}
                     placeholder="Describe where you are stuck..."
+                    aria-label="Message to the Dream Guide"
                     className="font-body flex-1"
                     style={{
                       resize: "none",

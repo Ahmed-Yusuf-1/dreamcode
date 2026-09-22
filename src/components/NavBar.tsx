@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import Wordmark from "./Wordmark";
 import SpotifyPlayer from "./SpotifyPlayer";
 import { useIsSignedIn, useUserProfile } from "@/lib/profile";
@@ -20,7 +21,8 @@ const EXPLORE: { title: string; items: [string, string][] }[] = [
     items: [
       ["Lessons", "/lessons"],
       ["Journey map", "/journey"],
-      ["Practice", "/practice/loops"],
+      ["Night review", "/review"],
+      ["Placement check", "/placement"],
     ],
   },
   {
@@ -28,7 +30,8 @@ const EXPLORE: { title: string; items: [string, string][] }[] = [
     items: [
       ["Problem Peaks", "/peaks"],
       ["Projects", "/projects"],
-      ["Challenges", "/challenge/cloud-hopper"],
+      ["Leaderboard", "/leaderboard"],
+      ["Where it's used", "/industry"],
     ],
   },
   {
@@ -36,18 +39,32 @@ const EXPLORE: { title: string; items: [string, string][] }[] = [
     items: [
       ["Dashboard", "/dashboard"],
       ["Badges", "/badges"],
-      ["Night review", "/review"],
       ["Profile", "/profile"],
     ],
   },
 ];
 
+function isActive(pathname: string, href: string) {
+  if (href === "/lessons") return pathname === "/lessons" || pathname.startsWith("/lesson/") || pathname.startsWith("/practice/");
+  if (href === "/peaks") return pathname === "/peaks" || pathname.startsWith("/challenge/");
+  if (href === "/projects") return pathname === "/projects" || pathname.startsWith("/project/");
+  return pathname === href;
+}
+
 export default function NavBar({ isHome = false }: { isHome?: boolean }) {
   const [scrolled, setScrolled] = useState(false);
   const [exploreOpen, setExploreOpen] = useState(false);
   const exploreRef = useRef<HTMLDivElement>(null);
+  const lastPointer = useRef("");
   const signedIn = useIsSignedIn();
   const { profile } = useUserProfile();
+  const pathname = usePathname() || "/";
+
+  // Close the menu whenever the route changes.
+  useEffect(() => {
+    const t = setTimeout(() => setExploreOpen(false), 0);
+    return () => clearTimeout(t);
+  }, [pathname]);
 
   useEffect(() => {
     const onScroll = () => setScrolled((window.scrollY || 0) > 40);
@@ -81,7 +98,7 @@ export default function NavBar({ isHome = false }: { isHome?: boolean }) {
       className="fixed left-0 right-0 top-0 z-50 transition-colors duration-300"
       style={{
         height: "var(--nav-h)",
-        background: solid ? "rgba(18,16,55,.82)" : "transparent",
+        background: solid ? "var(--dc-bar-bg)" : "transparent",
         backdropFilter: solid ? "blur(12px)" : "none",
         borderBottom: solid ? "1px solid rgba(255,255,255,.14)" : "1px solid transparent",
         boxShadow: solid ? "0 10px 30px rgba(8,6,30,.35)" : "none",
@@ -98,25 +115,39 @@ export default function NavBar({ isHome = false }: { isHome?: boolean }) {
             the signed-in profile chip does not crowd the wordmark. */}
         <nav className="flex items-center gap-2.5 sm:gap-[18px]">
           <div className="hidden items-center lg:flex" style={{ gap: 22 }}>
-            {PRIMARY.map(([label, href]) => (
-              <Link
-                key={href}
-                id={`nav-link-${label.toLowerCase()}`}
-                href={href}
-                className="cursor-pointer transition-colors hover:text-[#ffb3e2]"
-                style={linkStyle}
-              >
-                {label}
-              </Link>
-            ))}
+            {PRIMARY.map(([label, href]) => {
+              const active = isActive(pathname, href);
+              return (
+                <Link
+                  key={href}
+                  id={`nav-link-${label.toLowerCase()}`}
+                  href={href}
+                  aria-current={active ? "page" : undefined}
+                  className="cursor-pointer transition-colors hover:text-[#ffd9ef]"
+                  style={{
+                    ...linkStyle,
+                    paddingBottom: 3,
+                    borderBottom: active ? "2px solid rgba(255,255,255,.9)" : "2px solid transparent",
+                  }}
+                >
+                  {label}
+                </Link>
+              );
+            })}
           </div>
 
-          {/* Explore: opens on hover (desktop) or tap (touch) */}
+          {/* Explore: opens on mouse hover, or on click / tap */}
           <div
             ref={exploreRef}
             className="relative"
-            onMouseEnter={() => setExploreOpen(true)}
-            onMouseLeave={() => setExploreOpen(false)}
+            // Hover only for real mice: a tap fires enter and then click, which
+            // would open and immediately close the menu on phones.
+            onPointerEnter={(e) => {
+              if (e.pointerType === "mouse") setExploreOpen(true);
+            }}
+            onPointerLeave={(e) => {
+              if (e.pointerType === "mouse") setExploreOpen(false);
+            }}
             onKeyDown={(e) => {
               if (e.key === "Escape") {
                 setExploreOpen(false);
@@ -157,7 +188,15 @@ export default function NavBar({ isHome = false }: { isHome?: boolean }) {
             <button
               type="button"
               id="nav-btn-explore"
-              onClick={() => setExploreOpen((o) => !o)}
+              onPointerDown={(e) => {
+                lastPointer.current = e.pointerType;
+              }}
+              onClick={(e) => {
+                // A mouse already opened it on hover, so a click keeps it open.
+                // Taps and the keyboard (detail 0) toggle.
+                if (e.detail > 0 && lastPointer.current === "mouse") setExploreOpen(true);
+                else setExploreOpen((o) => !o);
+              }}
               className="flex cursor-pointer items-center transition-colors hover:text-[#ffb3e2]"
               style={{ ...linkStyle, gap: 5, background: "none", border: "none" }}
               aria-haspopup="true"
@@ -190,7 +229,7 @@ export default function NavBar({ isHome = false }: { isHome?: boolean }) {
                 transition: "opacity .2s ease, transform .2s ease, visibility .2s",
                 width: "min(440px, calc(100vw - 24px))",
                 maxWidth: "calc(100vw - 24px)",
-                background: "rgba(20,17,60,.95)",
+                background: "var(--dc-menu-bg)",
                 backdropFilter: "blur(16px)",
                 border: "1px solid rgba(255,255,255,.16)",
                 borderRadius: 20,
@@ -206,7 +245,7 @@ export default function NavBar({ isHome = false }: { isHome?: boolean }) {
                         fontSize: 11,
                         fontWeight: 900,
                         letterSpacing: 1.2,
-                        color: "#bfa8f5",
+                        color: "var(--dc-kicker)",
                         textTransform: "uppercase",
                         marginBottom: 10,
                       }}
@@ -214,18 +253,28 @@ export default function NavBar({ isHome = false }: { isHome?: boolean }) {
                       {group.title}
                     </div>
                     <div className="flex flex-col" style={{ gap: 9 }}>
-                      {group.items.map(([label, href]) => (
-                        <Link
-                          key={href}
-                          href={href}
-                          onClick={() => setExploreOpen(false)}
-                          role="menuitem"
-                          className="cursor-pointer transition-colors hover:text-[#ffd9ef]"
-                          style={{ color: "rgba(255,255,255,.9)", fontWeight: 700, fontSize: 14, whiteSpace: "nowrap" }}
-                        >
-                          {label}
-                        </Link>
-                      ))}
+                      {group.items.map(([label, href]) => {
+                        const active = isActive(pathname, href);
+                        return (
+                          <Link
+                            key={href}
+                            href={href}
+                            onClick={() => setExploreOpen(false)}
+                            role="menuitem"
+                            aria-current={active ? "page" : undefined}
+                            className="cursor-pointer transition-colors hover:text-[#ffd9ef]"
+                            style={{
+                              color: active ? "#ffffff" : "rgba(255,255,255,.86)",
+                              fontWeight: active ? 900 : 700,
+                              fontSize: 14,
+                              whiteSpace: "nowrap",
+                            }}
+                          >
+                            {active ? "\u2022 " : ""}
+                            {label}
+                          </Link>
+                        );
+                      })}
                     </div>
                   </div>
                 ))}
@@ -258,24 +307,13 @@ export default function NavBar({ isHome = false }: { isHome?: boolean }) {
               {profile.initial}
             </Link>
           ) : (
-            <Link
-              href="/signup"
-              id="nav-btn-signup"
-              className="hidden cursor-pointer backdrop-blur-md transition-colors hover:bg-white/32 sm:block"
-              style={{
-                background: "rgba(255,255,255,.16)",
-                border: "2px solid rgba(255,255,255,.7)",
-                color: "#ffffff",
-                fontWeight: 900,
-                fontSize: 14,
-                padding: "9px 20px",
-                borderRadius: 999,
-                boxShadow: "0 0 18px rgba(255,170,220,.35)",
-                whiteSpace: "nowrap",
-              }}
-            >
-              Start free
-            </Link>
+            // The wrapper owns visibility: .dc-pill sets its own display, and
+            // unlayered component CSS beats Tailwind's layered utilities.
+            <span className="hidden sm:inline-flex">
+              <Link href="/signup" id="nav-btn-signup" className="dc-pill" style={{ fontSize: 14, padding: "9px 20px" }}>
+                Start free
+              </Link>
+            </span>
           )}
         </nav>
       </div>

@@ -1,25 +1,27 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { gradientOpacity, cloudOpacity } from "@/lib/theme";
-import Cloud from "./Cloud";
+import Scene from "@/components/ui/Scene";
+import { cloudOpacity } from "@/lib/theme";
 import { createClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { track } from "@/lib/telemetry";
 
+const MIN_PASSWORD = 8;
+
 /**
- * Shared login/signup scene: doorway-clouds background + frosted card.
- * Uses Supabase auth (email/password + Google/GitHub). Until Supabase is
- * configured it falls back to the old demo routing so the app still runs.
+ * Shared login / signup screen. Uses Supabase auth (email + password, Google,
+ * GitHub, and an emailed sign-in link for forgotten passwords). When accounts
+ * are not configured on this deployment it says so and offers guest mode, where
+ * progress is saved on the device.
  */
-const cs = cloudOpacity.auth;
 export default function AuthScene({ mode }: { mode: "login" | "signup" }) {
   const router = useRouter();
   const isSignup = mode === "signup";
-  // New sign-ups get the guided first-run; returning logins go to the hub.
   const dest = isSignup ? "/start" : "/dashboard";
+  const configured = isSupabaseConfigured();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -27,13 +29,28 @@ export default function AuthScene({ mode }: { mode: "login" | "signup" }) {
   const [notice, setNotice] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("error") === "auth_callback") {
+      const t = setTimeout(() => setError("That sign-in link did not work or has expired. Please try again."), 0);
+      return () => clearTimeout(t);
+    }
+  }, []);
+
+  const friendly = (message: string) => {
+    if (/invalid login credentials/i.test(message)) return "That email and password do not match an account.";
+    if (/already registered/i.test(message)) return "An account with this email already exists. Try signing in instead.";
+    if (/rate limit/i.test(message)) return "Too many attempts. Wait a minute, then try again.";
+    return message;
+  };
+
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setNotice(null);
-
-    if (!isSupabaseConfigured()) {
-      router.push(dest);
+    if (!configured) return;
+    if (isSignup && password.length < MIN_PASSWORD) {
+      setError(`Use at least ${MIN_PASSWORD} characters for your password.`);
       return;
     }
 
@@ -41,19 +58,18 @@ export default function AuthScene({ mode }: { mode: "login" | "signup" }) {
     const supabase = createClient();
     try {
       if (isSignup) {
-        const { data, error } = await supabase.auth.signUp({
+        const { data, error: signUpError } = await supabase.auth.signUp({
           email,
           password,
           options: {
-            data: { full_name: name || undefined },
+            data: { full_name: name.trim() || undefined },
             // Bare callback URL (no query string) so it matches the exact Redirect
-            // URL allowlisted in Supabase Auth. A `?next=` query here makes GoTrue
-            // reject it ("requested path is invalid") unless a wildcard is allowed.
+            // URL allowlisted in Supabase Auth.
             emailRedirectTo: `${window.location.origin}/auth/callback`,
           },
         });
-        if (error) {
-          setError(error.message);
+        if (signUpError) {
+          setError(friendly(signUpError.message));
           return;
         }
         track("signup", {});
@@ -63,9 +79,9 @@ export default function AuthScene({ mode }: { mode: "login" | "signup" }) {
         }
         setNotice("Check your email to confirm your account, then sign in.");
       } else {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) {
-          setError(error.message);
+        const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+        if (signInError) {
+          setError(friendly(signInError.message));
           return;
         }
         track("login", {});
@@ -76,204 +92,149 @@ export default function AuthScene({ mode }: { mode: "login" | "signup" }) {
     }
   };
 
-  const oauth = async (provider: "google" | "github") => {
+  const sendLink = async () => {
     setError(null);
-    if (!isSupabaseConfigured()) {
-      router.push(dest);
+    setNotice(null);
+    if (!email) {
+      setError("Type your email above first, then choose Email me a sign-in link.");
       return;
     }
-    const supabase = createClient();
-    const { error } = await supabase.auth.signInWithOAuth({
+    setLoading(true);
+    const { error: otpError } = await createClient().auth.signInWithOtp({
+      email,
+      options: { shouldCreateUser: false, emailRedirectTo: `${window.location.origin}/auth/callback` },
+    });
+    setLoading(false);
+    if (otpError) setError(friendly(otpError.message));
+    else setNotice("If that email has an account, a sign-in link is on its way. After you sign in you can set a new password in Profile.");
+  };
+
+  const oauth = async (provider: "google" | "github") => {
+    setError(null);
+    const { error: oauthError } = await createClient().auth.signInWithOAuth({
       provider,
-      // Bare callback URL (no query string) so it matches the exact Redirect URL
-      // allowlisted in Supabase Auth; the callback then sends the user to the hub.
       options: { redirectTo: `${window.location.origin}/auth/callback` },
     });
-    if (error) setError(error.message);
+    if (oauthError) setError(friendly(oauthError.message));
   };
 
-  const fieldStyle: React.CSSProperties = {
-    width: "100%",
-    background: "rgba(255,255,255,.92)",
-    border: "2px solid rgba(255,255,255,.9)",
-    borderRadius: 14,
-    padding: "13px 16px",
-    fontSize: 15,
-    fontWeight: 700,
-    color: "#13335f",
-    outline: "none",
-  };
+  const label: React.CSSProperties = { display: "block", fontSize: 12.5, fontWeight: 900, letterSpacing: 0.3, marginBottom: 6, color: "var(--dc-ink-soft)" };
 
   return (
-    <div className="relative flex items-center justify-center overflow-hidden" style={{ minHeight: "100vh", background: "#6E8FC7" }}>
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src="/assets/backgrounds/bg-doorway-clouds-1.webp"
-        alt=""
-        className="absolute inset-0 h-full w-full object-cover"
-        style={{ objectPosition: "50% 50%" }}
-      />
-      <div
-        className="pointer-events-none absolute inset-0 z-2"
-        style={{ background: "linear-gradient(180deg, #6E8FC7 0%, #F0AABE 100%)", opacity: gradientOpacity.auth }}
-      />
-
-      <Cloud src="/assets/clouds-sunset/cutout-cloud-sunset-13.webp" speed={0.06} pos={{ left: "-8%", top: "10%" }} width="min(360px, 30vw)" opacity={0.7} duration={14} neon="cyan" scale={cs} />
-      <Cloud src="/assets/clouds-sunset/cutout-cloud-sunset-15.webp" speed={0.1} pos={{ right: "-6%", bottom: "12%" }} width="min(320px, 26vw)" opacity={0.7} duration={12} delay={1.1} neon="magenta" scale={cs} />
-      <Cloud src="/assets/clouds-sunset/cutout-cloud-sunset-1-02.webp" speed={0.14} pos={{ right: "4%", top: "8%" }} width="min(220px, 20vw)" opacity={0.6} anim="floatySm" duration={10} delay={0.6} scale={cs} />
-
-      <div className="relative z-5 w-full" style={{ maxWidth: 420, padding: "40px 24px" }}>
-        <div className="text-center" style={{ marginBottom: 24 }}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src="/assets/clouds-neon/cutout-cloud-neon-1-03.webp"
-            alt=""
-            style={{
-              display: "block",
-              width: 74,
-              height: "auto",
-              margin: "0 auto 10px",
-              filter: "drop-shadow(0 0 14px rgba(255,190,240,.85))",
-              animation: "floatySm 6s ease-in-out infinite",
-            }}
-          />
-          <h1 className="font-display neon-title" style={{ fontWeight: 800, fontSize: 38, color: "#fff6fb", margin: 0 }}>
-            dreamcode
+    <Scene clouds="drift" cloudScale={cloudOpacity.auth} className="flex items-center justify-center">
+      <div className="relative z-5 w-full" style={{ maxWidth: 440, padding: "40px 20px" }}>
+        <div className="text-center" style={{ marginBottom: 22 }}>
+          <Link href="/" aria-label="dreamcode home" className="inline-block">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/assets/clouds-neon/cutout-cloud-neon-1-03.webp" alt="" style={{ display: "block", width: 72, height: "auto", margin: "0 auto 8px", filter: "drop-shadow(0 0 14px rgba(255,190,240,.85))", animation: "floatySm 6s ease-in-out infinite" }} />
+            <span className="font-display neon-title" style={{ fontWeight: 800, fontSize: 38, color: "#fff6fb" }}>
+              dreamcode
+            </span>
+          </Link>
+          <h1 className="sky-text" style={{ fontSize: 16, fontWeight: 800, color: "#ffffff", margin: "8px 0 0" }}>
+            {isSignup ? "Create your free account" : "Welcome back, night driver"}
           </h1>
-          <p style={{ fontSize: 15, fontWeight: 700, color: "#ffffff", textShadow: "0 2px 14px rgba(30,30,80,.7)", margin: "8px 0 0" }}>
-            {isSignup ? "A whole sky of code is waiting. It's free to start." : "Welcome back, night driver."}
-          </p>
         </div>
 
-        <form
-          onSubmit={submit}
-          className="glass"
-          style={{ borderRadius: 26, padding: "28px 28px", boxShadow: "0 24px 60px rgba(30,30,80,.35)" }}
-        >
-          {isSignup && (
-            <input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="What should the clouds call you?"
-              aria-label="Full name"
-              className="transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[#ff7ad9] focus:border-transparent"
-              style={{ ...fieldStyle, marginBottom: 12 }}
-            />
-          )}
-          <input
-            type="email"
-            required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="Email"
-            aria-label="Email address"
-            className="transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[#ff7ad9] focus:border-transparent"
-            style={{ ...fieldStyle, marginBottom: 12 }}
-          />
-          <input
-            type="password"
-            required
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="Password"
-            aria-label="Password"
-            className="transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[#ff7ad9] focus:border-transparent"
-            style={{ ...fieldStyle, marginBottom: 18 }}
-          />
-          {error && (
-            <div style={{ background: "rgba(255,90,140,.18)", border: "1px solid rgba(255,120,160,.5)", color: "#ffe1ec", fontSize: 13, fontWeight: 700, padding: "10px 12px", borderRadius: 12, marginBottom: 12 }}>
-              {error}
-            </div>
-          )}
-          {notice && (
-            <div style={{ background: "rgba(120,230,170,.18)", border: "1px solid rgba(120,230,170,.5)", color: "#defff0", fontSize: 13, fontWeight: 700, padding: "10px 12px", borderRadius: 12, marginBottom: 12 }}>
-              {notice}
-            </div>
-          )}
-          <button
-            type="submit"
-            disabled={loading}
-            className="font-display w-full cursor-pointer transition-transform hover:-translate-y-0.5"
-            style={{
-              border: "none",
-              background: "linear-gradient(135deg, #ff7ad9, #ff4fb0)",
-              color: "#ffffff",
-              fontWeight: 800,
-              fontSize: 17,
-              padding: "14px 0",
-              borderRadius: 999,
-              boxShadow: "0 0 26px rgba(255,100,200,.55), 0 14px 32px rgba(40,16,60,.4)",
-              opacity: loading ? 0.7 : 1,
-              cursor: loading ? "wait" : "pointer",
-            }}
-          >
-            {loading ? "One moment..." : isSignup ? "Start the night drive \u2192" : "Sign in \u2192"}
-          </button>
-
-          <div className="flex items-center" style={{ gap: 12, margin: "18px 0" }}>
-            <div style={{ flex: 1, height: 1, background: "rgba(255,255,255,.5)" }} />
-            <span style={{ fontSize: 12, fontWeight: 900, color: "rgba(255,255,255,.85)" }}>OR</span>
-            <div style={{ flex: 1, height: 1, background: "rgba(255,255,255,.5)" }} />
+        {!configured ? (
+          <div className="dc-paper" style={{ padding: "26px 26px" }}>
+            <p className="dc-prose" style={{ margin: 0, fontSize: 15 }}>
+              Accounts are not switched on for this site yet. You can still learn everything as a guest: your progress is saved on this device.
+            </p>
+            <Link href={isSignup ? "/start" : "/dashboard"} className="dc-btn dc-btn--primary dc-btn--block" style={{ marginTop: 18 }}>
+              Continue as a guest {"→"}
+            </Link>
           </div>
+        ) : (
+          <form onSubmit={submit} className="dc-paper" style={{ padding: "26px 26px" }} noValidate={false}>
+            {isSignup && (
+              <label className="block" style={{ marginBottom: 12 }}>
+                <span style={label}>Display name (optional)</span>
+                <input value={name} onChange={(e) => setName(e.target.value)} placeholder="What should the clouds call you?" autoComplete="nickname" maxLength={60} className="dc-input" />
+              </label>
+            )}
+            <label className="block" style={{ marginBottom: 12 }}>
+              <span style={label}>Email</span>
+              <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" inputMode="email" className="dc-input" />
+            </label>
+            <label className="block" style={{ marginBottom: 16 }}>
+              <span style={label}>Password{isSignup ? ` (at least ${MIN_PASSWORD} characters)` : ""}</span>
+              <input
+                type="password"
+                required
+                minLength={isSignup ? MIN_PASSWORD : undefined}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                autoComplete={isSignup ? "new-password" : "current-password"}
+                className="dc-input"
+              />
+            </label>
+            {error && (
+              <div role="alert" className="dc-callout dc-callout--danger" style={{ marginBottom: 12, fontSize: 13 }}>
+                {error}
+              </div>
+            )}
+            {notice && (
+              <div role="status" className="dc-callout dc-callout--success" style={{ marginBottom: 12, fontSize: 13 }}>
+                {notice}
+              </div>
+            )}
+            <button type="submit" disabled={loading} className="dc-btn dc-btn--primary dc-btn--block">
+              {loading ? "One moment..." : isSignup ? "Start the night drive →" : "Sign in →"}
+            </button>
+            {!isSignup && (
+              <div className="text-center" style={{ marginTop: 12 }}>
+                <button type="button" onClick={sendLink} disabled={loading} className="dc-ink-soft underline" style={{ background: "none", border: "none", fontWeight: 800, fontSize: 13, cursor: "pointer" }}>
+                  Forgot your password? Email me a sign-in link
+                </button>
+              </div>
+            )}
 
-          <button
-            type="button"
-            onClick={() => oauth("google")}
-            className="w-full cursor-pointer transition-colors hover:bg-white"
-            style={{
-              background: "rgba(255,255,255,.92)",
-              border: "none",
-              color: "#13335f",
-              fontWeight: 900,
-              fontSize: 14.5,
-              padding: "12px 0",
-              borderRadius: 999,
-            }}
-          >
-            Continue with Google
-          </button>
-          <button
-            type="button"
-            onClick={() => oauth("github")}
-            className="w-full cursor-pointer transition-colors hover:bg-white"
-            style={{
-              background: "rgba(255,255,255,.92)",
-              border: "none",
-              color: "#13335f",
-              fontWeight: 900,
-              fontSize: 14.5,
-              padding: "12px 0",
-              borderRadius: 999,
-              marginTop: 10,
-            }}
-          >
-            Continue with GitHub
-          </button>
-        </form>
+            <div className="flex items-center" style={{ gap: 12, margin: "18px 0" }}>
+              <div style={{ flex: 1, height: 1, background: "var(--dc-inset-border)" }} />
+              <span className="dc-ink-muted" style={{ fontSize: 12, fontWeight: 900 }}>
+                OR
+              </span>
+              <div style={{ flex: 1, height: 1, background: "var(--dc-inset-border)" }} />
+            </div>
 
-        <div className="text-center" style={{ marginTop: 18, fontSize: 14, fontWeight: 800, color: "#ffffff", textShadow: "0 2px 12px rgba(30,30,80,.7)" }}>
+            <div className="flex flex-col" style={{ gap: 12 }}>
+              <button type="button" onClick={() => oauth("google")} className="dc-btn dc-btn--quiet dc-btn--block dc-btn--sm" style={{ fontSize: 14.5 }}>
+                Continue with Google
+              </button>
+              <button type="button" onClick={() => oauth("github")} className="dc-btn dc-btn--quiet dc-btn--block dc-btn--sm" style={{ fontSize: 14.5 }}>
+                Continue with GitHub
+              </button>
+            </div>
+          </form>
+        )}
+
+        <div className="sky-text text-center" style={{ marginTop: 18, fontSize: 14, fontWeight: 800, color: "#ffffff" }}>
           {isSignup ? (
             <>
-              Already dreaming?{" "}
-              <Link href="/login" className="underline" style={{ color: "#ffd9ef" }}>
+              Already have an account?{" "}
+              <Link href="/login" className="underline" style={{ color: "var(--dc-link)" }}>
                 Sign in
               </Link>
             </>
           ) : (
             <>
-              New to the sky?{" "}
-              <Link href="/signup" className="underline" style={{ color: "#ffd9ef" }}>
-                Start free
+              New here?{" "}
+              <Link href="/signup" className="underline" style={{ color: "var(--dc-link)" }}>
+                Create a free account
               </Link>
             </>
           )}
         </div>
-        <div className="text-center" style={{ marginTop: 10 }}>
-          <Link href="/" style={{ fontSize: 13, fontWeight: 800, color: "rgba(255,255,255,.75)" }}>
-            {"\u2190"} Back home
+        <div className="flex flex-wrap justify-center" style={{ marginTop: 14, gap: 10 }}>
+          <Link href="/" className="dc-pill">
+            {"←"} Home
+          </Link>
+          <Link href="/lessons" className="dc-pill">
+            Browse as a guest
           </Link>
         </div>
       </div>
-    </div>
+    </Scene>
   );
 }

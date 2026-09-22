@@ -5,14 +5,12 @@
   --font-display: var(--font-baloo);
   --font-mono: var(--font-jbmono);
 
-  /* dreamcode palette */
+  /* dreamcode palette (fixed brand colours; theme-aware tokens live below) */
   --color-ink: #13335f;
   --color-ink-soft: #41608f;
   --color-ink-muted: #7b93b8;
   --color-dusk: #0e2247;
   --color-dusk-deep: #081a38;
-  --color-sky-blue: #2f6fdd;
-  --color-sky-blue-bright: #3b7ce6;
   --color-mint: #a9ecc9;
   --color-mint-deep: #0f5c38;
   --color-butter: #fff3c9;
@@ -24,27 +22,155 @@
   --color-cyan-glow: #96f5ff;
 }
 
+/* ==========================================================================
+   Design tokens
+
+   Two skies, one system. Sunset Arcade (light) and Midnight Focus (dark) share
+   every component; only these tokens change. The theme is applied to <html>
+   before hydration (layout.tsx) and kept in sync by the appearance controller.
+
+   Surfaces:
+     sky    - the page background
+     glass  - translucent cards that sit directly on the sky (white text)
+     paper  - the reading surface for lessons, drills and briefs (ink text)
+     inset  - quiet panels and answer options inside paper
+     code   - editors, examples and consoles
+   ========================================================================== */
+
 :root {
   --nav-h: 66px;
+
+  --dc-on-sky: #ffffff;
+  --dc-on-sky-soft: rgba(255, 255, 255, 0.95);
+  --dc-on-sky-muted: rgba(255, 255, 255, 0.88);
+  --dc-sky-text-shadow: 0 2px 14px rgba(20, 16, 50, 0.55);
+
+  --dc-code-bg: #0e2247;
+  --dc-code-fg: #dbe9ff;
+  --dc-console-bg: #081a38;
+
+  --dc-mint: #a9ecc9;
+  --dc-mint-ink: #0f5c38;
+  --dc-butter: #fff3c9;
+  --dc-butter-ink: #7a5410;
+  --dc-pink: #ffe1ef;
+  --dc-pink-ink: #a13163;
+  --dc-lavender: #e6e0fb;
+  --dc-lavender-ink: #5b4a8a;
+  --dc-gold: #ffd86b;
+
+  --dc-radius-card: 24px;
+  --dc-radius-panel: 18px;
+  --dc-radius-control: 14px;
+
+  /* Sunset Arcade defaults (also the no-JS fallback) */
+  --dc-page-sky: radial-gradient(circle at 18% 20%, rgba(255, 220, 125, 0.26), transparent 30%),
+    linear-gradient(180deg, #58365f 0%, #9b526a 42%, #d87974 70%, #f3a35f 100%);
+  --dc-sky-scrim: linear-gradient(180deg, rgba(26, 12, 40, 0.04) 0%, rgba(26, 12, 40, 0.19) 35%, rgba(26, 12, 40, 0.35) 70%, rgba(26, 12, 40, 0.47) 100%);
+  --dc-glass-bg: rgba(58, 26, 56, 0.46);
+  --dc-glass-border: rgba(255, 246, 226, 0.5);
+  --dc-glass-strong-bg: rgba(74, 36, 72, 0.5);
+  --dc-bar-bg: rgba(66, 30, 66, 0.62);
+  --dc-menu-bg: rgba(52, 24, 54, 0.96);
+  --dc-card-shadow: 0 18px 44px rgba(73, 27, 47, 0.28);
+  --dc-depth-edge: rgba(97, 44, 61, 0.48);
+  --dc-depth-shadow: rgba(73, 27, 47, 0.3);
+
+  --dc-paper-bg: #fffaf6;
+  --dc-paper-border: rgba(255, 255, 255, 0.9);
+  --dc-paper-shadow: 0 0 34px rgba(255, 150, 140, 0.16), 0 24px 56px rgba(60, 20, 40, 0.35);
+  --dc-ink: #13335f;
+  --dc-ink-soft: #41608f;
+  --dc-ink-muted: #57698a;
+  --dc-ink-strong: #13335f;
+  --dc-inset-bg: #f6f1f7;
+  --dc-inset-border: #e9dfee;
+  --dc-inset-hover: #efe6f3;
+
+  --dc-accent: linear-gradient(135deg, #ef6248, #d92f5e);
+  --dc-accent-solid: #e34a53;
+  --dc-accent-edge: #9d2c44;
+  --dc-accent-glow: rgba(255, 110, 110, 0.45);
+  --dc-kicker: #ffe9e0;
+  --dc-chip-glass-bg: rgba(40, 18, 46, 0.42);
+  --dc-tier-bg: rgba(28, 12, 34, 0.5);
+  --dc-secondary-border: rgba(255, 238, 214, 0.9);
+  --dc-link: #ffe7cf;
+
+  --dc-success-bg: #eaf8f0;
+  --dc-success-fg: #0f6b41;
+  --dc-success-border: #9fdcb9;
+  --dc-danger-bg: #fdeef3;
+  --dc-danger-fg: #a13163;
+  --dc-danger-border: #f6a9c1;
+  --dc-warn-bg: #fff4d6;
+  --dc-warn-fg: #7a5410;
+  --dc-warn-border: #f2d48a;
+  --dc-info-bg: #eef3fd;
+  --dc-info-fg: #2c4a7c;
+  --dc-info-border: #c9d8f2;
 }
+
 @media (max-width: 640px) {
   :root {
     --nav-h: 60px;
   }
 }
 
-::selection {
-  background: #ffd3ec;
+html[data-theme="dark"] {
+  --dc-sky-scrim: linear-gradient(180deg, rgba(4, 6, 22, 0) 0%, rgba(4, 6, 22, 0.16) 70%, rgba(4, 6, 22, 0.3) 100%);
+  --dc-page-sky: radial-gradient(circle at 72% 12%, rgba(141, 124, 255, 0.17), transparent 34%),
+    linear-gradient(180deg, #090d26 0%, #121b3f 48%, #243c61 76%, #41697b 100%);
+  --dc-glass-bg: rgba(12, 19, 50, 0.7);
+  --dc-glass-border: rgba(136, 227, 218, 0.3);
+  --dc-glass-strong-bg: rgba(10, 16, 42, 0.78);
+  --dc-bar-bg: rgba(8, 12, 34, 0.8);
+  --dc-menu-bg: rgba(10, 15, 40, 0.97);
+  --dc-card-shadow: 0 20px 48px rgba(2, 4, 18, 0.42), inset 0 1px 0 rgba(255, 255, 255, 0.07);
+  --dc-depth-edge: rgba(4, 7, 25, 0.74);
+  --dc-depth-shadow: rgba(2, 4, 18, 0.48);
+
+  --dc-code-bg: #0a1230;
+  --dc-console-bg: #060b22;
+
+  --dc-paper-bg: #111a3e;
+  --dc-paper-border: rgba(136, 227, 218, 0.2);
+  --dc-paper-shadow: 0 0 34px rgba(120, 110, 255, 0.12), 0 24px 56px rgba(2, 4, 18, 0.55);
+  --dc-ink: #e9efff;
+  --dc-ink-soft: #b9c6ea;
+  --dc-ink-muted: #8a9ac4;
+  --dc-ink-strong: #ffffff;
+  --dc-inset-bg: rgba(255, 255, 255, 0.05);
+  --dc-inset-border: rgba(255, 255, 255, 0.11);
+  --dc-inset-hover: rgba(255, 255, 255, 0.09);
+
+  --dc-accent: linear-gradient(135deg, #8d7cff, #526fd1);
+  --dc-accent-solid: #7a74ec;
+  --dc-accent-edge: #2f3a8f;
+  --dc-accent-glow: rgba(141, 124, 255, 0.45);
+  --dc-kicker: #c9c0ff;
+  --dc-chip-glass-bg: rgba(255, 255, 255, 0.16);
+  --dc-tier-bg: rgba(255, 255, 255, 0.12);
+  --dc-secondary-border: rgba(150, 245, 255, 0.75);
+  --dc-link: #c9f3ff;
+
+  --dc-success-bg: rgba(90, 220, 150, 0.12);
+  --dc-success-fg: #9ff0c4;
+  --dc-success-border: rgba(120, 230, 170, 0.4);
+  --dc-danger-bg: rgba(255, 110, 150, 0.12);
+  --dc-danger-fg: #ffb3c9;
+  --dc-danger-border: rgba(255, 130, 170, 0.45);
+  --dc-warn-bg: rgba(255, 210, 110, 0.12);
+  --dc-warn-fg: #ffe3a1;
+  --dc-warn-border: rgba(255, 210, 120, 0.4);
+  --dc-info-bg: rgba(140, 170, 255, 0.12);
+  --dc-info-fg: #c6d6ff;
+  --dc-info-border: rgba(150, 180, 255, 0.35);
 }
 
-@keyframes eqbar {
-  0%,
-  100% {
-    transform: scaleY(0.35);
-  }
-  50% {
-    transform: scaleY(1);
-  }
+::selection {
+  background: #ffd3ec;
+  color: #13335f;
 }
 
 html,
@@ -55,7 +181,8 @@ body {
 
 body {
   font-family: var(--font-nunito), sans-serif;
-  background: #2b2c63;
+  background: var(--dc-page-sky);
+  background-attachment: fixed;
   color: #16315c;
 }
 
@@ -63,12 +190,17 @@ button {
   font-family: var(--font-nunito), sans-serif;
 }
 
-@keyframes drift {
-  0% {
-    transform: translateX(-46px);
-  }
+/* ==========================================================================
+   Motion
+   ========================================================================== */
+
+@keyframes eqbar {
+  0%,
   100% {
-    transform: translateX(46px);
+    transform: scaleY(0.35);
+  }
+  50% {
+    transform: scaleY(1);
   }
 }
 
@@ -113,23 +245,17 @@ button {
 
 @keyframes neonFlicker {
   0%,
+  89%,
+  91%,
+  95%,
   100% {
-    opacity: 1;
-  }
-  89% {
     opacity: 1;
   }
   90% {
     opacity: 0.55;
   }
-  91% {
-    opacity: 1;
-  }
   94% {
     opacity: 0.8;
-  }
-  95% {
-    opacity: 1;
   }
 }
 
@@ -141,6 +267,32 @@ button {
   100% {
     opacity: 1;
     transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes fadeUp {
+  0% {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  20%,
+  60% {
+    transform: translateX(-6px);
+  }
+  40%,
+  80% {
+    transform: translateX(6px);
   }
 }
 
@@ -162,28 +314,21 @@ button {
 .anim-pop-in {
   animation: popIn 0.35s cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
 }
+.anim-fade-up {
+  animation: fadeUp 0.4s ease both;
+}
+.anim-shake {
+  animation: shake 0.4s ease;
+}
 
-/* glow applied to cloud cutout images (cloudNeonGlow = 0.5) */
+/* ==========================================================================
+   Glow treatments
+   ========================================================================== */
+
 .cloud-glow {
-  filter: drop-shadow(0 0 14px rgba(255, 120, 222, 0.45))
-    drop-shadow(0 0 34px rgba(110, 230, 255, 0.3));
+  filter: drop-shadow(0 0 14px rgba(255, 120, 222, 0.45)) drop-shadow(0 0 34px rgba(110, 230, 255, 0.3));
 }
 
-/* bright magenta neon outline around a cloud cutout (like the wordmark) */
-.cloud-neon-magenta {
-  filter: drop-shadow(0 0 8px rgba(255, 160, 235, 0.95))
-    drop-shadow(0 0 22px rgba(255, 79, 208, 0.85))
-    drop-shadow(0 0 48px rgba(255, 79, 208, 0.55));
-}
-
-/* bright cyan neon outline around a cloud cutout */
-.cloud-neon-cyan {
-  filter: drop-shadow(0 0 8px rgba(180, 248, 255, 0.95))
-    drop-shadow(0 0 22px rgba(110, 230, 255, 0.85))
-    drop-shadow(0 0 48px rgba(80, 210, 255, 0.5));
-}
-
-/* the big neon wordmark glow */
 .neon-title {
   text-shadow:
     0 0 6px rgba(255, 255, 255, 0.95),
@@ -193,7 +338,6 @@ button {
     0 0 90px rgba(255, 79, 208, 0.6);
 }
 
-/* glowing page headings on cloud scenes */
 .glow-heading {
   text-shadow:
     0 0 8px rgba(255, 255, 255, 0.7),
@@ -201,12 +345,10 @@ button {
     0 6px 30px rgba(60, 60, 130, 0.5);
 }
 
-/* soft drop shadow for white text over photos */
 .sky-text {
-  text-shadow: 0 2px 14px rgba(20, 16, 50, 0.6);
+  text-shadow: var(--dc-sky-text-shadow);
 }
 
-/* small neon wordmark glow (scaled-down hero treatment) */
 .neon-wordmark {
   text-shadow:
     0 0 4px rgba(255, 255, 255, 0.9),
@@ -215,7 +357,20 @@ button {
     0 0 8px rgba(110, 230, 255, 0.45);
 }
 
-/* neon pink hover halo for interactive cards (overrides inline shadows) */
+html[data-theme="light"] :is(.neon-title, .neon-wordmark, .glow-heading) {
+  text-shadow:
+    0 0 7px rgba(255, 255, 255, 0.92),
+    0 0 20px rgba(255, 138, 98, 0.9),
+    0 0 46px rgba(255, 95, 120, 0.72);
+}
+
+html[data-theme="dark"] :is(.neon-title, .neon-wordmark, .glow-heading) {
+  text-shadow:
+    0 0 6px rgba(255, 255, 255, 0.82),
+    0 0 18px rgba(141, 124, 255, 0.72),
+    0 0 38px rgba(70, 216, 200, 0.42);
+}
+
 .glow-hover {
   transition:
     box-shadow 0.25s ease,
@@ -223,12 +378,11 @@ button {
 }
 .glow-hover:hover {
   box-shadow:
-    0 0 30px rgba(255, 122, 217, 0.45),
-    0 0 60px rgba(110, 230, 255, 0.18),
+    0 0 30px var(--dc-accent-glow),
     0 18px 44px rgba(20, 12, 50, 0.45) !important;
 }
 
-/* cyan-edged neon outline pill (like the LEARN·SOLVE·DREAM chip) */
+/* cyan-edged neon outline pill (like the LEARN · SOLVE · DREAM chip) */
 .neon-outline {
   border: 2px solid rgba(150, 245, 255, 0.85);
   box-shadow:
@@ -237,26 +391,746 @@ button {
   text-shadow: 0 0 10px rgba(110, 230, 255, 0.8);
 }
 
-/* frosted glass card */
-.glass {
-  background: rgba(255, 255, 255, 0.16);
-  backdrop-filter: blur(14px);
-  border: 1px solid rgba(255, 255, 255, 0.45);
-}
-
-.glass-strong {
-  background: rgba(255, 255, 255, 0.88);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.8);
-}
-
 @media (max-width: 1280px) {
   .dc-side-float {
     display: none !important;
   }
 }
 
-/* CodeMirror - melt the editor into the dusk panel */
+/* ==========================================================================
+   Layout primitives
+   ========================================================================== */
+
+/* Every page sits in a scene: the themed sky, clipped so drifting clouds can
+   never cause sideways scrolling. */
+.dc-scene {
+  position: relative;
+  min-height: 100vh;
+  min-height: 100dvh;
+  overflow-x: clip;
+  background: var(--dc-page-sky);
+  isolation: isolate;
+}
+
+/* Sunset is bright at the bottom of every screen, and the text on it is light.
+   This fixed scrim keeps the gradient but holds the contrast up. */
+.dc-scene::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: var(--dc-sky-scrim);
+}
+
+.dc-container {
+  position: relative;
+  z-index: 5;
+  margin-inline: auto;
+  width: 100%;
+  padding-inline: clamp(16px, 4vw, 32px);
+}
+
+/* The sticky bar under the global nav used by every focused flow (lesson,
+   practice, challenge, project, review, placement) and by the map HUDs. */
+.dc-bar {
+  position: sticky;
+  top: var(--nav-h);
+  z-index: 20;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 14px;
+  padding: 10px clamp(16px, 4vw, 32px);
+  background: var(--dc-bar-bg);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.14);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.dc-bar__title {
+  font-family: var(--font-baloo), sans-serif;
+  font-weight: 700;
+  font-size: 16px;
+  color: #ffffff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.dc-bar__center {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  flex: 1 1 auto;
+  justify-content: center;
+}
+
+@media (max-width: 720px) {
+  /* Full-width second row; the chips drop below a long title instead of
+     squeezing it down to a single letter. */
+  .dc-bar__center {
+    order: 3;
+    flex-basis: 100%;
+    flex-wrap: wrap;
+    row-gap: 6px;
+    justify-content: flex-start;
+  }
+
+  .dc-bar__title {
+    max-width: 100%;
+  }
+}
+
+/* Top row for hub pages: back pill left, actions right. */
+.dc-topline {
+  position: relative;
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 20px clamp(16px, 4vw, 44px) 0;
+}
+
+/* ==========================================================================
+   Type
+   ========================================================================== */
+
+.dc-title {
+  font-family: var(--font-baloo), sans-serif;
+  font-weight: 800;
+  font-size: clamp(32px, 5.2vw, 48px);
+  line-height: 1.1;
+  color: #ffffff;
+  margin: 0;
+  text-wrap: balance;
+}
+
+.dc-lede {
+  font-size: clamp(15px, 1.6vw, 17px);
+  font-weight: 700;
+  line-height: 1.6;
+  color: var(--dc-on-sky-soft);
+  text-shadow: var(--dc-sky-text-shadow);
+  margin: 10px auto 0;
+  max-width: 560px;
+  text-wrap: pretty;
+}
+
+.dc-kicker {
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: var(--dc-kicker);
+}
+
+.dc-section-title {
+  font-family: var(--font-baloo), sans-serif;
+  font-weight: 800;
+  font-size: clamp(22px, 3vw, 27px);
+  color: #ffffff;
+  margin: 0;
+  text-shadow: var(--dc-sky-text-shadow);
+}
+
+.dc-ink {
+  color: var(--dc-ink);
+}
+.dc-ink-soft {
+  color: var(--dc-ink-soft);
+}
+.dc-ink-muted {
+  color: var(--dc-ink-muted);
+}
+
+.dc-prose {
+  font-size: 16px;
+  line-height: 1.7;
+  font-weight: 600;
+  color: var(--dc-ink-soft);
+  text-wrap: pretty;
+}
+
+.dc-prose strong {
+  color: var(--dc-ink-strong);
+  font-weight: 800;
+}
+
+/* Show code exactly as it is typed: no => or != ligatures for beginners to copy. */
+code,
+pre,
+kbd,
+samp,
+.font-mono,
+.cm-editor {
+  font-variant-ligatures: none;
+  font-feature-settings: "liga" 0, "calt" 0;
+}
+
+.dc-prose code,
+.dc-inline-code {
+  font-family: var(--font-jbmono), monospace;
+  font-size: 0.9em;
+  font-weight: 500;
+  background: var(--dc-inset-bg);
+  border: 1px solid var(--dc-inset-border);
+  border-radius: 6px;
+  padding: 1px 6px;
+  color: var(--dc-ink-strong);
+  /* Short tokens stay whole; long snippets wrap instead of overflowing. */
+  overflow-wrap: anywhere;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+
+/* ==========================================================================
+   Surfaces
+   ========================================================================== */
+
+/* A card for something not yet unlocked. Dashed and flat rather than faded:
+   fading a whole card drags its labels under the contrast floor. */
+.dc-locked {
+  border-style: dashed;
+  box-shadow: none;
+}
+
+.glass,
+.dc-glass {
+  background: var(--dc-glass-bg);
+  border: 1px solid var(--dc-glass-border);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  color: #ffffff;
+}
+
+.dc-glass {
+  border-radius: 22px;
+  box-shadow: var(--dc-card-shadow);
+}
+
+.glass-strong,
+.dc-paper {
+  background: var(--dc-paper-bg);
+  border: 1px solid var(--dc-paper-border);
+  color: var(--dc-ink);
+}
+
+.dc-paper {
+  border-radius: var(--dc-radius-card);
+  box-shadow: var(--dc-paper-shadow);
+}
+
+.dc-inset {
+  background: var(--dc-inset-bg);
+  border: 1px solid var(--dc-inset-border);
+  border-radius: var(--dc-radius-control);
+}
+
+.dc-code {
+  background: var(--dc-code-bg);
+  color: var(--dc-code-fg);
+  font-family: var(--font-jbmono), monospace;
+  border-radius: 16px;
+}
+
+.dc-callout {
+  border-radius: 16px;
+  padding: 14px 16px;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.55;
+  border: 1px solid transparent;
+}
+.dc-callout--success {
+  background: var(--dc-success-bg);
+  color: var(--dc-success-fg);
+  border-color: var(--dc-success-border);
+}
+.dc-callout--danger {
+  background: var(--dc-danger-bg);
+  color: var(--dc-danger-fg);
+  border-color: var(--dc-danger-border);
+}
+.dc-callout--warn {
+  background: var(--dc-warn-bg);
+  color: var(--dc-warn-fg);
+  border-color: var(--dc-warn-border);
+}
+.dc-callout--info {
+  background: var(--dc-info-bg);
+  color: var(--dc-info-fg);
+  border-color: var(--dc-info-border);
+}
+
+/* Dashboard-style cards: a quiet base layer that rises on navigation. */
+.dc-depth-card {
+  box-shadow:
+    0 7px 0 var(--dc-depth-edge),
+    0 22px 46px var(--dc-depth-shadow),
+    inset 0 1px 0 rgba(255, 255, 255, 0.18) !important;
+  transition:
+    transform 180ms ease,
+    box-shadow 180ms ease,
+    filter 180ms ease !important;
+}
+
+.dc-depth-card--interactive:hover,
+.dc-depth-card--interactive:focus-visible {
+  box-shadow:
+    0 11px 0 var(--dc-depth-edge),
+    0 30px 58px var(--dc-depth-shadow),
+    inset 0 1px 0 rgba(255, 255, 255, 0.24) !important;
+  filter: brightness(1.04);
+  transform: translateY(-5px);
+}
+
+.dc-depth-card--interactive:active {
+  box-shadow:
+    0 3px 0 var(--dc-depth-edge),
+    0 10px 22px var(--dc-depth-shadow),
+    inset 0 2px 5px rgba(15, 8, 40, 0.2) !important;
+  transform: translateY(2px);
+}
+
+/* ==========================================================================
+   Buttons: one tactile, two-level press system for every action.
+   Display-font CTAs travel further than small utility pills.
+   ========================================================================== */
+
+.dc-btn {
+  --dc-btn-edge: var(--dc-depth-edge);
+  --dc-btn-lift: 5px;
+  --dc-btn-depth: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-family: var(--font-baloo), sans-serif;
+  font-weight: 800;
+  font-size: 16px;
+  line-height: 1.2;
+  padding: 12px 26px;
+  border-radius: 999px;
+  border: none;
+  color: #ffffff;
+  cursor: pointer;
+  text-decoration: none;
+  white-space: nowrap;
+  user-select: none;
+  box-shadow:
+    0 var(--dc-btn-depth) 0 var(--dc-btn-edge),
+    0 19px 34px var(--dc-depth-shadow),
+    inset 0 2px 0 rgba(255, 255, 255, 0.28);
+  transform: translateY(calc(var(--dc-btn-lift) * -1));
+  transition:
+    transform 150ms ease,
+    box-shadow 150ms ease,
+    filter 150ms ease,
+    background 150ms ease;
+}
+
+.dc-btn:hover {
+  filter: brightness(1.06) saturate(1.04);
+  transform: translateY(calc(var(--dc-btn-lift) * -1 - 2px));
+  box-shadow:
+    0 calc(var(--dc-btn-depth) + 2px) 0 var(--dc-btn-edge),
+    0 23px 38px var(--dc-depth-shadow),
+    inset 0 2px 0 rgba(255, 255, 255, 0.32);
+}
+
+.dc-btn:active {
+  transform: translateY(3px);
+  box-shadow:
+    0 2px 0 var(--dc-btn-edge),
+    0 7px 14px var(--dc-depth-shadow),
+    inset 0 3px 6px rgba(15, 8, 40, 0.24);
+}
+
+.dc-btn:disabled,
+.dc-btn[aria-disabled="true"] {
+  cursor: not-allowed;
+  opacity: 0.6;
+  filter: saturate(0.7);
+  transform: none;
+  box-shadow: 0 3px 0 var(--dc-btn-edge);
+}
+
+.dc-btn--primary {
+  background: var(--dc-accent);
+  --dc-btn-edge: var(--dc-accent-edge);
+}
+
+.dc-btn--secondary {
+  background: rgba(24, 22, 60, 0.35);
+  border: 2px solid var(--dc-secondary-border);
+  color: #ffffff;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  --dc-btn-edge: rgba(19, 24, 66, 0.66);
+}
+
+.dc-btn--secondary:hover {
+  background: rgba(24, 22, 60, 0.5);
+}
+
+.dc-btn--light {
+  background: rgba(255, 255, 255, 0.94);
+  color: #4a2f68;
+  --dc-btn-edge: rgba(80, 50, 110, 0.45);
+}
+
+.dc-btn--run {
+  background: var(--dc-mint);
+  color: var(--dc-mint-ink);
+  --dc-btn-edge: #5aa07e;
+}
+
+.dc-btn--gold {
+  background: rgba(60, 44, 20, 0.45);
+  border: 2px solid rgba(255, 216, 120, 0.9);
+  color: #fff6df;
+  --dc-btn-edge: rgba(90, 60, 10, 0.7);
+}
+
+.dc-btn--quiet {
+  background: var(--dc-inset-bg);
+  border: 2px solid var(--dc-inset-border);
+  color: var(--dc-ink);
+  --dc-btn-edge: var(--dc-inset-border);
+}
+
+.dc-btn--quiet:hover {
+  background: var(--dc-inset-hover);
+}
+
+.dc-btn--sm {
+  font-family: var(--font-nunito), sans-serif;
+  font-weight: 900;
+  font-size: 13px;
+  padding: 8px 16px;
+  --dc-btn-lift: 3px;
+  --dc-btn-depth: 6px;
+}
+
+.dc-btn--lg {
+  font-size: 18px;
+  padding: 15px 34px;
+}
+
+.dc-btn--block {
+  display: flex;
+  width: 100%;
+}
+
+/* Glass pills for navigation on the sky (back links, filters, quick links). */
+.dc-pill {
+  --dc-btn-edge: var(--dc-depth-edge);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 900;
+  font-size: 13px;
+  line-height: 1.2;
+  padding: 8px 16px;
+  border-radius: 999px;
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.16);
+  border: 2px solid rgba(255, 255, 255, 0.55);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  cursor: pointer;
+  text-decoration: none;
+  white-space: nowrap;
+  box-shadow: 0 5px 0 var(--dc-btn-edge), 0 10px 20px var(--dc-depth-shadow);
+  transform: translateY(-2px);
+  transition:
+    transform 150ms ease,
+    box-shadow 150ms ease,
+    background 150ms ease;
+}
+
+.dc-pill:hover {
+  background: rgba(255, 255, 255, 0.26);
+  transform: translateY(-3px);
+}
+
+.dc-pill:active {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 var(--dc-btn-edge), 0 4px 10px var(--dc-depth-shadow);
+}
+
+.dc-pill--static {
+  cursor: default;
+  box-shadow: none;
+  transform: none;
+}
+
+.dc-pill--static:hover {
+  background: rgba(255, 255, 255, 0.16);
+  transform: none;
+}
+
+/* Segmented control (track picker, Path / Peaks switch). */
+.dc-segmented {
+  display: inline-flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px;
+  padding: 5px;
+  border-radius: 999px;
+  /* Dark enough for white labels to stay readable over the light sky. */
+  background: rgba(20, 16, 50, 0.62);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  max-width: 100%;
+}
+
+.dc-segmented__option {
+  font-weight: 900;
+  font-size: 13.5px;
+  padding: 8px 18px;
+  border-radius: 999px;
+  border: none;
+  background: transparent;
+  color: #ffffff;
+  cursor: pointer;
+  text-decoration: none;
+  white-space: nowrap;
+  transition:
+    background 0.2s ease,
+    color 0.2s ease;
+}
+
+.dc-segmented__option:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.dc-segmented__option[aria-pressed="true"],
+.dc-segmented__option[aria-current="page"] {
+  background: #ffffff;
+  color: #13335f;
+  box-shadow: 0 4px 14px rgba(255, 255, 255, 0.2);
+}
+
+/* ==========================================================================
+   Chips, tiers, progress
+   ========================================================================== */
+
+.dc-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.4px;
+  line-height: 1.2;
+  padding: 5px 12px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.dc-chip--mint {
+  background: #d9f5e6;
+  color: #0f5c38;
+}
+.dc-chip--butter {
+  background: var(--dc-butter);
+  color: var(--dc-butter-ink);
+}
+.dc-chip--pink {
+  background: var(--dc-pink);
+  color: var(--dc-pink-ink);
+}
+.dc-chip--lavender {
+  background: var(--dc-lavender);
+  color: var(--dc-lavender-ink);
+}
+.dc-chip--glass {
+  background: var(--dc-chip-glass-bg);
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  color: #ffffff;
+}
+.dc-chip--solid {
+  background: rgba(255, 255, 255, 0.94);
+  color: #13335f;
+}
+.dc-chip--lg {
+  font-size: 13px;
+  padding: 8px 16px;
+}
+
+.dc-tier {
+  font-family: var(--font-baloo), sans-serif;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 1.6px;
+  padding: 2px 9px;
+  border-radius: 999px;
+  text-transform: uppercase;
+  border: 1px solid currentColor;
+  white-space: nowrap;
+}
+/* A dark plate under the coloured label, so a tier reads on any sky. */
+.dc-tier[data-tier] {
+  background: var(--dc-tier-bg);
+}
+.dc-tier[data-tier="beginner"] {
+  color: #a9ecc9;
+}
+.dc-tier[data-tier="intermediate"] {
+  color: #ffe49a;
+}
+.dc-tier[data-tier="advanced"] {
+  color: #ffb6d9;
+}
+.dc-tier[data-tier="expert"] {
+  color: #d9ccff;
+}
+
+.dc-progress {
+  position: relative;
+  width: 100%;
+  height: 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.24);
+  overflow: hidden;
+}
+
+.dc-progress__fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #a9ecc9, #ffe49a);
+  transition: width 0.4s ease;
+}
+
+.dc-progress--paper {
+  background: var(--dc-inset-border);
+}
+
+/* ==========================================================================
+   Answer options (predict, quizzes, placement)
+   ========================================================================== */
+
+.dc-option {
+  display: block;
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  font-size: 14.5px;
+  font-weight: 700;
+  line-height: 1.5;
+  color: var(--dc-ink);
+  background: var(--dc-inset-bg);
+  border: 2px solid var(--dc-inset-border);
+  border-radius: var(--dc-radius-control);
+  padding: 12px 16px;
+  cursor: pointer;
+  box-shadow: 0 3px 0 var(--dc-inset-border);
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    transform 0.15s ease;
+}
+
+.dc-option:hover:not(:disabled) {
+  background: var(--dc-inset-hover);
+  transform: translateY(-1px);
+}
+
+.dc-option:disabled {
+  cursor: default;
+}
+
+.dc-option[data-state="correct"] {
+  background: var(--dc-success-bg);
+  border-color: var(--dc-success-border);
+  color: var(--dc-success-fg);
+  box-shadow: 0 3px 0 var(--dc-success-border);
+}
+
+.dc-option[data-state="wrong"] {
+  background: var(--dc-danger-bg);
+  border-color: var(--dc-danger-border);
+  color: var(--dc-danger-fg);
+  box-shadow: 0 3px 0 var(--dc-danger-border);
+}
+
+.dc-option[data-state="reveal"] {
+  border-color: var(--dc-success-border);
+}
+
+.dc-option__why {
+  display: block;
+  margin-top: 6px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.dc-option code {
+  font-family: var(--font-jbmono), monospace;
+  font-size: 0.92em;
+}
+
+/* ==========================================================================
+   Forms
+   ========================================================================== */
+
+.dc-input {
+  width: 100%;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--dc-ink);
+  background: var(--dc-inset-bg);
+  border: 2px solid var(--dc-inset-border);
+  border-radius: var(--dc-radius-control);
+  padding: 11px 14px;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.dc-input:focus {
+  border-color: var(--dc-accent-solid);
+}
+
+.dc-input::placeholder {
+  color: var(--dc-ink-muted);
+}
+
+/* Search and text fields that sit directly on the sky. */
+.dc-search {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.16);
+  border: 2px solid rgba(255, 255, 255, 0.45);
+  border-radius: 999px;
+  padding: 10px 18px;
+  color: #ffffff;
+  font: inherit;
+  font-weight: 700;
+  font-size: 14.5px;
+  outline: none;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.dc-search::placeholder {
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.dc-search:focus {
+  border-color: #ffffff;
+}
+
+/* ==========================================================================
+   CodeMirror: melt the editor into the dusk panel
+   ========================================================================== */
+
 .dc-editor .cm-editor {
   background: transparent;
   font-family: var(--font-jbmono), monospace;
@@ -267,12 +1141,13 @@ button {
   outline: none;
 }
 .dc-editor .cm-scroller {
-  line-height: 2;
+  line-height: 1.9;
 }
 .dc-editor .cm-gutters {
   background: transparent;
   border: none;
-  color: #48618f;
+  /* Line numbers still have to be readable against the dusk editor. */
+  color: #8398c4;
 }
 .dc-editor .cm-activeLine {
   background: rgba(76, 130, 220, 0.18);
@@ -292,100 +1167,37 @@ button {
 .dc-editor .cm-editor ::selection {
   background: rgba(110, 160, 240, 0.35) !important;
 }
-
-/* Accessibility: honor a reduced-motion preference. Neutralizes the floaty
-   cloud bobbing, pulse rings, pop-ins, neon flicker, and CSS transitions.
-   The scroll parallax is also disabled in Parallax.tsx via matchMedia. */
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.001ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.001ms !important;
-    scroll-behavior: auto !important;
-  }
+.dc-editor .cm-errorLine {
+  background: rgba(255, 110, 150, 0.16);
 }
 
-/* Accessibility: a clear, on-theme focus ring for keyboard users. White core
-   with a blue halo so it reads on both the dusk and the light glass surfaces.
-   Mouse clicks do not trigger :focus-visible, so this only shows on keyboard. */
-a:focus-visible,
-button:focus-visible,
-input:focus-visible,
-textarea:focus-visible,
-select:focus-visible,
-summary:focus-visible,
-[role="button"]:focus-visible {
-  outline: 3px solid #ffffff;
-  outline-offset: 2px;
-  box-shadow: 0 0 0 6px rgba(47, 111, 221, 0.6);
-  border-radius: 8px;
+/* ==========================================================================
+   Journey map nodes: silhouette-shaped; only the label plate gains depth.
+   ========================================================================== */
+
+.dc-journey-node > .glass {
+  box-shadow:
+    0 5px 0 var(--dc-depth-edge),
+    0 14px 27px var(--dc-depth-shadow),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
+  transition:
+    transform 180ms ease,
+    box-shadow 180ms ease;
 }
 
-/* --------------------------------------------------------------------------
-   Production appearance system
-
-   Sunset Arcade is the light sky; Midnight Focus is the dark sky. The
-   selection is applied before hydration in layout.tsx and maintained by the
-   appearance controller. Importantly, depth is opt-in: styling every link as a
-   box created the rectangular Journey artifact visible in the design review.
-   -------------------------------------------------------------------------- */
-
-html[data-theme="light"] {
-  --dc-page-sky: radial-gradient(circle at 18% 20%, rgba(255, 220, 125, 0.26), transparent 30%), linear-gradient(180deg, #58365f 0%, #9b526a 42%, #d87974 70%, #f3a35f 100%);
-  --dc-glass-bg: rgba(255, 244, 233, 0.17);
-  --dc-glass-border: rgba(255, 246, 226, 0.68);
-  --dc-depth-edge: rgba(97, 44, 61, 0.48);
-  --dc-depth-shadow: rgba(73, 27, 47, 0.3);
-  --dc-accent: linear-gradient(135deg, #ff8a62, #ff5f78);
+.dc-journey-node:hover > .glass,
+.dc-journey-node:focus-visible > .glass {
+  box-shadow:
+    0 9px 0 var(--dc-depth-edge),
+    0 22px 38px var(--dc-depth-shadow),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25) !important;
+  transform: translateY(-4px);
 }
 
-html[data-theme="dark"] {
-  --dc-page-sky: radial-gradient(circle at 72% 12%, rgba(141, 124, 255, 0.17), transparent 34%), linear-gradient(180deg, #090d26 0%, #121b3f 48%, #243c61 76%, #41697b 100%);
-  --dc-glass-bg: rgba(10, 17, 45, 0.72);
-  --dc-glass-border: rgba(136, 227, 218, 0.34);
-  --dc-depth-edge: rgba(4, 7, 25, 0.74);
-  --dc-depth-shadow: rgba(2, 4, 18, 0.48);
-  --dc-accent: linear-gradient(135deg, #8d7cff, #526fd1);
-}
+/* ==========================================================================
+   Home: photo hero and story sky get explicit overlays per appearance.
+   ========================================================================== */
 
-html[data-theme] body {
-  background: var(--dc-page-sky);
-}
-
-/* Every full-page route currently has a direct div root with an authored
-   background. This override gives all routes one coherent day/night sky. */
-html[data-theme] main > div[style*="background"]:not(.dc-home) {
-  background: var(--dc-page-sky) !important;
-}
-
-html[data-theme] main .glass,
-html[data-theme] main .glass-strong {
-  background: var(--dc-glass-bg);
-  border-color: var(--dc-glass-border);
-  color: #eefcff;
-}
-
-html[data-theme="dark"] main .glass,
-html[data-theme="dark"] main .glass-strong {
-  box-shadow: 0 20px 48px rgba(2, 4, 18, 0.42), inset 0 1px 0 rgba(255, 255, 255, 0.09);
-}
-
-html[data-theme] main :is(button, a)[style*="#ff7ad9" i] {
-  background: var(--dc-accent) !important;
-}
-
-html[data-theme="light"] :is(.neon-title, .neon-wordmark, .glow-heading) {
-  text-shadow: 0 0 7px rgba(255, 255, 255, 0.92), 0 0 20px rgba(255, 138, 98, 0.9), 0 0 46px rgba(255, 95, 120, 0.72) !important;
-}
-
-html[data-theme="dark"] :is(.neon-title, .neon-wordmark, .glow-heading) {
-  text-shadow: 0 0 6px rgba(255, 255, 255, 0.82), 0 0 18px rgba(141, 124, 255, 0.72), 0 0 38px rgba(70, 216, 200, 0.42) !important;
-}
-
-/* Home uses a background image and nested story sky instead of a normal page
-   root, so it receives explicit overlays in both appearances. */
 .dc-home-hero::after {
   content: "";
   position: absolute;
@@ -402,120 +1214,37 @@ html[data-theme="dark"] .dc-home-hero::after {
   background: linear-gradient(180deg, rgba(2, 5, 26, 0.58), rgba(8, 12, 40, 0.8));
 }
 
-html[data-theme="light"] .dc-home-story {
-  background: linear-gradient(180deg, #623b65 0%, #99546e 32%, #d57d7e 67%, #f1a56a 100%) !important;
+.dc-home {
+  --dc-story-top: #623b65;
+  background: var(--dc-story-top);
+}
+
+html[data-theme="dark"] .dc-home {
+  --dc-story-top: #090d26;
+}
+
+/* Fades the bottom of the hero photo into the story sky, so there is no seam. */
+.dc-home-hero::before {
+  content: "";
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 38%;
+  z-index: 3;
+  pointer-events: none;
+  background: linear-gradient(180deg, transparent 0%, var(--dc-story-top) 100%);
+}
+
+.dc-home-story {
+  background: linear-gradient(180deg, #623b65 0%, #99546e 32%, #d57d7e 67%, #f1a56a 100%);
 }
 
 html[data-theme="dark"] .dc-home-story {
-  background: linear-gradient(180deg, #090d26 0%, #151b43 40%, #283659 72%, #3f5a70 100%) !important;
+  background: linear-gradient(180deg, #090d26 0%, #151b43 40%, #283659 72%, #3f5a70 100%);
 }
 
-/* Tactile controls preserve their authored border on all four sides. The old
-   border-bottom override is intentionally gone, fixing the broken cyan ring.
-
-   This selector deliberately covers real page buttons plus links that already
-   present themselves as rounded CTAs. It does not target ordinary text links,
-   lesson cards, dashboard cards, or Journey nodes, so depth stays consistent
-   without recreating the rectangular cloud-node regression. */
-:is(
-  .dc-pressable,
-  main button:not(:disabled):not(.dc-no-depth):not([aria-label^="Close"]):not([aria-label^="Dismiss"]):not(.appearance-picker__option),
-  main a.font-display.cursor-pointer:not(.dc-no-depth):not(.dc-journey-node),
-  main a.cursor-pointer[style*="border-radius"]:not(.dc-no-depth):not(.dc-journey-node),
-  header #nav-btn-signup
-) {
-  --dc-button-edge: var(--dc-depth-edge);
-  box-shadow: 0 7px 0 var(--dc-button-edge), 0 14px 26px var(--dc-depth-shadow), inset 0 1px 0 rgba(255, 255, 255, 0.25) !important;
-  transform: translateY(-3px);
-  transition: transform 150ms ease, box-shadow 150ms ease, filter 150ms ease !important;
-}
-
-:is(
-  .dc-pressable,
-  main button:not(:disabled):not(.dc-no-depth):not([aria-label^="Close"]):not([aria-label^="Dismiss"]):not(.appearance-picker__option),
-  main a.font-display.cursor-pointer:not(.dc-no-depth):not(.dc-journey-node),
-  main a.cursor-pointer[style*="border-radius"]:not(.dc-no-depth):not(.dc-journey-node),
-  header #nav-btn-signup
-):hover {
-  filter: brightness(1.06) saturate(1.04);
-  transform: translateY(-5px);
-}
-
-:is(
-  .dc-pressable,
-  main button:not(:disabled):not(.dc-no-depth):not([aria-label^="Close"]):not([aria-label^="Dismiss"]):not(.appearance-picker__option),
-  main a.font-display.cursor-pointer:not(.dc-no-depth):not(.dc-journey-node),
-  main a.cursor-pointer[style*="border-radius"]:not(.dc-no-depth):not(.dc-journey-node),
-  header #nav-btn-signup
-):active {
-  box-shadow: 0 2px 0 var(--dc-button-edge), 0 6px 12px var(--dc-depth-shadow), inset 0 2px 5px rgba(15, 8, 40, 0.2) !important;
-  transform: translateY(2px);
-}
-
-/* Display-font CTAs get the more pronounced arcade travel from the original
-   study; small utility buttons keep the quieter seven-pixel edge above. */
-:is(
-  main :is(button, a).font-display.cursor-pointer:not(.dc-no-depth):not(.dc-journey-node),
-  header #nav-btn-signup
-) {
-  box-shadow: 0 10px 0 var(--dc-button-edge), 0 19px 34px var(--dc-depth-shadow), inset 0 2px 0 rgba(255, 255, 255, 0.28) !important;
-  transform: translateY(-5px);
-}
-
-:is(
-  main :is(button, a).font-display.cursor-pointer:not(.dc-no-depth):not(.dc-journey-node),
-  header #nav-btn-signup
-):hover {
-  box-shadow: 0 12px 0 var(--dc-button-edge), 0 23px 38px var(--dc-depth-shadow), inset 0 2px 0 rgba(255, 255, 255, 0.32) !important;
-  transform: translateY(-7px);
-}
-
-:is(
-  main :is(button, a).font-display.cursor-pointer:not(.dc-no-depth):not(.dc-journey-node),
-  header #nav-btn-signup
-):active {
-  box-shadow: 0 2px 0 var(--dc-button-edge), 0 7px 14px var(--dc-depth-shadow), inset 0 3px 6px rgba(15, 8, 40, 0.24) !important;
-  transform: translateY(3px);
-}
-
-.dc-pressable--outline {
-  --dc-button-edge: rgba(19, 24, 66, 0.66);
-}
-
-.dc-track-option[aria-pressed="true"] {
-  --dc-button-edge: color-mix(in srgb, var(--dc-depth-edge) 82%, #ffffff 18%);
-  filter: brightness(1.03);
-}
-
-/* Dashboard cards hold a quiet base layer and rise further on navigation. */
-.dc-depth-card {
-  box-shadow: 0 7px 0 var(--dc-depth-edge), 0 22px 46px var(--dc-depth-shadow), inset 0 1px 0 rgba(255, 255, 255, 0.18) !important;
-  transition: transform 180ms ease, box-shadow 180ms ease, filter 180ms ease !important;
-}
-
-.dc-depth-card--interactive:hover,
-.dc-depth-card--interactive:focus-visible {
-  box-shadow: 0 11px 0 var(--dc-depth-edge), 0 30px 58px var(--dc-depth-shadow), inset 0 1px 0 rgba(255, 255, 255, 0.24) !important;
-  filter: brightness(1.04);
-  transform: translateY(-5px);
-}
-
-.dc-depth-card--interactive:active {
-  box-shadow: 0 3px 0 var(--dc-depth-edge), 0 10px 22px var(--dc-depth-shadow), inset 0 2px 5px rgba(15, 8, 40, 0.2) !important;
-  transform: translateY(2px);
-}
-
-/* Journey nodes stay silhouette-shaped. Only the small label gains depth. */
-.dc-journey-node > .glass {
-  box-shadow: 0 5px 0 var(--dc-depth-edge), 0 14px 27px var(--dc-depth-shadow), inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
-  transition: transform 180ms ease, box-shadow 180ms ease;
-}
-
-.dc-journey-node:hover > .glass,
-.dc-journey-node:focus-visible > .glass {
-  box-shadow: 0 9px 0 var(--dc-depth-edge), 0 22px 38px var(--dc-depth-shadow), inset 0 1px 0 rgba(255, 255, 255, 0.25) !important;
-  transform: translateY(-4px);
-}
+/* ==========================================================================
+   Profile appearance picker
+   ========================================================================== */
 
 .appearance-picker {
   display: grid;
@@ -540,20 +1269,59 @@ html[data-theme="dark"] .dc-home-story {
   color: #ffffff;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .dc-pressable,
-  main button:not(.dc-no-depth),
-  main a.font-display.cursor-pointer:not(.dc-no-depth),
-  main a.cursor-pointer[style*="border-radius"]:not(.dc-no-depth),
-  header #nav-btn-signup,
-  .dc-depth-card,
-  .dc-journey-node > .glass {
-    transform: none !important;
-  }
-}
-
 @media (max-width: 520px) {
   .appearance-picker {
     grid-template-columns: 1fr;
+  }
+}
+
+/* ==========================================================================
+   Accessibility
+   ========================================================================== */
+
+.sr-only-focusable:not(:focus) {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* A clear, on-theme focus ring for keyboard users. Mouse clicks do not trigger
+   :focus-visible, so this only shows on keyboard. */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible,
+summary:focus-visible,
+[role="button"]:focus-visible,
+[tabindex]:focus-visible {
+  outline: 3px solid #ffffff;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 6px rgba(47, 111, 221, 0.6);
+}
+
+/* Honor a reduced-motion preference: no bobbing clouds, pulses, or travel. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .dc-btn,
+  .dc-btn:hover,
+  .dc-btn:active,
+  .dc-pill,
+  .dc-pill:hover,
+  .dc-depth-card,
+  .dc-depth-card--interactive:hover,
+  .dc-journey-node > .glass {
+    transform: none !important;
   }
 }
